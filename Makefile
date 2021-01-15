@@ -1,5 +1,7 @@
+<<<<<<< HEAD
 # CrazyFlie's Makefile
 # Copyright (c) 2011-2021 Bitcraze AB
+
 # This Makefile compiles all the object file to ./bin/ and the resulting firmware
 # image in ./cfX.elf and ./cfX.bin
 
@@ -207,7 +209,7 @@ PROJ_OBJ += gtgps.o
 PROJ_OBJ += cppmdeck.o
 PROJ_OBJ += usddeck.o
 PROJ_OBJ += zranger.o zranger2.o
-PROJ_OBJ += locodeck.o
+#PROJ_OBJ += locodeck.o
 PROJ_OBJ += clockCorrectionEngine.o
 PROJ_OBJ += lpsTwrTag.o
 PROJ_OBJ += lpsTdoa2Tag.o
@@ -218,6 +220,12 @@ PROJ_OBJ += oa.o
 PROJ_OBJ += multiranger.o
 PROJ_OBJ += lighthouse.o
 PROJ_OBJ += activeMarkerDeck.o
+
+# OLSR
+PROJ_OBJ += uwbOlsr.o
+PROJ_OBJ += olsrAlgo.o
+PROJ_OBJ += olsrStruct.o
+PROJ_OBJ += adhocdeck.o
 
 # Uart2 Link for CRTP communication is not compatible with decks using uart2
 ifeq ($(UART2_LINK), 1)
@@ -316,7 +324,7 @@ else
   CFLAGS += -Os
 
   # Fail on warnings
-  CFLAGS += -Werror
+  # CFLAGS += -Werror
 endif
 
 # Disable warnings for unaligned addresses in packed structs (added in GCC 9)
