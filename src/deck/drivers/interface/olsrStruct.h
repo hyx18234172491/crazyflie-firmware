@@ -24,7 +24,7 @@ typedef short setIndex_t;
 #define LINK_SET_SIZE 30
 #define MPR_SET_SIZE 30
 #define DUPLICATE_SET_SIZE 30
-#define TIMESTAMP_SET_SIZE 30
+#define RANGING_SET_SIZE 30
 #define MPR_SELECTOR_SET_SIZE 30
 #define NEIGHBOR_SET_SIZE 30
 #define TWO_HOP_NEIGHBOR_SET_SIZE 30
@@ -40,7 +40,7 @@ typedef enum
   WILL_ALWAYS  = 7,
 } olsrWillingness_t;
 
-typedef enum 
+typedef enum
 {
   STATUS_NOT_SYM = 0,
   STATUS_SYM = 1,
@@ -54,7 +54,7 @@ typedef struct
   olsrWillingness_t m_willingness;
 } olsrNeighborTuple_t;
 
-typedef struct 
+typedef struct
 {
   olsrNeighborTuple_t data;
   setIndex_t next;
@@ -92,7 +92,7 @@ typedef struct
   olsrTime_t m_expirationTime;
 } olsrLinkTuple_t;
 
-typedef struct 
+typedef struct
 {
   olsrLinkTuple_t data;
   setIndex_t next;
@@ -104,12 +104,12 @@ typedef struct
 */
 
 SemaphoreHandle_t olsrMprSetLock;
-typedef struct 
+typedef struct
 {
   olsrAddr_t m_addr;
 } olsrMprTuple_t;
 
-typedef struct 
+typedef struct
 {
   olsrMprTuple_t data;
   setIndex_t next;
@@ -120,13 +120,13 @@ typedef struct
 
 SemaphoreHandle_t olsrMprSelectorSetLock;
 
-typedef struct 
+typedef struct
 {
   olsrAddr_t m_addr;
   olsrTime_t m_expirationTime;
 } olsrMprSelectorTuple_t;
 
-typedef struct 
+typedef struct
 {
   olsrMprSelectorTuple_t data;
   setIndex_t next;
@@ -136,7 +136,7 @@ typedef struct
 *********************TopologySet*************************
 */
 SemaphoreHandle_t olsrTopologySetLock;
-typedef struct 
+typedef struct
 {
   olsrAddr_t m_destAddr;
   olsrAddr_t m_lastAddr;
@@ -145,7 +145,7 @@ typedef struct
   olsrTime_t m_expirationTime;
 } olsrTopologyTuple_t;
 
-typedef struct 
+typedef struct
 {
   olsrTopologyTuple_t data;
   setIndex_t next;
@@ -162,30 +162,48 @@ typedef struct
   olsrTime_t m_expirationTime;
 } olsrDuplicateTuple_t;
 
-typedef struct 
+typedef struct
 {
   olsrDuplicateTuple_t data;
   setIndex_t next;
 } olsrDuplicateSetItem_t;
 /*
-*********************TimestampSet*************************
+*********************TimestampRangingTable*************************
 */
 
-typedef struct 
+typedef struct
 {
   uint16_t m_seqenceNumber;
   dwTime_t m_timestamp;
 } olsrTimestampTuple_t;
 
-typedef struct 
+typedef struct {
+  olsrAddr_t tsAddr;
+  // tick from dw1000
+  olsrTimestampTuple_t Rp;
+  olsrTimestampTuple_t Tp;
+  olsrTimestampTuple_t Rr;
+  olsrTimestampTuple_t Tr;
+  olsrTimestampTuple_t Rf;
+  olsrTimestampTuple_t Tf;
+  olsrTimestampTuple_t Re;
+  // tick from stm32
+  olsrTime_t period;
+  olsrTime_t nextDelivery;
+  olsrTime_t expiration;
+  int16_t distance;
+} olsrRangingTuple_t;
+
+typedef struct
 {
-  olsrTimestampTuple_t data;
+  olsrRangingTuple_t data;
   setIndex_t next;
-} olsrTimestampSetItem_t;
+} olsrRangingSetItem_t;
+
 /*
 *********************RoutingTable*************************
 */
-typedef struct 
+typedef struct
 {
   olsrAddr_t m_destAddr;
   olsrAddr_t m_nextAddr;
@@ -193,7 +211,7 @@ typedef struct
   olsrTime_t m_expirationTime;
 } olsrRoutingTuple_t;
 
-typedef struct 
+typedef struct
 {
   olsrRoutingTuple_t data;
   setIndex_t next;
@@ -211,7 +229,7 @@ typedef struct
 } olsrRoutingSet_t;
 
 
-typedef struct 
+typedef struct
 {
   olsrTopologySetItem_t setData[TOPOLOGY_SET_SIZE];
   setIndex_t freeQueueEntry;
@@ -227,15 +245,15 @@ typedef struct
 } olsrLinkSet_t;
 
 
-typedef struct 
+typedef struct
 {
   olsrNeighborSetItem_t setData[NEIGHBOR_SET_SIZE];
   setIndex_t freeQueueEntry;
-  setIndex_t fullQueueEntry; 
+  setIndex_t fullQueueEntry;
 } olsrNeighborSet_t;
 
 
-typedef struct 
+typedef struct
 {
   olsrTwoHopNeighborSetItem_t setData[TWO_HOP_NEIGHBOR_SET_SIZE];
   setIndex_t freeQueueEntry;
@@ -251,7 +269,7 @@ typedef struct
 } olsrDuplicateSet_t;
 
 
-typedef struct 
+typedef struct
 {
   olsrMprSetItem_t setData[MPR_SET_SIZE];
   setIndex_t freeQueueEntry;
@@ -259,21 +277,21 @@ typedef struct
 } olsrMprSet_t;
 
 
-typedef struct 
+typedef struct
 {
   olsrMprSelectorSetItem_t setData[MPR_SELECTOR_SET_SIZE];
   setIndex_t freeQueueEntry;
-  setIndex_t fullQueueEntry; 
+  setIndex_t fullQueueEntry;
 } olsrMprSelectorSet_t;
 
 
 
 typedef struct
 {
-  olsrTimestampSetItem_t setData[TIMESTAMP_SET_SIZE];
+  olsrRangingSetItem_t setData[RANGING_SET_SIZE];
   setIndex_t freeQueueEntry;
   setIndex_t fullQueueEntry;
-} olsrTimestampSet_t;
+} olsrRangingSet_t;
 
 
 olsrTopologySet_t olsrTopologySet;
@@ -291,6 +309,8 @@ olsrMprSet_t olsrMprSet;
 olsrMprSelectorSet_t olsrMprSelectorSet;
 
 olsrRoutingSet_t olsrRoutingSet;
+
+olsrRangingSet_t olsrRangingSet;
 
 /*linkSet*/
 setIndex_t olsrInsertToLinkSet(olsrLinkSet_t *linkSet, const olsrLinkTuple_t *item);
@@ -401,4 +421,12 @@ void olsrRoutingSetInit(olsrRoutingSet_t *routingSet);
 bool olsrRoutingSetInsert(olsrRoutingSet_t *routingSet,olsrRoutingTuple_t *tuple);
 
 olsrAddr_t olsrFindInRoutingTable(olsrRoutingSet_t *routingSet,olsrAddr_t destAddr);
+
+/*ranging table*/ //TODO: 后续需要修复各类“set”和“table”名词混用的情况
+void olsrRangingSetInit(olsrRangingSet_t *rangingSet);
+
+bool olsrRangingSetInsert(olsrRangingSet_t *rangingSet, olsrRangingTuple_t *tuple);
+
+olsrRangingTuple_t olsrFindInRangingTable(olsrRangingSet_t *rangingSet, olsrAddr_t addr);
+
 #endif //__OLSR_STRUCT_H__

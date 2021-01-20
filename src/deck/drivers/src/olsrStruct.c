@@ -39,7 +39,7 @@ static setIndex_t olsrTopologySetMalloc(olsrTopologySet_t *topologySet)
       return -1;
     }
   else
-    { 
+    {
       setIndex_t candidate = topologySet->freeQueueEntry;
       topologySet->freeQueueEntry = topologySet->setData[candidate].next;
       //insert to full queue
@@ -64,7 +64,7 @@ static bool olsrTopologySetFree(olsrTopologySet_t *topologySet,\
       topologySet->freeQueueEntry = delItem;
       return true;
     }
-  else 
+  else
     {
       while(pre!=-1)
         {
@@ -85,7 +85,7 @@ static bool olsrTopologySetFree(olsrTopologySet_t *topologySet,\
 setIndex_t olsrInsertToTopologySet(olsrTopologySet_t *topologySet,\
                              const olsrTopologyTuple_t *tcTuple)
 {
-  setIndex_t candidate = olsrTopologySetMalloc(topologySet); 
+  setIndex_t candidate = olsrTopologySetMalloc(topologySet);
   if(candidate != -1)
     {
       memcpy(&topologySet->setData[candidate].data,tcTuple,sizeof(olsrTopologyTuple_t));
@@ -195,7 +195,7 @@ static setIndex_t olsrLinkSetMalloc(olsrLinkSet_t *linkSet)
       return -1;
     }
   else
-    { 
+    {
       setIndex_t candidate = linkSet->freeQueueEntry;   // 0 2 3 5 6 -1 freequeentey
       linkSet->freeQueueEntry = linkSet->setData[candidate].next; //  1 4 -1 fullqueueentry
       // xSemaphoreGive(olsrLinkEmptySetLock);
@@ -226,7 +226,7 @@ static bool olsrLinkSetFree(olsrLinkSet_t *linkSet,setIndex_t delItem)
       // xSemaphoreGive(olsrLinkEmptySetLock);
       return true;
     }
-  else 
+  else
     {
       while(pre!=-1)
         {
@@ -269,7 +269,7 @@ setIndex_t olsrInsertToLinkSet(olsrLinkSet_t *linkSet,const olsrLinkTuple_t *ite
   if(candidate!=-1)
     {
       memcpy(&linkSet->setData[candidate].data,item,sizeof(olsrLinkTuple_t));
-      
+
     }
   else
     {
@@ -337,7 +337,7 @@ static setIndex_t olsrNeighborSetMalloc(olsrNeighborSet_t *neighborSet)
       return -1;
     }
   else
-    { 
+    {
       setIndex_t candidate = neighborSet->freeQueueEntry;
       neighborSet->freeQueueEntry = neighborSet->setData[candidate].next;
       // xSemaphoreGive(olsrNeighborEmptySetLock);
@@ -369,7 +369,7 @@ static bool olsrNeighborSetFree(olsrNeighborSet_t *neighborSet, \
       // xSemaphoreGive(olsrNeighborEmptySetLock);
       return true;
     }
-  else 
+  else
     {
       while(pre!=-1)
         {
@@ -471,7 +471,7 @@ static setIndex_t olsrTwoHopNeighborSetMalloc(olsrTwoHopNeighborSet_t *twoHopNei
       return -1;
     }
   else
-    { 
+    {
       setIndex_t candidate = twoHopNeighborSet->freeQueueEntry;
       twoHopNeighborSet->freeQueueEntry = twoHopNeighborSet->setData[candidate].next;
       // xSemaphoreGive(olsrNeighborEmptySetLock);
@@ -503,7 +503,7 @@ static bool olsrTwoHopNeighborSetFree(olsrTwoHopNeighborSet_t *twoHopNeighborSet
       // xSemaphoreGive(olsrNeighborEmptySetLock);
       return true;
     }
-  else 
+  else
     {
       while(pre!=-1)
         {
@@ -607,7 +607,7 @@ setIndex_t olsrEraseTwoHopNeighborTupleByTuple(olsrTwoHopNeighborSet_t *twoHopNe
           return nextIt;
         }
     }
-  return candidate; 
+  return candidate;
 }
 
 void olsrPrintTwoHopNeighborSet(olsrTwoHopNeighborSet_t *twoHopNeighborSet)
@@ -648,7 +648,7 @@ static setIndex_t olsrMprSetMalloc(olsrMprSet_t *mprSet)
       return -1;
     }
   else
-    { 
+    {
       setIndex_t candidate = mprSet->freeQueueEntry;
       mprSet->freeQueueEntry = mprSet->setData[candidate].next;
       //insert to full queue
@@ -688,7 +688,7 @@ bool olsrFindMprByAddr(olsrMprSet_t *mprSet,\
         }
       it = mprSet->setData[it].next;
     }
-  return isFound; 
+  return isFound;
   //TODO checkout lock all
 }
 
@@ -725,7 +725,7 @@ static setIndex_t olsrMprSelectorSetMalloc(olsrMprSelectorSet_t *mprSelectorSet)
       return -1;
     }
   else
-    { 
+    {
       setIndex_t candidate = mprSelectorSet->freeQueueEntry;
       mprSelectorSet->freeQueueEntry = mprSelectorSet->setData[candidate].next;
       //insert to full queue
@@ -749,7 +749,7 @@ static bool olsrMprSelectorSetFree(olsrMprSelectorSet_t *mprSelectorSet, setInde
       mprSelectorSet->freeQueueEntry = delItem;
       return true;
     }
-  else 
+  else
     {
       while(pre!=-1)
         {
@@ -786,7 +786,7 @@ setIndex_t olsrFindInMprSelectorSet(olsrMprSelectorSet_t *mprSelectorSet, olsrAd
   setIndex_t it = mprSelectorSet->fullQueueEntry;
   while(it != -1)
     {
-      if(mprSelectorSet->setData[it].data.m_addr == addr) 
+      if(mprSelectorSet->setData[it].data.m_addr == addr)
         {
           break;
         }
@@ -813,7 +813,7 @@ bool olsrEraseMprSelectorTuples(olsrMprSelectorSet_t *mprSelectorSet, olsrAddr_t
               return true;
             }
         }
-      candidate = tmp.next; 
+      candidate = tmp.next;
     }
   return false;
 }
@@ -858,7 +858,7 @@ static setIndex_t olsrDuplicateSetMalloc(olsrDuplicateSet_t *duplicateSet)
       return -1;
     }
   else
-    { 
+    {
       setIndex_t candidate = duplicateSet->freeQueueEntry;
       duplicateSet->freeQueueEntry = duplicateSet->setData[candidate].next;
       //insert to full queue
@@ -882,7 +882,7 @@ static bool olsrDuplicateSetFree(olsrDuplicateSet_t *duplicateSet, setIndex_t de
       duplicateSet->freeQueueEntry = delItem;
       return true;
     }
-  else 
+  else
     {
       while(pre!=-1)
         {
@@ -986,7 +986,7 @@ static setIndex_t olsrRoutingSetMalloc(olsrRoutingSet_t *routingSet)
       return -1;
     }
   else
-    { 
+    {
       setIndex_t candidate = routingSet->freeQueueEntry;
       routingSet->freeQueueEntry = routingSet->setData[candidate].next;
       //insert to full queue
@@ -1010,7 +1010,7 @@ static bool olsrRoutingSetFree(olsrRoutingSet_t *routingSet, setIndex_t delItem)
       routingSet->freeQueueEntry = delItem;
       return true;
     }
-  else 
+  else
     {
       while(pre!=-1)
         {
@@ -1053,6 +1053,81 @@ olsrAddr_t olsrFindInRoutingTable(olsrRoutingSet_t *routingSet,olsrAddr_t destAd
         }
       it = routeNode.next;
     }
+  return it;
+}
+
+/*
+************************RangingSetFunction********************
+*/
+void olsrRangingSetInit(olsrRangingSet_t *rangingSet) {
+  setIndex_t i;
+  for (i = 0; i < RANGING_SET_SIZE - 1; i++) {
+    rangingSet->setData[i].next = i + 1;
+  }
+  rangingSet->setData[i].next = -1;
+  rangingSet->freeQueueEntry = 0;
+  rangingSet->fullQueueEntry = -1;
+}
+
+static setIndex_t olsrRangingSetMalloc(olsrRangingSet_t *rangingSet) {
+  if (rangingSet->freeQueueEntry == -1) {
+    DEBUG_PRINT_OLSR_SET("Full of sets!!!! can not malloc!!!\n");
+    return -1;
+  } else {
+    setIndex_t candidate = rangingSet->freeQueueEntry;
+    rangingSet->freeQueueEntry = rangingSet->setData[candidate].next;
+    //insert to full queue
+    setIndex_t tmp = rangingSet->fullQueueEntry;
+    rangingSet->fullQueueEntry = candidate;
+    rangingSet->setData[candidate].next = tmp;
+    return candidate;
+  }
+}
+
+static bool olsrRangingSetFree(olsrRangingSet_t *rangingSet, setIndex_t delItem) {
+  if (-1 == delItem) return true;
+  //del from full queue
+  setIndex_t pre = rangingSet->fullQueueEntry;
+  if (delItem == pre) {
+    rangingSet->fullQueueEntry = rangingSet->setData[pre].next;
+    //insert to empty queue
+    rangingSet->setData[delItem].next = rangingSet->freeQueueEntry;
+    rangingSet->freeQueueEntry = delItem;
+    return true;
+  } else {
+    while (pre != -1) {
+      if (rangingSet->setData[pre].next == delItem) {
+        rangingSet->setData[pre].next = rangingSet->setData[delItem].next;
+        //insert to empty queue
+        rangingSet->setData[delItem].next = rangingSet->freeQueueEntry;
+        rangingSet->freeQueueEntry = delItem;
+        return true;
+      }
+      pre = rangingSet->setData[pre].next;
+    }
+  }
+  return false;
+}
+
+bool olsrRangingSetInsert(olsrRangingSet_t *rangingSet, olsrRangingTuple_t *tuple) {
+  setIndex_t candidate = olsrRoutingSetMalloc(rangingSet);
+  if (candidate != -1) {
+    memcpy(&rangingSet->setData[candidate].data, tuple, sizeof(olsrRangingTuple_t));
+    return true;
+  } else {
+    return false;
+  }
+}
+
+olsrRangingSetItem_t olsrFindInRangingTable(olsrRangingSet_t *rangingSet, olsrAddr_t addr) {
+  setIndex_t it = rangingSet->fullQueueEntry;
+  while (it != -1) {
+    olsrRangingSetItem_t rangingNode = rangingSet->setData[it];
+    if (rangingNode.data.tsAddr == addr) {
+      return rangingNode;
+    }
+    it = rangingNode.next;
+  }
   return it;
 }
 
