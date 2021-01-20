@@ -422,11 +422,11 @@ bool olsrRoutingSetInsert(olsrRoutingSet_t *routingSet,olsrRoutingTuple_t *tuple
 
 olsrAddr_t olsrFindInRoutingTable(olsrRoutingSet_t *routingSet,olsrAddr_t destAddr);
 
-/*ranging table*/ //TODO: 后续需要修复各类“set”和“table”名词混用的情况
+/*ranging table*/
 void olsrRangingSetInit(olsrRangingSet_t *rangingSet);
 
 bool olsrRangingSetInsert(olsrRangingSet_t *rangingSet, olsrRangingTuple_t *tuple);
 
-olsrRangingTuple_t olsrFindInRangingTable(olsrRangingSet_t *rangingSet, olsrAddr_t addr);
+setIndex_t olsrFindInRangingTable(olsrRangingSet_t *rangingSet, olsrAddr_t addr);
 
 #endif //__OLSR_STRUCT_H__

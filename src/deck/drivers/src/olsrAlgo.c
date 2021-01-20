@@ -8,7 +8,7 @@
 #include "olsrAlgo.h"
 #include "olsrStruct.h"
 #include "olsrPacket.h"
-
+#include "log.h"
 //const
 
 #define OLSR_HELLO_INTERVAL 2000
@@ -16,7 +16,8 @@
 #define OLSR_TC_INTERVAL 5000
 #define OLSR_TOP_HOLD_TIME (3*OLSR_TC_INTERVAL)
 #define OLSR_DUP_HOLD_TIME 10000
-#define TS_INTERVAL 1000
+#define OLSR_TS_INTERVAL_MIN 20 //default 20
+#define OLSR_TS_INTERVAL_MAX 500 //default 500
 #define OLSR_ROUTING_SET_HOLD_TIME 10000
 #define OLSR_DUP_CLEAR_INTERVAL 30000
 #define OLSR_LINK_CLEAR_INTERVAL 5000
@@ -55,6 +56,10 @@ static uint16_t g_ansn = 0;
 static SemaphoreHandle_t olsrMessageSeqLock;
 static SemaphoreHandle_t olsrAnsnLock;
 static SemaphoreHandle_t olsrAllSetLock;
+static uint16_t idVelocityX;
+static uint16_t idVelocityY;
+static uint16_t idVelocityZ;
+static float velocity;
 // static bool m_linkTupleTimerFirstTime  = true;
 
 //TODO define packet and message struct once, save space
@@ -1100,6 +1105,10 @@ void olsrSendData(olsrAddr_t sourceAddr,AdHocPort sourcePort,\
   xQueueSend(g_olsrSendQueue,&msg,portMAX_DELAY);
 }
 
+void olsrSendTimestamp() {
+  DEBUG_PRINT_OLSR_TS("--olsrSendTimestamp--\n");
+}
+
 void olsrNeighborLoss(olsrAddr_t addr[],uint8_t length)
 {
   for(int i = 0; i < length; i++)
@@ -1248,7 +1257,20 @@ void olsrTcTask(void *ptr)
   }
 }
 
-
+void olsrTsTask(void *ptr) {
+  idVelocityX = logGetVarId("stateEstimate", "vx");
+  idVelocityY = logGetVarId("stateEstimate", "vy");
+  idVelocityZ = logGetVarId("stateEstimate", "vz");
+  DEBUG_PRINT_OLSR_TS("TS TASK START\n");
+  while (true) {
+    xSemaphoreTake(olsrAllSetLock, portMAX_DELAY);
+    DEBUG_PRINT_OLSR_TS("Timestamp send\n");
+    olsrSendTimestamp();
+    xSemaphoreGive(olsrAllSetLock);
+    DEBUG_PRINT_OLSR_TS("Timestamp send end\n");
+    vTaskDelay(M2T(OLSR_TS_INTERVAL_MAX));
+  }
+}
 // void olsrSendTask(void *ptr)
 // {
 //   packet_t txPacket = {0};
@@ -1392,3 +1414,4 @@ void olsrRecvTask(void *ptr){
         vTaskDelay(50);
     }
 }
+

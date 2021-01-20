@@ -12,7 +12,7 @@ void olsrHelloTask(void *ptr);
 void olsrSendTask(void *ptr);
 void olsrRecvTask(void *ptr);
 void olsrTcTask(void *ptr);
-void olsr_ts_task(void *ptr);
+void olsrTsTask(void *ptr);
 void olsrDeviceInit(dwDevice_t *dev);
 void olsrRxCallback(dwDevice_t *dev);
 void olsrDupTupleTimerExpireTask(void *ptr);
@@ -21,5 +21,5 @@ void olsrNbTwoHopTupleTimerExpireTask(void *ptr);
 void olsrMprSelectorTupleTimerExpireTask(void *ptr);
 void olsrTopologyTupleTimerExpireTask(void *ptr);
 void olsrSendData(olsrAddr_t sourceAddr,AdHocPort sourcePort,olsrAddr_t destAddr, AdHocPort destPort,uint16_t portSeq, uint8_t data[],uint8_t length);
-
+void olsrSendTimestamp();
 #endif //__OLSR_ALGO_H__

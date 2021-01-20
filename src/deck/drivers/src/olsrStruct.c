@@ -1076,10 +1076,6 @@ static setIndex_t olsrRangingSetMalloc(olsrRangingSet_t *rangingSet) {
   } else {
     setIndex_t candidate = rangingSet->freeQueueEntry;
     rangingSet->freeQueueEntry = rangingSet->setData[candidate].next;
-    //insert to full queue
-    setIndex_t tmp = rangingSet->fullQueueEntry;
-    rangingSet->fullQueueEntry = candidate;
-    rangingSet->setData[candidate].next = tmp;
     return candidate;
   }
 }
@@ -1110,21 +1106,37 @@ static bool olsrRangingSetFree(olsrRangingSet_t *rangingSet, setIndex_t delItem)
 }
 
 bool olsrRangingSetInsert(olsrRangingSet_t *rangingSet, olsrRangingTuple_t *tuple) {
-  setIndex_t candidate = olsrRoutingSetMalloc(rangingSet);
+  setIndex_t candidate = olsrRangingSetMalloc(rangingSet);
   if (candidate != -1) {
     memcpy(&rangingSet->setData[candidate].data, tuple, sizeof(olsrRangingTuple_t));
+    // insertion follows asending order by nextDeliveryTime
+    setIndex_t index = rangingSet->fullQueueEntry;
+    // -1 or candidate -> fullQueueEntry -> .... -> -1
+    if (index == -1 || tuple->m_nextDeliveryTime <= rangingSet->setData[index].data.m_nextDeliveryTime) {
+      rangingSet->fullQueueEntry = candidate;
+      rangingSet->setData[candidate].next = index;
+    } else {
+      // fullQueueEntry -> ... -> candidate -> ... -> -1
+      setIndex_t pre = index, cur = index;
+      while (cur != -1 && tuple->m_nextDeliveryTime > rangingSet->setData[cur].data.m_nextDeliveryTime) {
+        pre = cur;
+        cur = rangingSet->setData[cur].next;
+      }
+      rangingSet->setData[pre].next = candidate;
+      rangingSet->setData[candidate].next = cur;
+    }
     return true;
   } else {
     return false;
   }
 }
 
-olsrRangingSetItem_t olsrFindInRangingTable(olsrRangingSet_t *rangingSet, olsrAddr_t addr) {
+setIndex_t olsrFindInRangingTable(olsrRangingSet_t *rangingSet, olsrAddr_t addr) {
   setIndex_t it = rangingSet->fullQueueEntry;
   while (it != -1) {
     olsrRangingSetItem_t rangingNode = rangingSet->setData[it];
     if (rangingNode.data.m_tsAddress == addr) {
-      return rangingNode;
+      break;
     }
     it = rangingNode.next;
   }
@@ -1170,4 +1182,5 @@ void olsrStructInitAll(dwDevice_t *dev)
   olsrDuplicateSetInit(&olsrDuplicateSet);
   olsrMprSelectorSetInit(&olsrMprSelectorSet);
   olsrRoutingSetInit(&olsrRoutingSet);
+  olsrRangingSetInit(&olsrRangingSet);
 }
