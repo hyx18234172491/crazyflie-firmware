@@ -178,7 +178,7 @@ typedef struct
 } olsrTimestampTuple_t;
 
 typedef struct {
-  olsrAddr_t tsAddr;
+  olsrAddr_t m_tsAddress;
   // tick from dw1000
   olsrTimestampTuple_t Rp;
   olsrTimestampTuple_t Tp;
@@ -188,9 +188,9 @@ typedef struct {
   olsrTimestampTuple_t Tf;
   olsrTimestampTuple_t Re;
   // tick from stm32
-  olsrTime_t period;
-  olsrTime_t nextDelivery;
-  olsrTime_t expiration;
+  olsrTime_t m_period;
+  olsrTime_t m_nextDeliveryTime;
+  olsrTime_t m_expiration;
   int16_t distance;
 } olsrRangingTuple_t;
 

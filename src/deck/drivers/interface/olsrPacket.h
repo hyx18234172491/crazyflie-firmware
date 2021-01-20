@@ -178,14 +178,16 @@ typedef struct {
 //time stamp (ts)
 
 typedef struct {
-  olsrMessageType_t m_messageType;
-  uint8_t dwTime_high8;
-  uint16_t m_messageSize;
-  olsrAddr_t m_sourceAddr; // uint16_t
-  uint16_t m_messageSeq;
-  uint32_t dwTime_low32;
-  uint16_t seq4TsSend;
-  short velocity; // in cm
+  olsrMessageType_t m_messageType; // 1 byte
+  uint16_t m_vTime; // 2 byte
+  uint16_t m_messageSize; // 2 byte
+  olsrAddr_t m_originatorAddress; // 2 byte
+  uint16_t m_tsSeqence; // 2 byte
+  short m_velocity; // 2 byte
+  uint8_t m_reserved; // 1 byte
+  uint8_t m_timeToLive; // 1 byte
+  uint8_t m_hopCount; // 1 byte
+  uint16_t m_messageSeq; // 2 byte
 } __attribute__((packed)) olsrTsMessageHeader_t; // 16 byte
 
 typedef struct {

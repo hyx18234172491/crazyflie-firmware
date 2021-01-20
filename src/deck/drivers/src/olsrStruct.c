@@ -1123,7 +1123,7 @@ olsrRangingSetItem_t olsrFindInRangingTable(olsrRangingSet_t *rangingSet, olsrAd
   setIndex_t it = rangingSet->fullQueueEntry;
   while (it != -1) {
     olsrRangingSetItem_t rangingNode = rangingSet->setData[it];
-    if (rangingNode.data.tsAddr == addr) {
+    if (rangingNode.data.m_tsAddress == addr) {
       return rangingNode;
     }
     it = rangingNode.next;
