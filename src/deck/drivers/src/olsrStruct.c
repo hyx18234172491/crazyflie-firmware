@@ -1109,7 +1109,7 @@ bool olsrRangingSetInsert(olsrRangingSet_t *rangingSet, olsrRangingTuple_t *tupl
   setIndex_t candidate = olsrRangingSetMalloc(rangingSet);
   if (candidate != -1) {
     memcpy(&rangingSet->setData[candidate].data, tuple, sizeof(olsrRangingTuple_t));
-    // insertion follows asending order by nextDeliveryTime
+    // insertion follows ascending order by nextDeliveryTime
     setIndex_t index = rangingSet->fullQueueEntry;
     // -1 or candidate -> fullQueueEntry -> .... -> -1
     if (index == -1 || tuple->m_nextDeliveryTime <= rangingSet->setData[index].data.m_nextDeliveryTime) {

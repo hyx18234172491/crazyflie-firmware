@@ -178,7 +178,7 @@ typedef struct
 } olsrTimestampTuple_t;
 
 typedef struct {
-  olsrAddr_t m_tsAddress;
+  olsrAddr_t m_tsAddress; // neighbor address
   // tick from dw1000
   olsrTimestampTuple_t Rp;
   olsrTimestampTuple_t Tp;

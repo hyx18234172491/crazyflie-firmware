@@ -178,24 +178,16 @@ typedef struct {
 //time stamp (ts)
 
 typedef struct {
-  olsrMessageType_t m_messageType; // 1 byte
-  uint16_t m_vTime; // 2 byte
-  uint16_t m_messageSize; // 2 byte
-  olsrAddr_t m_originatorAddress; // 2 byte
-  uint16_t m_tsSeqence; // 2 byte
-  short m_velocity; // 2 byte
-  uint8_t m_reserved; // 1 byte
-  uint8_t m_timeToLive; // 1 byte
-  uint8_t m_hopCount; // 1 byte
-  uint16_t m_messageSeq; // 2 byte
-} __attribute__((packed)) olsrTsMessageHeader_t; // 16 byte
+  olsrAddr_t m_senderAddr;
+  uint16_t m_tsSeqNumber;
+  short m_velocity;
+} __attribute__((packed)) olsrTsMessageHeader_t;
 
 typedef struct {
-  uint16_t tsAddr;
-  uint16_t sequenceNumber;
-  uint32_t dwtime_low32;
-  uint8_t dwtime_high8;
-} __attribute__((packed)) olsrTimestampMessageUnit_t; // RxM
+  olsrAddr_t sourceAddr; // if A -> Y and A receive the message sourceAddr == Addr of A
+  olsrTimestampTuple_t rxTs; // receive time and sequence number
+  olsrTimestampTuple_t Tr // Tr
+} __attribute__((packed)) olsrTsMessageUnit_t; // RxM
 
 typedef struct {
   olsrTsMessageHeader_t m_tsHeader;
