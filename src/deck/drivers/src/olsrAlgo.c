@@ -29,6 +29,7 @@
 #define OLSR_MS_CLEAR_INTERVAL 4000
 
 #define OLSR_TOP_CLEAR_INTERVAL 3000
+#define ANTENNA_OFFSET 154.0   // In meter
 
 /// Unspecified link type.
 #define OLSR_UNSPEC_LINK        0
@@ -61,10 +62,10 @@ static uint16_t idVelocityX;
 static uint16_t idVelocityY;
 static uint16_t idVelocityZ;
 static float velocity;
-static dwTime_t g_olsrTsTransTime = 0;
-static dwTime_t g_olsrTsReceiveTime = 0;
+static dwTime_t g_olsrTsLastTransTime = {.full = 0};
+static dwTime_t g_olsrTsReceiveTime = {.full = 0};
 // static bool m_linkTupleTimerFirstTime  = true;
-
+const int antennaDelay = (ANTENNA_OFFSET * 499.2e6 * 128) / 299792458.0; // In radio tick
 //TODO define packet and message struct once, save space
 //debugging, to be deleted
 //TODO delete testDataLength2send
@@ -1108,8 +1109,9 @@ void olsrSendData(olsrAddr_t sourceAddr,AdHocPort sourcePort,\
   xQueueSend(g_olsrSendQueue,&msg,portMAX_DELAY);
 }
 
-void olsrSendTimestamp() {
+olsrTime_t olsrSendTimestamp() {
   DEBUG_PRINT_OLSR_TS("--olsrSendTimestamp--\n");
+  olsrTime_t nextSendTime = xTaskGetTickCount() + M2T(OLSR_TS_INTERVAL_MAX) + OLSR_TS_INTERVAL_MIN;
   olsrMessage_t msg;
   msg.m_messageHeader.m_messageType = TS_MESSAGE;
   msg.m_messageHeader.m_vTime = OLSR_TOP_HOLD_TIME;
@@ -1126,36 +1128,58 @@ void olsrSendTimestamp() {
   velocity = sqrt(pow(velocityX, 2) + pow(velocityY, 2) + pow(velocityZ, 2));
   tsMsg.m_tsHeader.m_velocity = (short) (velocity * 100); //in cm
   tsMsg.m_tsHeader.m_senderAddr = myAddress;
-  tsMsg.m_tsHeader.lastTransTs.m_timestamp = g_olsrTsTransTime;
+  tsMsg.m_tsHeader.lastTransTs.m_timestamp = g_olsrTsLastTransTime;
   tsMsg.m_tsHeader.lastTransTs.m_seqenceNumber = g_staticMessageSeq;
 
   // delete expiration neighbor
-  olsrTime_t now = xTaskGetTickCount();
-  for (
-      setIndex_t index = olsrRangingSet.fullQueueEntry;
-      index != -1 && olsrRangingSet.setData[index].data.m_expiration < now;
-      index = olsrRangingSet.fullQueueEntry) {
-
-    if (!olsrDelRangingTupleByPos(index)) {
-      DEBUG_PRINT_OLSR_TS("delete expirate neighbor error!\n");
-    }
-
-  }
+//  for (
+//      setIndex_t index = olsrRangingSet.fullQueueEntry;
+//      index != -1 && olsrRangingSet.setData[index].data.m_expiration <= xTaskGetTickCount();
+//      index = olsrRangingSet.fullQueueEntry) {
+//
+//    if (!olsrDelRangingTupleByPos(index)) {
+//      DEBUG_PRINT_OLSR_TS("delete expirate neighbor error!\n");
+//    }
+//
+//  }
+  olsrRangingSetClearExpire(&olsrRangingSet);
 
   setIndex_t unitNumber = olsrRangingSet.size;
   unitNumber = unitNumber > TS_PAYLOAD_MAX_NUM ? TS_PAYLOAD_MAX_NUM : unitNumber;
   unitNumber = unitNumber > OLSR_TS_UNIT_SEND_NUMBER ? OLSR_TS_UNIT_SEND_NUMBER : unitNumber;
+  setIndex_t unitSendNumber = 0;
   for (setIndex_t i = 0, index = olsrRangingSet.fullQueueEntry; i < unitNumber;
-       i++, index = olsrRangingSet.setData[index].next;) {
-    olsrTsMessageUnit_t *unit = tsMsg.m_content[i];
-    unit->sourceAddr = olsrRangingSet.setData[index].data.m_tsAddress;
-    unit->rxTs.m_seqenceNumber = olsrRangingSet.setData[index].data.Re.m_seqenceNumber;
-    unit->rxTs.m_timestamp = olsrRangingSet.setData[index].data.Re.m_timestamp;
+       i++, index = olsrRangingSet.setData[index].next) {
+    olsrRangingTuple_t t = olsrRangingSet.setData[index].data;
+    if (t.m_nextDeliveryTime <= xTaskGetTickCount() + OLSR_TS_INTERVAL_MIN && t.Re.m_timestamp.full) {
+      olsrTsMessageUnit_t *unit = &tsMsg.m_content[i];
+      unit->sourceAddr = t.m_tsAddress;
+      unit->rxTs.m_seqenceNumber = t.Re.m_seqenceNumber;
+      unit->rxTs.m_timestamp = t.Re.m_timestamp;
+      t.Re.m_seqenceNumber = 0;
+      t.Re.m_timestamp.full = 0;
+
+      // UpdateS
+      t.Tf.m_seqenceNumber = g_staticMessageSeq;
+      dwGetSystemTimestamp(dwm, &t.Tf.m_timestamp);
+
+      t.m_nextDeliveryTime = xTaskGetTickCount() + t.m_period;
+
+      if (t.m_nextDeliveryTime < nextSendTime) {
+        nextSendTime = t.m_nextDeliveryTime;
+      }
+      unitSendNumber++;
+    }
   }
+  DEBUG_PRINT_OLSR_TS("have sent %d Timestamp Rx unit\n", unitSendNumber);
 
   memcpy(msg.m_messagePayload, &tsMsg, sizeof(tsMsg));
-  msg.m_messageHeader.m_messageSize += sizeof(tsMsg.m_tsHeader) + unitNumber * sizeof(olsrTsMessageUnit_t);
+  msg.m_messageHeader.m_messageSize += sizeof(tsMsg.m_tsHeader) + unitSendNumber * sizeof(olsrTsMessageUnit_t);
   xQueueSend(g_olsrSendQueue, &msg, portMAX_DELAY);
+
+  olsrSortRangingTable(&olsrRangingSet);
+
+  return nextSendTime;
 }
 
 void olsrNeighborLoss(olsrAddr_t addr[],uint8_t length)
@@ -1311,13 +1335,23 @@ void olsrTsTask(void *ptr) {
   idVelocityY = logGetVarId("stateEstimate", "vy");
   idVelocityZ = logGetVarId("stateEstimate", "vz");
   DEBUG_PRINT_OLSR_TS("TS TASK START\n");
+
   while (true) {
+
     xSemaphoreTake(olsrAllSetLock, portMAX_DELAY);
+
     DEBUG_PRINT_OLSR_TS("Timestamp send\n");
-    olsrSendTimestamp();
+    olsrTime_t nextSendTime = olsrSendTimestamp();
+    olsrTime_t currentTime = xTaskGetTickCount();
+    if (nextSendTime < currentTime + M2T(OLSR_TS_INTERVAL_MIN)) {
+      nextSendTime = currentTime + M2T(OLSR_TS_INTERVAL_MIN);
+    }
+
     xSemaphoreGive(olsrAllSetLock);
+
     DEBUG_PRINT_OLSR_TS("Timestamp send end\n");
-    vTaskDelay(M2T(OLSR_TS_INTERVAL_MAX));
+    vTaskDelay(nextSendTime - currentTime);
+    DEBUG_PRINT_OLSR_TS("TsTaskDelay=%d\n", nextSendTime - currentTime);
   }
 }
 // void olsrSendTask(void *ptr)
@@ -1384,9 +1418,9 @@ void olsrSendTask(void *ptr)
       dwReceivePermanently(dwm, true);
       dwSetData(dwm, (uint8_t *)&txPacket,MAC802154_HEADER_LENGTH+olsrPacket->m_packetHeader.m_packetLength);
       dwStartTransmit(dwm);
-      g_olsrTsTransTime.full = 0;
-      dwGetTransmitTimestamp(dwm, &g_olsrTsTransTime);
-      DEBUG_PRINT_OLSR_SEND("Send time is : %d\n", g_olsrTsTransTime);
+      g_olsrTsLastTransTime.full = 0;
+      dwGetTransmitTimestamp(dwm, &g_olsrTsLastTransTime);
+      DEBUG_PRINT_OLSR_SEND("Send time is : %d\n", g_olsrTsLastTransTime);
       DEBUG_PRINT_OLSR_SEND("PktSend!Len:%d\n",MAC802154_HEADER_LENGTH+olsrPacket->m_packetHeader.m_packetLength);
     }
 }

@@ -1151,6 +1151,22 @@ setIndex_t olsrFindInRangingTable(olsrRangingSet_t *rangingSet, olsrAddr_t addr)
   return it;
 }
 
+bool olsrRangingSetClearExpire(olsrRangingSet_t *ranging_set) {
+  setIndex_t next = -1;
+  bool isChange = false;
+  for (setIndex_t i = olsrRangingSet.fullQueueEntry; i != -1; i = next) {
+    next = ranging_set->setData[i].next;
+    if (ranging_set->setData[i].data.m_expiration >= xTaskGetTickCount()) {
+      olsrDelRangingTupleByPos(i);
+      isChange = true;
+    }
+  }
+  return isChange;
+}
+
+void olsrSortRangingTable(olsrRangingSet_t *rangingSet) {
+  //todo : 实现排序算法
+}
 /*
 ************************CommonFunctions********************
 */

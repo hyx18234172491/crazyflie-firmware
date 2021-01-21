@@ -432,4 +432,8 @@ bool olsrRangingSetInsert(olsrRangingSet_t *rangingSet, olsrRangingTuple_t *tupl
 setIndex_t olsrFindInRangingTable(olsrRangingSet_t *rangingSet, olsrAddr_t addr);
 
 bool olsrDelRangingTupleByPos(setIndex_t pos);
+
+bool olsrRangingSetClearExpire(olsrRangingSet_t *ranging_set);
+
+void olsrSortRangingTable(olsrRangingSet_t *rangingSet);
 #endif //__OLSR_STRUCT_H__
