@@ -18,7 +18,7 @@
 #define OLSR_DUP_HOLD_TIME 10000
 #define OLSR_TS_INTERVAL_MIN 20 //default 20
 #define OLSR_TS_INTERVAL_MAX 500 //default 500
-#define OLSR_TS_SEND_NUMBER 2
+#define OLSR_TS_UNIT_SEND_NUMBER 2
 #define OLSR_ROUTING_SET_HOLD_TIME 10000
 #define OLSR_DUP_CLEAR_INTERVAL 30000
 #define OLSR_LINK_CLEAR_INTERVAL 5000
@@ -1119,27 +1119,43 @@ void olsrSendTimestamp() {
   msg.m_messageHeader.m_timeToLive = 0xff;
   msg.m_messageHeader.m_messageSize = sizeof(olsrMessageHeader_t);
 
-  olsrTsMessage_t ts_message;
+  olsrTsMessage_t tsMsg;
   float velocityX = logGetFloat(idVelocityX);
   float velocityY = logGetFloat(idVelocityY);
   float velocityZ = logGetFloat(idVelocityZ);
   velocity = sqrt(pow(velocityX, 2) + pow(velocityY, 2) + pow(velocityZ, 2));
-  ts_message.m_tsHeader.m_velocity = (short) (velocity * 100); //in cm
-  ts_message.m_tsHeader.m_tsSeqNumber = g_staticMessageSeq;
-  ts_message.m_tsHeader.m_senderAddr = myAddress;
+  tsMsg.m_tsHeader.m_velocity = (short) (velocity * 100); //in cm
+  tsMsg.m_tsHeader.m_senderAddr = myAddress;
+  tsMsg.m_tsHeader.lastTransTs.m_timestamp = g_olsrTsTransTime;
+  tsMsg.m_tsHeader.lastTransTs.m_seqenceNumber = g_staticMessageSeq;
 
-  setIndex_t sendNumber = olsrRangingSet.size;
-  sendNumber = sendNumber > TS_PAYLOAD_MAX_NUM ? TS_PAYLOAD_MAX_NUM : sendNumber;
-  sendNumber = sendNumber > OLSR_TS_SEND_NUMBER ? OLSR_TS_SEND_NUMBER : sendNumber;
+  // delete expiration neighbor
+  olsrTime_t now = xTaskGetTickCount();
+  for (
+      setIndex_t index = olsrRangingSet.fullQueueEntry;
+      index != -1 && olsrRangingSet.setData[index].data.m_expiration < now;
+      index = olsrRangingSet.fullQueueEntry) {
 
-  int unitCount = 0;
-  setIndex_t index = olsrRangingSet.fullQueueEntry;
-  for (setIndex_t i = 0; i < sendNumber; i++) {
-
-    if (0) {
-      unitCount++;
+    if (!olsrDelRangingTupleByPos(index)) {
+      DEBUG_PRINT_OLSR_TS("delete expirate neighbor error!\n");
     }
+
   }
+
+  setIndex_t unitNumber = olsrRangingSet.size;
+  unitNumber = unitNumber > TS_PAYLOAD_MAX_NUM ? TS_PAYLOAD_MAX_NUM : unitNumber;
+  unitNumber = unitNumber > OLSR_TS_UNIT_SEND_NUMBER ? OLSR_TS_UNIT_SEND_NUMBER : unitNumber;
+  for (setIndex_t i = 0, index = olsrRangingSet.fullQueueEntry; i < unitNumber;
+       i++, index = olsrRangingSet.setData[index].next;) {
+    olsrTsMessageUnit_t *unit = tsMsg.m_content[i];
+    unit->sourceAddr = olsrRangingSet.setData[index].data.m_tsAddress;
+    unit->rxTs.m_seqenceNumber = olsrRangingSet.setData[index].data.Re.m_seqenceNumber;
+    unit->rxTs.m_timestamp = olsrRangingSet.setData[index].data.Re.m_timestamp;
+  }
+
+  memcpy(msg.m_messagePayload, &tsMsg, sizeof(tsMsg));
+  msg.m_messageHeader.m_messageSize += sizeof(tsMsg.m_tsHeader) + unitNumber * sizeof(olsrTsMessageUnit_t);
+  xQueueSend(g_olsrSendQueue, &msg, portMAX_DELAY);
 }
 
 void olsrNeighborLoss(olsrAddr_t addr[],uint8_t length)

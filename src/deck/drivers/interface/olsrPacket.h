@@ -179,14 +179,13 @@ typedef struct {
 
 typedef struct {
   olsrAddr_t m_senderAddr;
-  uint16_t m_tsSeqNumber;
+  olsrTimestampTuple_t lastTransTs; // Tr
   short m_velocity;
 } __attribute__((packed)) olsrTsMessageHeader_t;
 
 typedef struct {
-  olsrAddr_t sourceAddr; // if A -> Y and A receive the message sourceAddr == Addr of A
-  olsrTimestampTuple_t rxTs; // receive time and sequence number
-  olsrTimestampTuple_t Tr // Tr
+  olsrAddr_t sourceAddr;
+  olsrTimestampTuple_t rxTs;
 } __attribute__((packed)) olsrTsMessageUnit_t; // RxM
 
 typedef struct {

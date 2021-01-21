@@ -178,7 +178,7 @@ typedef struct
 } olsrTimestampTuple_t;
 
 typedef struct {
-  dwTime_t lastSendTime;
+//  dwTime_t lastSendTime;
   olsrAddr_t m_tsAddress; // neighbor address
   // tick from dw1000
   olsrTimestampTuple_t Rp;
@@ -431,4 +431,5 @@ bool olsrRangingSetInsert(olsrRangingSet_t *rangingSet, olsrRangingTuple_t *tupl
 
 setIndex_t olsrFindInRangingTable(olsrRangingSet_t *rangingSet, olsrAddr_t addr);
 
+bool olsrDelRangingTupleByPos(setIndex_t pos);
 #endif //__OLSR_STRUCT_H__

@@ -1135,6 +1135,10 @@ bool olsrRangingSetInsert(olsrRangingSet_t *rangingSet, olsrRangingTuple_t *tupl
   }
 }
 
+bool olsrDelRangingTupleByPos(setIndex_t pos) {
+  return olsrRangingSetFree(&olsrRangingSet, pos);
+}
+
 setIndex_t olsrFindInRangingTable(olsrRangingSet_t *rangingSet, olsrAddr_t addr) {
   setIndex_t it = rangingSet->fullQueueEntry;
   while (it != -1) {
