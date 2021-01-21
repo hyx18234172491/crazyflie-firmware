@@ -18,6 +18,7 @@
 #define OLSR_DUP_HOLD_TIME 10000
 #define OLSR_TS_INTERVAL_MIN 20 //default 20
 #define OLSR_TS_INTERVAL_MAX 500 //default 500
+#define OLSR_TS_SEND_NUMBER 2
 #define OLSR_ROUTING_SET_HOLD_TIME 10000
 #define OLSR_DUP_CLEAR_INTERVAL 30000
 #define OLSR_LINK_CLEAR_INTERVAL 5000
@@ -60,6 +61,8 @@ static uint16_t idVelocityX;
 static uint16_t idVelocityY;
 static uint16_t idVelocityZ;
 static float velocity;
+static dwTime_t g_olsrTsTransTime = 0;
+static dwTime_t g_olsrTsReceiveTime = 0;
 // static bool m_linkTupleTimerFirstTime  = true;
 
 //TODO define packet and message struct once, save space
@@ -1107,6 +1110,36 @@ void olsrSendData(olsrAddr_t sourceAddr,AdHocPort sourcePort,\
 
 void olsrSendTimestamp() {
   DEBUG_PRINT_OLSR_TS("--olsrSendTimestamp--\n");
+  olsrMessage_t msg;
+  msg.m_messageHeader.m_messageType = TS_MESSAGE;
+  msg.m_messageHeader.m_vTime = OLSR_TOP_HOLD_TIME;
+  msg.m_messageHeader.m_messageSeq = getSeqNumber();
+  msg.m_messageHeader.m_originatorAddress = myAddress;
+  msg.m_messageHeader.m_hopCount = 0;
+  msg.m_messageHeader.m_timeToLive = 0xff;
+  msg.m_messageHeader.m_messageSize = sizeof(olsrMessageHeader_t);
+
+  olsrTsMessage_t ts_message;
+  float velocityX = logGetFloat(idVelocityX);
+  float velocityY = logGetFloat(idVelocityY);
+  float velocityZ = logGetFloat(idVelocityZ);
+  velocity = sqrt(pow(velocityX, 2) + pow(velocityY, 2) + pow(velocityZ, 2));
+  ts_message.m_tsHeader.m_velocity = (short) (velocity * 100); //in cm
+  ts_message.m_tsHeader.m_tsSeqNumber = g_staticMessageSeq;
+  ts_message.m_tsHeader.m_senderAddr = myAddress;
+
+  setIndex_t sendNumber = olsrRangingSet.size;
+  sendNumber = sendNumber > TS_PAYLOAD_MAX_NUM ? TS_PAYLOAD_MAX_NUM : sendNumber;
+  sendNumber = sendNumber > OLSR_TS_SEND_NUMBER ? OLSR_TS_SEND_NUMBER : sendNumber;
+
+  int unitCount = 0;
+  setIndex_t index = olsrRangingSet.fullQueueEntry;
+  for (setIndex_t i = 0; i < sendNumber; i++) {
+
+    if (0) {
+      unitCount++;
+    }
+  }
 }
 
 void olsrNeighborLoss(olsrAddr_t addr[],uint8_t length)
@@ -1335,6 +1368,9 @@ void olsrSendTask(void *ptr)
       dwReceivePermanently(dwm, true);
       dwSetData(dwm, (uint8_t *)&txPacket,MAC802154_HEADER_LENGTH+olsrPacket->m_packetHeader.m_packetLength);
       dwStartTransmit(dwm);
+      g_olsrTsTransTime.full = 0;
+      dwGetTransmitTimestamp(dwm, &g_olsrTsTransTime);
+      DEBUG_PRINT_OLSR_SEND("Send time is : %d\n", g_olsrTsTransTime);
       DEBUG_PRINT_OLSR_SEND("PktSend!Len:%d\n",MAC802154_HEADER_LENGTH+olsrPacket->m_packetHeader.m_packetLength);
     }
 }
@@ -1408,6 +1444,9 @@ void olsrRecvTask(void *ptr){
         // DEBUG_PRINT_OLSR_RECEIVE("to take a packet from q\n");
         if (xQueueReceive(g_olsrRecvQueue,&recvPacket,0)==pdTRUE)
           {
+            g_olsrTsReceiveTime.full = 0;
+            dwGetReceiveTimestamp((dwDevice_t*) ptr, &g_olsrTsReceiveTime);
+            DEBUG_PRINT_OLSR_RECEIVE("Receive time is: %d\n", g_olsrTsReceiveTime);
             // DEBUG_PRINT_OLSR_RECEIVE("got a packet from q\n");
             olsrPacketDispatch(&recvPacket);
           }

@@ -1067,6 +1067,7 @@ void olsrRangingSetInit(olsrRangingSet_t *rangingSet) {
   rangingSet->setData[i].next = -1;
   rangingSet->freeQueueEntry = 0;
   rangingSet->fullQueueEntry = -1;
+  rangingSet->size = 0;
 }
 
 static setIndex_t olsrRangingSetMalloc(olsrRangingSet_t *rangingSet) {
@@ -1076,6 +1077,7 @@ static setIndex_t olsrRangingSetMalloc(olsrRangingSet_t *rangingSet) {
   } else {
     setIndex_t candidate = rangingSet->freeQueueEntry;
     rangingSet->freeQueueEntry = rangingSet->setData[candidate].next;
+    rangingSet->size++;
     return candidate;
   }
 }
@@ -1089,6 +1091,7 @@ static bool olsrRangingSetFree(olsrRangingSet_t *rangingSet, setIndex_t delItem)
     //insert to empty queue
     rangingSet->setData[delItem].next = rangingSet->freeQueueEntry;
     rangingSet->freeQueueEntry = delItem;
+    rangingSet->size--;
     return true;
   } else {
     while (pre != -1) {
@@ -1097,6 +1100,7 @@ static bool olsrRangingSetFree(olsrRangingSet_t *rangingSet, setIndex_t delItem)
         //insert to empty queue
         rangingSet->setData[delItem].next = rangingSet->freeQueueEntry;
         rangingSet->freeQueueEntry = delItem;
+        rangingSet->size--;
         return true;
       }
       pre = rangingSet->setData[pre].next;

@@ -178,6 +178,7 @@ typedef struct
 } olsrTimestampTuple_t;
 
 typedef struct {
+  dwTime_t lastSendTime;
   olsrAddr_t m_tsAddress; // neighbor address
   // tick from dw1000
   olsrTimestampTuple_t Rp;
@@ -291,6 +292,7 @@ typedef struct
   olsrRangingSetItem_t setData[RANGING_SET_SIZE];
   setIndex_t freeQueueEntry;
   setIndex_t fullQueueEntry;
+  setIndex_t size;
 } olsrRangingSet_t;
 
 

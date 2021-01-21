@@ -21,5 +21,4 @@ void olsrNbTwoHopTupleTimerExpireTask(void *ptr);
 void olsrMprSelectorTupleTimerExpireTask(void *ptr);
 void olsrTopologyTupleTimerExpireTask(void *ptr);
 void olsrSendData(olsrAddr_t sourceAddr,AdHocPort sourcePort,olsrAddr_t destAddr, AdHocPort destPort,uint16_t portSeq, uint8_t data[],uint8_t length);
-void olsrSendTimestamp();
 #endif //__OLSR_ALGO_H__
