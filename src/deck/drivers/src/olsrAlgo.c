@@ -713,11 +713,10 @@ void olsrProcessData(olsrMessage_t* msg)
 }
 
 uint16_t olsrTsComputeDistance(olsrRangingTuple_t *tuple) {
-  uint64_t tround1, treply1, tround2, treply2, diff1, diff2, tprop_ctn;
-  uint64_t ad = (tuple.Rr.m_timestamp.full - tuple.Tp.m_timestamp.full + MAX_TIMESTAMP) % MAX_TIMESTAMP;
-  uint64_t ap = (tuple.Tf.m_timestamp.full - tuple.Rr.m_timestamp.full + MAX_TIMESTAMP) % MAX_TIMESTAMP;
-  uint64_t bp = (tuple.Tr.m_timestamp.full - tuple.Rp.m_timestamp.full + MAX_TIMESTAMP) % MAX_TIMESTAMP;
-  uint64_t bd = (tuple.Rf.m_timestamp.full - tuple.Tr.m_timestamp.full + MAX_TIMESTAMP) % MAX_TIMESTAMP;
+  uint64_t ad = (tuple->Rr.m_timestamp.full - tuple->Tp.m_timestamp.full + MAX_TIMESTAMP) % MAX_TIMESTAMP;
+  uint64_t ap = (tuple->Tf.m_timestamp.full - tuple->Rr.m_timestamp.full + MAX_TIMESTAMP) % MAX_TIMESTAMP;
+  uint64_t bp = (tuple->Tr.m_timestamp.full - tuple->Rp.m_timestamp.full + MAX_TIMESTAMP) % MAX_TIMESTAMP;
+  uint64_t bd = (tuple->Rf.m_timestamp.full - tuple->Tr.m_timestamp.full + MAX_TIMESTAMP) % MAX_TIMESTAMP;
   uint64_t TOF = (ad * bd - ap * bp) / (ad + bd + ap + bp);
   DEBUG_PRINT_OLSR_TS("TOF is : %llu\n", TOF);
   // todo : Update period
@@ -743,13 +742,13 @@ uint16_t olsrTsComputeDistance(olsrRangingTuple_t *tuple) {
 
 void olsrProcessTs(olsrMessage_t *msg) {
   DEBUG_PRINT_OLSR_TS("--olsrProcessTimestamp--\n");
-  olsrTsMessage_t tsMsg = msg->m_messagePayload;
-  setIndex_t unitNumber = (msg->m_messageHeader.m_messageSize - sizeof(msg->m_messageHeader) - sizeof(tsMsg.m_tsHeader))
+  olsrTsMessage_t *tsMsg = (olsrTsMessage_t *) msg->m_messagePayload;
+  setIndex_t unitNumber = (msg->m_messageHeader.m_messageSize - sizeof(msg->m_messageHeader) - sizeof(tsMsg->m_tsHeader))
       / sizeof(olsrTsMessageUnit_t);
   // todo : check (m_originatorAddress equals to m_senderAddr ? 'remove m_senderAddr struct as redundancy' : 'keep it');
   //olsrAddr_t neighborAddr = msg->m_messageHeader.m_originatorAddress;
-  olsrAddr_t neighborAddr = tsMsg.m_tsHeader.m_senderAddr;
-  olsrAddr_t neighborIndex = olsrFindInRangingTable(olsrRangingSet, neighborAddr);
+  olsrAddr_t neighborAddr = tsMsg->m_tsHeader.m_senderAddr;
+  olsrAddr_t neighborIndex = olsrFindInRangingTable(&olsrRangingSet, neighborAddr);
   if (neighborIndex == -1) {
     DEBUG_PRINT_OLSR_TS("new neighbor found, neighbor address :%hu\n", neighborAddr);
 
@@ -764,7 +763,7 @@ void olsrProcessTs(olsrMessage_t *msg) {
     tuple.Rf.m_timestamp.full = 0;
     tuple.Rf.m_seqenceNumber = 0;
 
-    neighborIndex = olsrRangingSetInsert(olsrRangingSet, &tuple);
+    neighborIndex = olsrRangingSetInsert(&olsrRangingSet, &tuple);
   }
   if (neighborIndex == -1) {
     DEBUG_PRINT_OLSR_TS("now neighbor tuple malloc failed!\n");
@@ -775,12 +774,12 @@ void olsrProcessTs(olsrMessage_t *msg) {
 
   olsrRangingTuple_t neighborTuple = olsrRangingSet.setData[neighborIndex].data;
   for (int i = 0; i < unitNumber; i++) {
-    olsrTsMessageUnit_t unit = tsMsg.m_content[i];
+    olsrTsMessageUnit_t unit = tsMsg->m_content[i];
     if (unit.sourceAddr == myAddress) {
       DEBUG_PRINT_OLSR_TS("receive a Rx TsMessageUnit from neighbor %hu\n", neighborAddr);
       // UpdateS
-      neighborTuple.Tr.m_seqenceNumber = tsMsg.m_tsHeader.lastTransTs.m_seqenceNumber;
-      neighborTuple.Tr.m_timestamp = tsMsg.m_tsHeader.lastTransTs.m_timestamp;
+      neighborTuple.Tr.m_seqenceNumber = tsMsg->m_tsHeader.lastTransTs.m_seqenceNumber;
+      neighborTuple.Tr.m_timestamp = tsMsg->m_tsHeader.lastTransTs.m_timestamp;
       neighborTuple.Rf.m_seqenceNumber = unit.rxTs.m_seqenceNumber;
       neighborTuple.Rf.m_timestamp = unit.rxTs.m_timestamp;
       neighborTuple.Re.m_seqenceNumber = msg->m_messageHeader.m_messageSeq;
