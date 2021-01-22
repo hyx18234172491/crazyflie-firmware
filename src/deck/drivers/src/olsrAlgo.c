@@ -1612,8 +1612,8 @@ void olsrRecvTask(void *ptr){
         if (xQueueReceive(g_olsrRecvQueue,&recvPacket,0)==pdTRUE)
           {
             g_olsrTsReceiveTime.full = 0;
-            dwGetReceiveTimestamp((dwDevice_t*) ptr, &g_olsrTsReceiveTime);
-            DEBUG_PRINT_OLSR_RECEIVE("Receive time is: %d\n", g_olsrTsReceiveTime);
+            dwGetSystemTimestamp((dwDevice_t*) ptr, &g_olsrTsReceiveTime);
+            DEBUG_PRINT_OLSR_RECEIVE("Receive time is: %llu\n", g_olsrTsReceiveTime);
             // DEBUG_PRINT_OLSR_RECEIVE("got a packet from q\n");
             olsrPacketDispatch(&recvPacket);
           }
