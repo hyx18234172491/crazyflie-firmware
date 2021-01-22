@@ -1165,7 +1165,31 @@ bool olsrRangingSetClearExpire(olsrRangingSet_t *ranging_set) {
 }
 
 void olsrSortRangingTable(olsrRangingSet_t *rangingSet) {
-  //todo : 实现排序算法
+  if (rangingSet->fullQueueEntry == -1) {
+    return;
+  }
+  setIndex_t newHead = rangingSet->fullQueueEntry;
+  setIndex_t cur = rangingSet->setData[newHead].next;
+  rangingSet->setData[newHead].next = -1;
+  setIndex_t next = -1;
+  while (cur != -1) {
+    next = rangingSet->setData[cur].next;
+    if (rangingSet->setData[cur].data.m_nextDeliveryTime <= rangingSet->setData[newHead].data.m_nextDeliveryTime) {
+      rangingSet->setData[cur].next = newHead;
+      newHead = cur;
+    } else {
+      setIndex_t start = rangingSet->setData[newHead].next;
+      setIndex_t pre = newHead;
+      while (start != -1 && rangingSet->setData[cur].data.m_nextDeliveryTime > rangingSet->setData[start].data.m_nextDeliveryTime) {
+        pre = start;
+        start = rangingSet->setData[start].next;
+      }
+      rangingSet->setData[cur].next = start;
+      rangingSet->setData[pre].next = cur;
+    }
+    cur = next;
+  }
+  rangingSet->fullQueueEntry = newHead;
 }
 /*
 ************************CommonFunctions********************
