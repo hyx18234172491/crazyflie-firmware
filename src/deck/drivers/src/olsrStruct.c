@@ -1109,7 +1109,7 @@ static bool olsrRangingSetFree(olsrRangingSet_t *rangingSet, setIndex_t delItem)
   return false;
 }
 
-bool olsrRangingSetInsert(olsrRangingSet_t *rangingSet, olsrRangingTuple_t *tuple) {
+setIndex_t olsrRangingSetInsert(olsrRangingSet_t *rangingSet, olsrRangingTuple_t *tuple) {
   setIndex_t candidate = olsrRangingSetMalloc(rangingSet);
   if (candidate != -1) {
     memcpy(&rangingSet->setData[candidate].data, tuple, sizeof(olsrRangingTuple_t));
@@ -1129,9 +1129,9 @@ bool olsrRangingSetInsert(olsrRangingSet_t *rangingSet, olsrRangingTuple_t *tupl
       rangingSet->setData[pre].next = candidate;
       rangingSet->setData[candidate].next = cur;
     }
-    return true;
+    return candidate;
   } else {
-    return false;
+    return -1;
   }
 }
 

@@ -192,7 +192,7 @@ typedef struct {
   olsrTime_t m_period;
   olsrTime_t m_nextDeliveryTime;
   olsrTime_t m_expiration;
-  int16_t distance;
+  uint16_t distance;
 } olsrRangingTuple_t;
 
 typedef struct
@@ -427,7 +427,7 @@ olsrAddr_t olsrFindInRoutingTable(olsrRoutingSet_t *routingSet,olsrAddr_t destAd
 /*ranging table*/
 void olsrRangingSetInit(olsrRangingSet_t *rangingSet);
 
-bool olsrRangingSetInsert(olsrRangingSet_t *rangingSet, olsrRangingTuple_t *tuple);
+setIndex_t olsrRangingSetInsert(olsrRangingSet_t *rangingSet, olsrRangingTuple_t *tuple);
 
 setIndex_t olsrFindInRangingTable(olsrRangingSet_t *rangingSet, olsrAddr_t addr);
 

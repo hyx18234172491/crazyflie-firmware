@@ -184,7 +184,7 @@ typedef struct {
 } __attribute__((packed)) olsrTsMessageHeader_t;
 
 typedef struct {
-  olsrAddr_t sourceAddr;
+  olsrAddr_t sourceAddr; //neighborAddress
   olsrTimestampTuple_t rxTs;
 } __attribute__((packed)) olsrTsMessageUnit_t; // RxM
 
