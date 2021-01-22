@@ -140,10 +140,6 @@ void olsrRxCallback(dwDevice_t *dev){
 
 //packet process
 
-void olsr_ts_process(const olsrMessage_t* ts_msg){
-
-}
-
 static void incrementAnsn()
 {
   xSemaphoreTake(olsrAnsnLock,portMAX_DELAY);
@@ -713,6 +709,10 @@ void olsrProcessData(olsrMessage_t* msg)
       xQueueSend(g_olsrSendQueue,msg,portMAX_DELAY);
     }
 }
+
+void olsrProcessTs(olsrMessage_t* msg) {
+
+}
 void forwardDefault(olsrMessage_t* olsrMessage, setIndex_t duplicateIndex)
 {
   olsrTime_t now = xTaskGetTickCount();
@@ -914,7 +914,7 @@ void olsrPacketDispatch(const packet_t* rxPacket)
                 break;
             case TS_MESSAGE:
                 DEBUG_PRINT_OLSR_RECEIVE("TS_MESSAGE\n");
-                //olsr_ts_process(olsr_message);
+                olsrProcessTs((olsrMessage_t*)message);
                 break;
             default:
                 DEBUG_PRINT_OLSR_RECEIVE("WRONG MESSAGE\n");
