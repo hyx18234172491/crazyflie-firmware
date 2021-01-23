@@ -1005,9 +1005,10 @@ void olsrPacketDispatch(const packet_t* rxPacket)
     {
       olsrMessageHeader_t* messageHeader = (olsrMessageHeader_t*)message;
       olsrMessageType_t type = messageHeader->m_messageType;
-      DEBUG_PRINT_OLSR_RECEIVE("message type : %d", TS_MESSAGE);
+      DEBUG_PRINT_OLSR_RECEIVE("message type : %d\n", TS_MESSAGE);
       if(messageHeader->m_originatorAddress == myAddress ||messageHeader->m_timeToLive ==0)
         {
+          DEBUG_PRINT_OLSR_RECEIVE("message address is : %u, ttl is : %d\n", messageHeader->m_originatorAddress, messageHeader->m_timeToLive);
           index += messageHeader->m_messageSize;
           message += messageHeader->m_messageSize;
           continue;
