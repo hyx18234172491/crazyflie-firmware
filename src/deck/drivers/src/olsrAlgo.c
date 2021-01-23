@@ -992,7 +992,7 @@ void olsrRoutingTableComputation()
 }
 void olsrPacketDispatch(const packet_t* rxPacket)
 {
-  DEBUG_PRINT_OLSR_HELLO("PACKET_DISPATCH\n");  
+  DEBUG_PRINT_OLSR_RECEIVE("PACKET_DISPATCH\n");
   //need to add a condition whether recvive a packet from self
   olsrPacket_t* olsrPacket = (olsrPacket_t* )rxPacket->payload;
   int lengthOfPacket = olsrPacket->m_packetHeader.m_packetLength;
@@ -1005,6 +1005,7 @@ void olsrPacketDispatch(const packet_t* rxPacket)
     {
       olsrMessageHeader_t* messageHeader = (olsrMessageHeader_t*)message;
       olsrMessageType_t type = messageHeader->m_messageType;
+      DEBUG_PRINT_OLSR_RECEIVE("message type : %d", TS_MESSAGE);
       if(messageHeader->m_originatorAddress == myAddress ||messageHeader->m_timeToLive ==0)
         {
           index += messageHeader->m_messageSize;
@@ -1016,7 +1017,7 @@ void olsrPacketDispatch(const packet_t* rxPacket)
                                                      messageHeader->m_messageSeq);
       if(duplicated == -1)
         {
-          switch (type) 
+          switch (type)
             {
             case HELLO_MESSAGE:
                 DEBUG_PRINT_OLSR_HELLO("recv a hello\n");
@@ -1256,6 +1257,7 @@ olsrTime_t olsrSendTimestamp() {
   unitNumber = unitNumber > TS_PAYLOAD_MAX_NUM ? TS_PAYLOAD_MAX_NUM : unitNumber;
   unitNumber = unitNumber > OLSR_TS_UNIT_SEND_NUMBER ? OLSR_TS_UNIT_SEND_NUMBER : unitNumber;
   setIndex_t unitSendNumber = 0;
+  DEBUG_PRINT_OLSR_TS("start to send %hd rx unit\n", unitSendNumber);
   for (setIndex_t i = 0, index = olsrRangingSet.fullQueueEntry; i < unitNumber;
        i++, index = olsrRangingSet.setData[index].next) {
     olsrRangingTuple_t t = olsrRangingSet.setData[index].data;
@@ -1279,14 +1281,14 @@ olsrTime_t olsrSendTimestamp() {
       unitSendNumber++;
     }
   }
-  DEBUG_PRINT_OLSR_TS("have sent %d Timestamp Rx unit\n", unitSendNumber);
-
+  DEBUG_PRINT_OLSR_TS("have sent %dd Timestamp Rx unit\n", unitSendNumber);
   memcpy(msg.m_messagePayload, &tsMsg, sizeof(tsMsg));
   msg.m_messageHeader.m_messageSize += sizeof(tsMsg.m_tsHeader) + unitSendNumber * sizeof(olsrTsMessageUnit_t);
   xQueueSend(g_olsrSendQueue, &msg, portMAX_DELAY);
-
+  DEBUG_PRINT_OLSR_TS("start sort rangingTable\n", unitSendNumber);
   olsrSortRangingTable(&olsrRangingSet);
-
+  DEBUG_PRINT_OLSR_TS("end sort rangingTable\n", unitSendNumber);
+  DEBUG_PRINT_OLSR_TS("current neighbor size : %d \n", olsrRangingSet.size);
   return nextSendTime;
 }
 
