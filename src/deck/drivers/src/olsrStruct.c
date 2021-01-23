@@ -1077,7 +1077,8 @@ static setIndex_t olsrRangingSetMalloc(olsrRangingSet_t *rangingSet) {
   } else {
     setIndex_t candidate = rangingSet->freeQueueEntry;
     rangingSet->freeQueueEntry = rangingSet->setData[candidate].next;
-    rangingSet->size++;
+    // todo : fix 0 neighbor error
+    rangingSet->size = rangingSet->size + 1;
     return candidate;
   }
 }
