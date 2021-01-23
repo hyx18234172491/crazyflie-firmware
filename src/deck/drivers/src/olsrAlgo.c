@@ -9,6 +9,7 @@
 #include "olsrStruct.h"
 #include "olsrPacket.h"
 #include "log.h"
+#include "math.h"
 //const
 
 #define OLSR_HELLO_INTERVAL 2000
@@ -1230,11 +1231,11 @@ void olsrSendData(olsrAddr_t sourceAddr,AdHocPort sourcePort,\
 }
 
 olsrTime_t olsrSendTimestamp() {
-  DEBUG_PRINT_OLSR_TS("--olsrSendTimestamp--\n");
-  olsrTime_t nextSendTime = xTaskGetTickCount() + M2T(OLSR_TS_INTERVAL_MAX) + OLSR_TS_INTERVAL_MIN;
+  DEBUG_PRINT_OLSR_TS("--olsrSendTimestamp--,myaddress is : %d \n", myAddress);
+  olsrTime_t nextSendTime = xTaskGetTickCount() + M2T(OLSR_TS_INTERVAL_MAX) + M2T(OLSR_TS_INTERVAL_MIN);
   olsrMessage_t msg;
   msg.m_messageHeader.m_messageType = TS_MESSAGE;
-  msg.m_messageHeader.m_vTime = OLSR_TOP_HOLD_TIME;
+  msg.m_messageHeader.m_vTime = OLSR_RANGING_SET_HOLD_TIME;
   msg.m_messageHeader.m_messageSeq = getSeqNumber();
   msg.m_messageHeader.m_originatorAddress = myAddress;
   msg.m_messageHeader.m_hopCount = 0;
@@ -1258,7 +1259,7 @@ olsrTime_t olsrSendTimestamp() {
   unitNumber = unitNumber > TS_PAYLOAD_MAX_NUM ? TS_PAYLOAD_MAX_NUM : unitNumber;
   unitNumber = unitNumber > OLSR_TS_UNIT_SEND_NUMBER ? OLSR_TS_UNIT_SEND_NUMBER : unitNumber;
   setIndex_t unitSendNumber = 0;
-  DEBUG_PRINT_OLSR_TS("start to send %hd rx unit\n", unitSendNumber);
+  DEBUG_PRINT_OLSR_TS("start to send %d rx unit\n", unitSendNumber);
   for (setIndex_t i = 0, index = olsrRangingSet.fullQueueEntry; i < unitNumber;
        i++, index = olsrRangingSet.setData[index].next) {
     olsrRangingTuple_t t = olsrRangingSet.setData[index].data;
@@ -1282,7 +1283,7 @@ olsrTime_t olsrSendTimestamp() {
       unitSendNumber++;
     }
   }
-  DEBUG_PRINT_OLSR_TS("have sent %dd Timestamp Rx unit\n", unitSendNumber);
+  DEBUG_PRINT_OLSR_TS("have sent %d Timestamp Rx unit\n", unitSendNumber);
   memcpy(msg.m_messagePayload, &tsMsg, sizeof(tsMsg));
   msg.m_messageHeader.m_messageSize += sizeof(tsMsg.m_tsHeader) + unitSendNumber * sizeof(olsrTsMessageUnit_t);
   xQueueSend(g_olsrSendQueue, &msg, portMAX_DELAY);
