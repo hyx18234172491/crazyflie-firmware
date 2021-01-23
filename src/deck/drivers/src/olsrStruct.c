@@ -1071,6 +1071,7 @@ void olsrRangingSetInit(olsrRangingSet_t *rangingSet) {
 }
 
 static setIndex_t olsrRangingSetMalloc(olsrRangingSet_t *rangingSet) {
+  DEBUG_PRINT_OLSR_TS("--olsrRangingSetMalloc--\n");
   if (rangingSet->freeQueueEntry == -1) {
     DEBUG_PRINT_OLSR_SET("Full of sets!!!! can not malloc!!!\n");
     return -1;
@@ -1078,12 +1079,13 @@ static setIndex_t olsrRangingSetMalloc(olsrRangingSet_t *rangingSet) {
     setIndex_t candidate = rangingSet->freeQueueEntry;
     rangingSet->freeQueueEntry = rangingSet->setData[candidate].next;
     // todo : fix 0 neighbor error
-    rangingSet->size = rangingSet->size + 1;
+    rangingSet->size++;
     return candidate;
   }
 }
 
 static bool olsrRangingSetFree(olsrRangingSet_t *rangingSet, setIndex_t delItem) {
+  DEBUG_PRINT_OLSR_TS("--olsrRangingSetFree--\n");
   if (-1 == delItem) return true;
   //del from full queue
   setIndex_t pre = rangingSet->fullQueueEntry;
@@ -1111,6 +1113,7 @@ static bool olsrRangingSetFree(olsrRangingSet_t *rangingSet, setIndex_t delItem)
 }
 
 setIndex_t olsrRangingSetInsert(olsrRangingSet_t *rangingSet, olsrRangingTuple_t *tuple) {
+  DEBUG_PRINT_OLSR_TS("--olsrRangingSetInsert--\n");
   setIndex_t candidate = olsrRangingSetMalloc(rangingSet);
   if (candidate != -1) {
     memcpy(&rangingSet->setData[candidate].data, tuple, sizeof(olsrRangingTuple_t));
@@ -1137,10 +1140,12 @@ setIndex_t olsrRangingSetInsert(olsrRangingSet_t *rangingSet, olsrRangingTuple_t
 }
 
 bool olsrDelRangingTupleByPos(setIndex_t pos) {
+  DEBUG_PRINT_OLSR_TS("--olsrDelRangingTupleByPos--\n");
   return olsrRangingSetFree(&olsrRangingSet, pos);
 }
 
 setIndex_t olsrFindInRangingTable(olsrRangingSet_t *rangingSet, olsrAddr_t addr) {
+  DEBUG_PRINT_OLSR_TS("--olsrFindInRangingTable--\n");
   setIndex_t it = rangingSet->fullQueueEntry;
   while (it != -1) {
     olsrRangingSetItem_t rangingNode = rangingSet->setData[it];

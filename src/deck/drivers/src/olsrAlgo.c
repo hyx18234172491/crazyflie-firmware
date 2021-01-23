@@ -750,9 +750,10 @@ void olsrProcessTs(olsrMessage_t *msg) {
   // todo : check (m_originatorAddress equals to m_senderAddr ? 'remove m_senderAddr struct as redundancy' : 'keep it');
   //olsrAddr_t neighborAddr = msg->m_messageHeader.m_originatorAddress;
   olsrAddr_t neighborAddr = tsMsg->m_tsHeader.m_senderAddr;
-  olsrAddr_t neighborIndex = olsrFindInRangingTable(&olsrRangingSet, neighborAddr);
+  setIndex_t neighborIndex = olsrFindInRangingTable(&olsrRangingSet, neighborAddr);
+  DEBUG_PRINT_OLSR_TS("neighborIndex is %d \n", neighborIndex);
   if (neighborIndex == -1) {
-    DEBUG_PRINT_OLSR_TS("new neighbor found, neighbor address :%hu\n", neighborAddr);
+    DEBUG_PRINT_OLSR_TS("new neighbor found, neighbor address :%u \n", neighborAddr);
 
     olsrTime_t now = xTaskGetTickCount();
     olsrRangingTuple_t tuple;
@@ -766,19 +767,20 @@ void olsrProcessTs(olsrMessage_t *msg) {
     tuple.Rf.m_seqenceNumber = 0;
 
     neighborIndex = olsrRangingSetInsert(&olsrRangingSet, &tuple);
+    if (neighborIndex != -1) {
+      DEBUG_PRINT_OLSR_TS("now neighbor tuple malloc success! now have totle %d neighbor\n", olsrRangingSet.size);
+    } else {
+      DEBUG_PRINT_OLSR_TS("now neighbor tuple malloc failed!\n");
+      return;
+    }
   }
-  if (neighborIndex == -1) {
-    DEBUG_PRINT_OLSR_TS("now neighbor tuple malloc failed!\n");
-    return;
-  } else {
-    DEBUG_PRINT_OLSR_TS("now neighbor tuple malloc success! now have totle %d neighbor\n", olsrRangingSet.size);
-  }
+
 
   olsrRangingTuple_t* neighborTuple = &olsrRangingSet.setData[neighborIndex].data;
   for (int i = 0; i < unitNumber; i++) {
     olsrTsMessageUnit_t unit = tsMsg->m_content[i];
     if (unit.sourceAddr == myAddress) {
-      DEBUG_PRINT_OLSR_TS("receive a Rx TsMessageUnit from neighbor %hu\n", neighborAddr);
+      DEBUG_PRINT_OLSR_TS("receive a Rx TsMessageUnit from neighbor %u\n", neighborAddr);
       // UpdateS
       neighborTuple->Tr.m_seqenceNumber = tsMsg->m_tsHeader.lastTransTs.m_seqenceNumber;
       neighborTuple->Tr.m_timestamp = tsMsg->m_tsHeader.lastTransTs.m_timestamp;
@@ -797,7 +799,9 @@ void olsrProcessTs(olsrMessage_t *msg) {
         neighborTuple->Tf.m_seqenceNumber = 0;
         neighborTuple->Re.m_timestamp.full = 0;
         neighborTuple->Re.m_seqenceNumber = 0;
-      } else if (neighborTuple->Tr.m_seqenceNumber != neighborTuple->Rr.m_seqenceNumber) {
+      } else if (neighborTuple->Tr.m_timestamp.full && neighborTuple->Rr.m_timestamp.full &&
+      neighborTuple->Tr.m_seqenceNumber != neighborTuple->Rr.m_seqenceNumber) {
+
         neighborTuple->Rp.m_timestamp = neighborTuple->Rf.m_timestamp;
         neighborTuple->Rp.m_seqenceNumber = neighborTuple->Rf.m_seqenceNumber;
         neighborTuple->Tp.m_timestamp = neighborTuple->Tf.m_timestamp;
@@ -1035,7 +1039,7 @@ void olsrPacketDispatch(const packet_t* rxPacket)
                 olsrProcessData((olsrMessage_t*)message);
                 break;
             case TS_MESSAGE:
-                DEBUG_PRINT_OLSR_RECEIVE("TS_MESSAGE from neighbor %d\n", messageHeader->m_originatorAddress);
+                DEBUG_PRINT_OLSR_RECEIVE("TS_MESSAGE from neighbor %u\n", messageHeader->m_originatorAddress);
                 olsrProcessTs((olsrMessage_t*)message);
                 break;
             default:
@@ -1254,13 +1258,13 @@ olsrTime_t olsrSendTimestamp() {
   DEBUG_PRINT_OLSR_TS("Last Timestamp Send time is : %llu\n", g_olsrTsLastTransTime);
   tsMsg.m_tsHeader.lastTransTs.m_seqenceNumber = g_staticMessageSeq;
 
-  olsrRangingSetClearExpire(&olsrRangingSet);
+  //olsrRangingSetClearExpire(&olsrRangingSet);
 
   setIndex_t unitNumber = olsrRangingSet.size;
   unitNumber = unitNumber > TS_PAYLOAD_MAX_NUM ? TS_PAYLOAD_MAX_NUM : unitNumber;
   unitNumber = unitNumber > OLSR_TS_UNIT_SEND_NUMBER ? OLSR_TS_UNIT_SEND_NUMBER : unitNumber;
   setIndex_t unitSendNumber = 0;
-  DEBUG_PRINT_OLSR_TS("start to send %d rx unit\n", unitSendNumber);
+  DEBUG_PRINT_OLSR_TS("start to send %d rx unit\n", unitNumber);
   for (setIndex_t i = 0, index = olsrRangingSet.fullQueueEntry; i < unitNumber;
        i++, index = olsrRangingSet.setData[index].next) {
     olsrRangingTuple_t t = olsrRangingSet.setData[index].data;
@@ -1289,7 +1293,7 @@ olsrTime_t olsrSendTimestamp() {
   msg.m_messageHeader.m_messageSize += sizeof(tsMsg.m_tsHeader) + unitSendNumber * sizeof(olsrTsMessageUnit_t);
   xQueueSend(g_olsrSendQueue, &msg, portMAX_DELAY);
   DEBUG_PRINT_OLSR_TS("start sort rangingTable\n", unitSendNumber);
-  olsrSortRangingTable(&olsrRangingSet);
+  //olsrSortRangingTable(&olsrRangingSet);
   DEBUG_PRINT_OLSR_TS("end sort rangingTable\n", unitSendNumber);
   DEBUG_PRINT_OLSR_TS("current neighbor size : %d \n", olsrRangingSet.size);
   return nextSendTime;
