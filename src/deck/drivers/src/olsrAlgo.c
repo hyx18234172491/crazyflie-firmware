@@ -746,6 +746,7 @@ void olsrProcessTs(olsrMessage_t *msg) {
   olsrTsMessage_t *tsMsg = (olsrTsMessage_t *) msg->m_messagePayload;
   setIndex_t unitNumber = (msg->m_messageHeader.m_messageSize - sizeof(msg->m_messageHeader) - sizeof(tsMsg->m_tsHeader))
       / sizeof(olsrTsMessageUnit_t);
+  DEBUG_PRINT_OLSR_TS("receive %d unit\n", unitNumber);
   // todo : check (m_originatorAddress equals to m_senderAddr ? 'remove m_senderAddr struct as redundancy' : 'keep it');
   //olsrAddr_t neighborAddr = msg->m_messageHeader.m_originatorAddress;
   olsrAddr_t neighborAddr = tsMsg->m_tsHeader.m_senderAddr;
@@ -770,66 +771,66 @@ void olsrProcessTs(olsrMessage_t *msg) {
     DEBUG_PRINT_OLSR_TS("now neighbor tuple malloc failed!\n");
     return;
   } else {
-    DEBUG_PRINT_OLSR_TS("now neighbor tuple malloc success!\n");
+    DEBUG_PRINT_OLSR_TS("now neighbor tuple malloc success! now have totle %d neighbor\n", olsrRangingSet.size);
   }
 
-  olsrRangingTuple_t neighborTuple = olsrRangingSet.setData[neighborIndex].data;
-  for (int i = 0; i < unitNumber; i++) {
-    olsrTsMessageUnit_t unit = tsMsg->m_content[i];
-    if (unit.sourceAddr == myAddress) {
-      DEBUG_PRINT_OLSR_TS("receive a Rx TsMessageUnit from neighbor %hu\n", neighborAddr);
-      // UpdateS
-      neighborTuple.Tr.m_seqenceNumber = tsMsg->m_tsHeader.lastTransTs.m_seqenceNumber;
-      neighborTuple.Tr.m_timestamp = tsMsg->m_tsHeader.lastTransTs.m_timestamp;
-      neighborTuple.Rf.m_seqenceNumber = unit.rxTs.m_seqenceNumber;
-      neighborTuple.Rf.m_timestamp = unit.rxTs.m_timestamp;
-      neighborTuple.Re.m_seqenceNumber = msg->m_messageHeader.m_messageSeq;
-      neighborTuple.Re.m_timestamp = g_olsrTsReceiveTime;
-      // UpdateM
-      // todo : check if need to set m_sequenceNumber to 0
-      if (neighborTuple.Rf.m_timestamp.full == 0) {
-        neighborTuple.Rr.m_timestamp = neighborTuple.Re.m_timestamp;
-        neighborTuple.Rr.m_seqenceNumber = neighborTuple.Re.m_seqenceNumber;
-        neighborTuple.Tr.m_timestamp.full = 0;
-        neighborTuple.Tr.m_seqenceNumber = 0;
-        neighborTuple.Tf.m_timestamp.full = 0;
-        neighborTuple.Tf.m_seqenceNumber = 0;
-        neighborTuple.Re.m_timestamp.full = 0;
-        neighborTuple.Re.m_seqenceNumber = 0;
-      } else if (neighborTuple.Tr.m_seqenceNumber != neighborTuple.Rr.m_seqenceNumber) {
-        neighborTuple.Rp.m_timestamp = neighborTuple.Rf.m_timestamp;
-        neighborTuple.Rp.m_seqenceNumber = neighborTuple.Rf.m_seqenceNumber;
-        neighborTuple.Tp.m_timestamp = neighborTuple.Tf.m_timestamp;
-        neighborTuple.Tp.m_seqenceNumber = neighborTuple.Tf.m_seqenceNumber;
-        neighborTuple.Rr.m_timestamp = neighborTuple.Re.m_timestamp;
-        neighborTuple.Rr.m_seqenceNumber = neighborTuple.Re.m_seqenceNumber;
-
-        neighborTuple.Tr.m_timestamp.full = 0;
-        neighborTuple.Tr.m_seqenceNumber = 0;
-        neighborTuple.Rf.m_timestamp.full = 0;
-        neighborTuple.Rf.m_seqenceNumber = 0;
-        neighborTuple.Tf.m_timestamp.full = 0;
-        neighborTuple.Tf.m_seqenceNumber = 0;
-        neighborTuple.Re.m_timestamp.full = 0;
-        neighborTuple.Re.m_seqenceNumber = 0;
-      } else {
-        DEBUG_PRINT_OLSR_TS("unknown conditions occurred when UpdateM!\n");
-      }
-      // Update
-      neighborTuple.m_expiration = xTaskGetTickCount() + M2T(OLSR_RANGING_SET_HOLD_TIME);
-    }
-    // ComputeS
-    for (setIndex_t i = olsrRangingSet.fullQueueEntry; i!= -1; i = olsrRangingSet.setData[i].next) {
-      olsrRangingTuple_t tuple = olsrRangingSet.setData[i].data;
-      if (tuple.Rp.m_timestamp.full && tuple.Tr.m_timestamp.full && tuple.Rf.m_timestamp.full
-          && tuple.Tp.m_timestamp.full && tuple.Rr.m_timestamp.full && tuple.Tf.m_timestamp.full
-          && tuple.Re.m_timestamp.full
-          ) {
-        tuple.distance = olsrTsComputeDistance(&tuple);
-        DEBUG_PRINT_OLSR_TS("neighbor %hu can compute distance\n, distance is : %hu", tuple.m_tsAddress, tuple.distance);
-      }
-    }
-  }
+//  olsrRangingTuple_t neighborTuple = olsrRangingSet.setData[neighborIndex].data;
+//  for (int i = 0; i < unitNumber; i++) {
+//    olsrTsMessageUnit_t unit = tsMsg->m_content[i];
+//    if (unit.sourceAddr == myAddress) {
+//      DEBUG_PRINT_OLSR_TS("receive a Rx TsMessageUnit from neighbor %hu\n", neighborAddr);
+//      // UpdateS
+//      neighborTuple.Tr.m_seqenceNumber = tsMsg->m_tsHeader.lastTransTs.m_seqenceNumber;
+//      neighborTuple.Tr.m_timestamp = tsMsg->m_tsHeader.lastTransTs.m_timestamp;
+//      neighborTuple.Rf.m_seqenceNumber = unit.rxTs.m_seqenceNumber;
+//      neighborTuple.Rf.m_timestamp = unit.rxTs.m_timestamp;
+//      neighborTuple.Re.m_seqenceNumber = msg->m_messageHeader.m_messageSeq;
+//      neighborTuple.Re.m_timestamp = g_olsrTsReceiveTime;
+//      // UpdateM
+//      // todo : check if need to set m_sequenceNumber to 0
+//      if (neighborTuple.Rf.m_timestamp.full == 0) {
+//        neighborTuple.Rr.m_timestamp = neighborTuple.Re.m_timestamp;
+//        neighborTuple.Rr.m_seqenceNumber = neighborTuple.Re.m_seqenceNumber;
+//        neighborTuple.Tr.m_timestamp.full = 0;
+//        neighborTuple.Tr.m_seqenceNumber = 0;
+//        neighborTuple.Tf.m_timestamp.full = 0;
+//        neighborTuple.Tf.m_seqenceNumber = 0;
+//        neighborTuple.Re.m_timestamp.full = 0;
+//        neighborTuple.Re.m_seqenceNumber = 0;
+//      } else if (neighborTuple.Tr.m_seqenceNumber != neighborTuple.Rr.m_seqenceNumber) {
+//        neighborTuple.Rp.m_timestamp = neighborTuple.Rf.m_timestamp;
+//        neighborTuple.Rp.m_seqenceNumber = neighborTuple.Rf.m_seqenceNumber;
+//        neighborTuple.Tp.m_timestamp = neighborTuple.Tf.m_timestamp;
+//        neighborTuple.Tp.m_seqenceNumber = neighborTuple.Tf.m_seqenceNumber;
+//        neighborTuple.Rr.m_timestamp = neighborTuple.Re.m_timestamp;
+//        neighborTuple.Rr.m_seqenceNumber = neighborTuple.Re.m_seqenceNumber;
+//
+//        neighborTuple.Tr.m_timestamp.full = 0;
+//        neighborTuple.Tr.m_seqenceNumber = 0;
+//        neighborTuple.Rf.m_timestamp.full = 0;
+//        neighborTuple.Rf.m_seqenceNumber = 0;
+//        neighborTuple.Tf.m_timestamp.full = 0;
+//        neighborTuple.Tf.m_seqenceNumber = 0;
+//        neighborTuple.Re.m_timestamp.full = 0;
+//        neighborTuple.Re.m_seqenceNumber = 0;
+//      } else {
+//        DEBUG_PRINT_OLSR_TS("unknown conditions occurred when UpdateM!\n");
+//      }
+//      // Update
+//      neighborTuple.m_expiration = xTaskGetTickCount() + M2T(OLSR_RANGING_SET_HOLD_TIME);
+//    }
+//    // ComputeS
+//    for (setIndex_t i = olsrRangingSet.fullQueueEntry; i!= -1; i = olsrRangingSet.setData[i].next) {
+//      olsrRangingTuple_t tuple = olsrRangingSet.setData[i].data;
+//      if (tuple.Rp.m_timestamp.full && tuple.Tr.m_timestamp.full && tuple.Rf.m_timestamp.full
+//          && tuple.Tp.m_timestamp.full && tuple.Rr.m_timestamp.full && tuple.Tf.m_timestamp.full
+//          && tuple.Re.m_timestamp.full
+//          ) {
+//        tuple.distance = olsrTsComputeDistance(&tuple);
+//        DEBUG_PRINT_OLSR_TS("neighbor %hu can compute distance\n, distance is : %hu", tuple.m_tsAddress, tuple.distance);
+//      }
+//    }
+//  }
   DEBUG_PRINT_OLSR_TS("--olsrProcessTimestampEnd--\n");
 }
 void forwardDefault(olsrMessage_t* olsrMessage, setIndex_t duplicateIndex)
@@ -1034,7 +1035,7 @@ void olsrPacketDispatch(const packet_t* rxPacket)
                 olsrProcessData((olsrMessage_t*)message);
                 break;
             case TS_MESSAGE:
-                DEBUG_PRINT_OLSR_RECEIVE("TS_MESSAGE\n");
+                DEBUG_PRINT_OLSR_RECEIVE("TS_MESSAGE from neighbor %d\n", messageHeader->m_originatorAddress);
                 olsrProcessTs((olsrMessage_t*)message);
                 break;
             default:
