@@ -743,6 +743,7 @@ uint16_t olsrTsComputeDistance(olsrRangingTuple_t *tuple) {
 
 void olsrProcessTs(olsrMessage_t *msg) {
   DEBUG_PRINT_OLSR_TS("--olsrProcessTimestamp--\n");
+  DEBUG_PRINT_OLSR_TS("message size is : %u\n", msg->m_messageHeader.m_messageSize);
   olsrTsMessage_t *tsMsg = (olsrTsMessage_t *) msg->m_messagePayload;
   setIndex_t unitNumber = (msg->m_messageHeader.m_messageSize - sizeof(msg->m_messageHeader) - sizeof(tsMsg->m_tsHeader))
       / sizeof(olsrTsMessageUnit_t);
@@ -831,7 +832,7 @@ void olsrProcessTs(olsrMessage_t *msg) {
 //          && tuple.Re.m_timestamp.full
 //          ) {
 //        tuple.distance = olsrTsComputeDistance(&tuple);
-//        DEBUG_PRINT_OLSR_TS("neighbor %hu can compute distance\n, distance is : %hu", tuple.m_tsAddress, tuple.distance);
+//        DEBUG_PRINT_OLSR_TS("neighbor %u can compute distance, distance is : %u \n", tuple.m_tsAddress, tuple.distance);
 //      }
 //    }
   }
@@ -1263,37 +1264,42 @@ olsrTime_t olsrSendTimestamp() {
   setIndex_t unitNumber = olsrRangingSet.size;
   unitNumber = unitNumber > TS_PAYLOAD_MAX_NUM ? TS_PAYLOAD_MAX_NUM : unitNumber;
   unitNumber = unitNumber > OLSR_TS_UNIT_SEND_NUMBER ? OLSR_TS_UNIT_SEND_NUMBER : unitNumber;
-  setIndex_t unitSendNumber = 0;
+  int unitSendNumber = 0;
   DEBUG_PRINT_OLSR_TS("start to send %d rx unit\n", unitNumber);
   for (setIndex_t i = 0, index = olsrRangingSet.fullQueueEntry; i < unitNumber;
        i++, index = olsrRangingSet.setData[index].next) {
-    olsrRangingTuple_t t = olsrRangingSet.setData[index].data;
-    if (t.m_nextDeliveryTime <= xTaskGetTickCount() + OLSR_TS_INTERVAL_MIN && t.Re.m_timestamp.full) {
+    olsrRangingTuple_t* t = &olsrRangingSet.setData[index].data;
+    DEBUG_PRINT_OLSR_TS("tuple nextDeliveryTime is : %ld, <=? %ld\n", t->m_nextDeliveryTime, xTaskGetTickCount() + M2T(OLSR_TS_INTERVAL_MIN));
+    DEBUG_PRINT_OLSR_TS("t.Re.m_timestamp.full is : %u \n", t->Re.m_timestamp.full);
+    // && t.Re.m_timestamp.full
+    if (t->m_nextDeliveryTime <= xTaskGetTickCount() + M2T(OLSR_TS_INTERVAL_MIN)) {
       olsrTsMessageUnit_t *unit = &tsMsg.m_content[i];
-      unit->sourceAddr = t.m_tsAddress;
-      unit->rxTs.m_seqenceNumber = t.Re.m_seqenceNumber;
-      unit->rxTs.m_timestamp = t.Re.m_timestamp;
-      t.Re.m_seqenceNumber = 0;
-      t.Re.m_timestamp.full = 0;
+      unit->sourceAddr = t->m_tsAddress;
+      unit->rxTs.m_seqenceNumber = t->Re.m_seqenceNumber;
+      unit->rxTs.m_timestamp = t->Re.m_timestamp;
+      t->Re.m_seqenceNumber = 0;
+      t->Re.m_timestamp.full = 0;
 
       // UpdateS
-      t.Tf.m_seqenceNumber = g_staticMessageSeq;
-      dwGetSystemTimestamp(dwm, &t.Tf.m_timestamp);
+      t->Tf.m_seqenceNumber = g_staticMessageSeq;
+      dwGetSystemTimestamp(dwm, &t->Tf.m_timestamp);
 
-      t.m_nextDeliveryTime = xTaskGetTickCount() + t.m_period;
+      t->m_nextDeliveryTime = xTaskGetTickCount() + t->m_period;
 
-      if (t.m_nextDeliveryTime < nextSendTime) {
-        nextSendTime = t.m_nextDeliveryTime;
+      if (t->m_nextDeliveryTime < nextSendTime) {
+        nextSendTime = t->m_nextDeliveryTime;
       }
       unitSendNumber++;
     }
   }
   DEBUG_PRINT_OLSR_TS("have sent %d Timestamp Rx unit\n", unitSendNumber);
-  memcpy(msg.m_messagePayload, &tsMsg, sizeof(tsMsg));
-  msg.m_messageHeader.m_messageSize += sizeof(tsMsg.m_tsHeader) + unitSendNumber * sizeof(olsrTsMessageUnit_t);
+  uint16_t writeSize = sizeof(tsMsg.m_tsHeader) + unitSendNumber * sizeof(olsrTsMessageUnit_t);
+  msg.m_messageHeader.m_messageSize += writeSize;
+  memcpy(msg.m_messagePayload, &tsMsg, writeSize);
+  DEBUG_PRINT_OLSR_TS("message size is : %u\n", msg.m_messageHeader.m_messageSize);
   xQueueSend(g_olsrSendQueue, &msg, portMAX_DELAY);
   DEBUG_PRINT_OLSR_TS("start sort rangingTable\n", unitSendNumber);
-  olsrSortRangingTable(&olsrRangingSet);
+  //olsrSortRangingTable(&olsrRangingSet);
   DEBUG_PRINT_OLSR_TS("end sort rangingTable\n", unitSendNumber);
   DEBUG_PRINT_OLSR_TS("current neighbor size : %d \n", olsrRangingSet.size);
   return nextSendTime;
