@@ -1236,7 +1236,7 @@ void olsrSendData(olsrAddr_t sourceAddr,AdHocPort sourcePort,\
 }
 
 olsrTime_t olsrSendTimestamp() {
-  DEBUG_PRINT_OLSR_TS("--olsrSendTimestamp--,myaddress is : %d \n", myAddress);
+  DEBUG_PRINT_OLSR_TS("--olsrSendTimestamp--,myaddress is : %u \n", myAddress);
   olsrTime_t nextSendTime = xTaskGetTickCount() + M2T(OLSR_TS_INTERVAL_MAX) + M2T(OLSR_TS_INTERVAL_MIN);
   olsrMessage_t msg;
   msg.m_messageHeader.m_messageType = TS_MESSAGE;
@@ -1258,7 +1258,7 @@ olsrTime_t olsrSendTimestamp() {
   DEBUG_PRINT_OLSR_TS("Last Timestamp Send time is : %llu\n", g_olsrTsLastTransTime);
   tsMsg.m_tsHeader.lastTransTs.m_seqenceNumber = g_staticMessageSeq;
 
-  //olsrRangingSetClearExpire(&olsrRangingSet);
+  olsrRangingSetClearExpire(&olsrRangingSet);
 
   setIndex_t unitNumber = olsrRangingSet.size;
   unitNumber = unitNumber > TS_PAYLOAD_MAX_NUM ? TS_PAYLOAD_MAX_NUM : unitNumber;
@@ -1293,7 +1293,7 @@ olsrTime_t olsrSendTimestamp() {
   msg.m_messageHeader.m_messageSize += sizeof(tsMsg.m_tsHeader) + unitSendNumber * sizeof(olsrTsMessageUnit_t);
   xQueueSend(g_olsrSendQueue, &msg, portMAX_DELAY);
   DEBUG_PRINT_OLSR_TS("start sort rangingTable\n", unitSendNumber);
-  //olsrSortRangingTable(&olsrRangingSet);
+  olsrSortRangingTable(&olsrRangingSet);
   DEBUG_PRINT_OLSR_TS("end sort rangingTable\n", unitSendNumber);
   DEBUG_PRINT_OLSR_TS("current neighbor size : %d \n", olsrRangingSet.size);
   return nextSendTime;
