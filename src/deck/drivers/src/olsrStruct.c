@@ -1165,7 +1165,7 @@ bool olsrRangingSetClearExpire(olsrRangingSet_t *ranging_set) {
     if (ranging_set->setData[i].data.m_expiration <= xTaskGetTickCount()) {
       olsrDelRangingTupleByPos(i);
       isChange = true;
-      DEBUG_PRINT_OLSR_TS("neighbor %d expiration occurred!\n", ranging_set->setData[i].data.m_tsAddress);
+      DEBUG_PRINT_OLSR_TS("neighbor %u expiration occurred!\n", ranging_set->setData[i].data.m_tsAddress);
     }
   }
   return isChange;
