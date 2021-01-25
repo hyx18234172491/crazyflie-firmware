@@ -436,4 +436,6 @@ bool olsrDelRangingTupleByPos(setIndex_t pos);
 bool olsrRangingSetClearExpire(olsrRangingSet_t *ranging_set);
 
 void olsrSortRangingTable(olsrRangingSet_t *rangingSet);
+
+void olsrPrintRangingTableTuple(olsrRangingTuple_t *tuple);
 #endif //__OLSR_STRUCT_H__

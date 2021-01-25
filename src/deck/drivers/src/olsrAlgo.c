@@ -825,16 +825,16 @@ void olsrProcessTs(olsrMessage_t *msg) {
       neighborTuple->m_expiration = xTaskGetTickCount() + M2T(OLSR_RANGING_SET_HOLD_TIME);
     }
     // ComputeS
-//    for (setIndex_t i = olsrRangingSet.fullQueueEntry; i!= -1; i = olsrRangingSet.setData[i].next) {
-//      olsrRangingTuple_t tuple = olsrRangingSet.setData[i].data;
-//      if (tuple.Rp.m_timestamp.full && tuple.Tr.m_timestamp.full && tuple.Rf.m_timestamp.full
-//          && tuple.Tp.m_timestamp.full && tuple.Rr.m_timestamp.full && tuple.Tf.m_timestamp.full
-//          && tuple.Re.m_timestamp.full
-//          ) {
-//        tuple.distance = olsrTsComputeDistance(&tuple);
-//        DEBUG_PRINT_OLSR_TS("neighbor %u can compute distance, distance is : %u \n", tuple.m_tsAddress, tuple.distance);
-//      }
-//    }
+    for (setIndex_t i = olsrRangingSet.fullQueueEntry; i!= -1; i = olsrRangingSet.setData[i].next) {
+      olsrRangingTuple_t tuple = olsrRangingSet.setData[i].data;
+      if (tuple.Rp.m_timestamp.full && tuple.Tr.m_timestamp.full && tuple.Rf.m_timestamp.full
+          && tuple.Tp.m_timestamp.full && tuple.Rr.m_timestamp.full && tuple.Tf.m_timestamp.full
+          && tuple.Re.m_timestamp.full
+          ) {
+        tuple.distance = olsrTsComputeDistance(&tuple);
+        DEBUG_PRINT_OLSR_TS("neighbor %u can compute distance, distance is : %u \n", tuple.m_tsAddress, tuple.distance);
+      }
+    }
   }
   DEBUG_PRINT_OLSR_TS("--olsrProcessTimestampEnd--\n");
 }
@@ -1238,7 +1238,7 @@ void olsrSendData(olsrAddr_t sourceAddr,AdHocPort sourcePort,\
 
 olsrTime_t olsrSendTimestamp() {
   DEBUG_PRINT_OLSR_TS("--olsrSendTimestamp--,myaddress is : %u \n", myAddress);
-  olsrTime_t nextSendTime = xTaskGetTickCount() + M2T(OLSR_TS_INTERVAL_MAX) + M2T(OLSR_TS_INTERVAL_MIN);
+  olsrTime_t nextSendTime = xTaskGetTickCount() + M2T(OLSR_TS_INTERVAL_MAX) + OLSR_TS_INTERVAL_MIN;
   olsrMessage_t msg;
   msg.m_messageHeader.m_messageType = TS_MESSAGE;
   msg.m_messageHeader.m_vTime = OLSR_RANGING_SET_HOLD_TIME;
@@ -1271,8 +1271,8 @@ olsrTime_t olsrSendTimestamp() {
     olsrRangingTuple_t* t = &olsrRangingSet.setData[index].data;
     DEBUG_PRINT_OLSR_TS("tuple nextDeliveryTime is : %ld, <=? %ld\n", t->m_nextDeliveryTime, xTaskGetTickCount() + M2T(OLSR_TS_INTERVAL_MIN));
     DEBUG_PRINT_OLSR_TS("t.Re.m_timestamp.full is : %u \n", t->Re.m_timestamp.full);
-    // && t.Re.m_timestamp.full
-    if (t->m_nextDeliveryTime <= xTaskGetTickCount() + M2T(OLSR_TS_INTERVAL_MIN)) {
+
+    if (t->m_nextDeliveryTime <= xTaskGetTickCount() + M2T(OLSR_TS_INTERVAL_MIN) && t->Re.m_timestamp.full) {
       olsrTsMessageUnit_t *unit = &tsMsg.m_content[i];
       unit->sourceAddr = t->m_tsAddress;
       unit->rxTs.m_seqenceNumber = t->Re.m_seqenceNumber;
@@ -1290,6 +1290,7 @@ olsrTime_t olsrSendTimestamp() {
         nextSendTime = t->m_nextDeliveryTime;
       }
       unitSendNumber++;
+      olsrPrintRangingTableTuple(t);
     }
   }
   DEBUG_PRINT_OLSR_TS("have sent %d Timestamp Rx unit\n", unitSendNumber);

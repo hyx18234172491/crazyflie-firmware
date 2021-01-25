@@ -1198,6 +1198,13 @@ void olsrSortRangingTable(olsrRangingSet_t *rangingSet) {
   }
   rangingSet->fullQueueEntry = newHead;
 }
+
+void olsrPrintRangingTableTuple(olsrRangingTuple_t *tuple) {
+  DEBUG_PRINT_OLSR_TS("Rp:%llu,Tr:%llu,Rf:%llu,Tp:%llu,Rr:%llu,Tf:%llu,Re:%llu \n",
+                      tuple->Rp.m_timestamp.full,tuple->Tr.m_timestamp.full,tuple->Rf.m_timestamp.full,
+                      tuple->Tp.m_timestamp.full,tuple->Rr.m_timestamp.full,tuple->Tf.m_timestamp.full,
+                      tuple->Re.m_timestamp.full);
+}
 /*
 ************************CommonFunctions********************
 */
