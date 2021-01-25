@@ -1238,7 +1238,7 @@ void olsrSendData(olsrAddr_t sourceAddr,AdHocPort sourcePort,\
 
 olsrTime_t olsrSendTimestamp() {
   DEBUG_PRINT_OLSR_TS("--olsrSendTimestamp--,myaddress is : %u \n", myAddress);
-  olsrTime_t nextSendTime = xTaskGetTickCount() + M2T(OLSR_TS_INTERVAL_MAX) + OLSR_TS_INTERVAL_MIN;
+  olsrTime_t nextSendTime = xTaskGetTickCount() + M2T(OLSR_TS_INTERVAL_MAX) + M2T(OLSR_TS_INTERVAL_MIN);
   olsrMessage_t msg;
   msg.m_messageHeader.m_messageType = TS_MESSAGE;
   msg.m_messageHeader.m_vTime = OLSR_RANGING_SET_HOLD_TIME;
@@ -1268,29 +1268,28 @@ olsrTime_t olsrSendTimestamp() {
   DEBUG_PRINT_OLSR_TS("start to send %d rx unit\n", unitNumber);
   for (setIndex_t i = 0, index = olsrRangingSet.fullQueueEntry; i < unitNumber;
        i++, index = olsrRangingSet.setData[index].next) {
-    olsrRangingTuple_t* t = &olsrRangingSet.setData[index].data;
-    DEBUG_PRINT_OLSR_TS("tuple nextDeliveryTime is : %ld, <=? %ld\n", t->m_nextDeliveryTime, xTaskGetTickCount() + M2T(OLSR_TS_INTERVAL_MIN));
-    DEBUG_PRINT_OLSR_TS("t.Re.m_timestamp.full is : %u \n", t->Re.m_timestamp.full);
 
-    if (t->m_nextDeliveryTime <= xTaskGetTickCount() + M2T(OLSR_TS_INTERVAL_MIN) && t->Re.m_timestamp.full) {
-      olsrTsMessageUnit_t *unit = &tsMsg.m_content[i];
-      unit->sourceAddr = t->m_tsAddress;
-      unit->rxTs.m_seqenceNumber = t->Re.m_seqenceNumber;
-      unit->rxTs.m_timestamp = t->Re.m_timestamp;
-      t->Re.m_seqenceNumber = 0;
-      t->Re.m_timestamp.full = 0;
+    DEBUG_PRINT_OLSR_TS("tuple nextDeliveryTime is : %ld, <=? %ld\n", olsrRangingSet.setData[index].data.m_nextDeliveryTime, xTaskGetTickCount() + M2T(OLSR_TS_INTERVAL_MIN));
+    DEBUG_PRINT_OLSR_TS("t.Re.m_timestamp.full is : %u \n", olsrRangingSet.setData[index].data.Re.m_timestamp.full);
+    olsrPrintRangingTableTuple(&olsrRangingSet.setData[index].data);
+    if (olsrRangingSet.setData[index].data.m_nextDeliveryTime <= xTaskGetTickCount() + M2T(OLSR_TS_INTERVAL_MIN) && olsrRangingSet.setData[index].data.Re.m_timestamp.full) {
+
+      tsMsg.m_content[i].sourceAddr = olsrRangingSet.setData[index].data.m_tsAddress;
+      tsMsg.m_content[i].rxTs.m_seqenceNumber = olsrRangingSet.setData[index].data.Re.m_seqenceNumber;
+      tsMsg.m_content[i].rxTs.m_timestamp = olsrRangingSet.setData[index].data.Re.m_timestamp;
+      olsrRangingSet.setData[index].data.Re.m_seqenceNumber = 0;
+      olsrRangingSet.setData[index].data.Re.m_timestamp.full = 0;
 
       // UpdateS
-      t->Tf.m_seqenceNumber = g_staticMessageSeq;
-      dwGetSystemTimestamp(dwm, &t->Tf.m_timestamp);
+      olsrRangingSet.setData[index].data.Tf.m_seqenceNumber = g_staticMessageSeq;
+      dwGetSystemTimestamp(dwm, &olsrRangingSet.setData[index].data.Tf.m_timestamp);
 
-      t->m_nextDeliveryTime = xTaskGetTickCount() + t->m_period;
+      olsrRangingSet.setData[index].data.m_nextDeliveryTime = xTaskGetTickCount() + olsrRangingSet.setData[index].data.m_period;
 
-      if (t->m_nextDeliveryTime < nextSendTime) {
-        nextSendTime = t->m_nextDeliveryTime;
+      if (olsrRangingSet.setData[index].data.m_nextDeliveryTime < nextSendTime) {
+        nextSendTime = olsrRangingSet.setData[index].data.m_nextDeliveryTime;
       }
       unitSendNumber++;
-      olsrPrintRangingTableTuple(t);
     }
   }
   DEBUG_PRINT_OLSR_TS("have sent %d Timestamp Rx unit\n", unitSendNumber);
