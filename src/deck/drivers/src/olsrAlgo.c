@@ -714,11 +714,11 @@ void olsrProcessData(olsrMessage_t* msg)
 }
 
 uint16_t olsrTsComputeDistance(olsrRangingTuple_t *tuple) {
-  uint64_t ad = (tuple->Rr.m_timestamp.full - tuple->Tp.m_timestamp.full + MAX_TIMESTAMP) % MAX_TIMESTAMP;
-  uint64_t ap = (tuple->Tf.m_timestamp.full - tuple->Rr.m_timestamp.full + MAX_TIMESTAMP) % MAX_TIMESTAMP;
-  uint64_t bp = (tuple->Tr.m_timestamp.full - tuple->Rp.m_timestamp.full + MAX_TIMESTAMP) % MAX_TIMESTAMP;
-  uint64_t bd = (tuple->Rf.m_timestamp.full - tuple->Tr.m_timestamp.full + MAX_TIMESTAMP) % MAX_TIMESTAMP;
-  uint64_t TOF = (ad * bd - ap * bp) / (ad + bd + ap + bp);
+  int64_t ad = (tuple->Rr.m_timestamp.full - tuple->Tp.m_timestamp.full + MAX_TIMESTAMP) % MAX_TIMESTAMP;
+  int64_t ap = (tuple->Tf.m_timestamp.full - tuple->Rr.m_timestamp.full + MAX_TIMESTAMP) % MAX_TIMESTAMP;
+  int64_t bp = (tuple->Tr.m_timestamp.full - tuple->Rp.m_timestamp.full + MAX_TIMESTAMP) % MAX_TIMESTAMP;
+  int64_t bd = (tuple->Rf.m_timestamp.full - tuple->Tr.m_timestamp.full + MAX_TIMESTAMP) % MAX_TIMESTAMP;
+  int64_t TOF = (ad * bd - ap * bp) / (ad + bd + ap + bp);
   if (bd < 0 || ap < 0) {
     tuple->Rf.m_timestamp.full = 0;
     tuple->Tf.m_timestamp.full = 0;

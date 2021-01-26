@@ -177,6 +177,13 @@ typedef struct
   dwTime_t m_timestamp;
 } olsrTimestampTuple_t;
 
+/*
++------+------+------+------+
+|  Rp  |  Tr  |  Rf  |      |
++------+------+------+------+
+|  Tp  |  Rr  |  Tf  |  Re  |
++------+------+------+------+
+*/
 typedef struct {
 //  dwTime_t lastSendTime;
   olsrAddr_t m_tsAddress; // neighbor address
