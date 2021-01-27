@@ -156,7 +156,7 @@ void olsrRxCallback(dwDevice_t *dev){
 
 //packet process
 
-void olsr_ts_process(const olsrMessage_t* ts_msg){
+void olsrProcessTs(const olsrMessage_t* tsMsg){
 
 }
 
@@ -1093,7 +1093,7 @@ void olsrPacketDispatch(const packet_t* rxPacket)
                 break;
             case TS_MESSAGE:
                 DEBUG_PRINT_OLSR_RECEIVE("TS_MESSAGE\n");
-                //olsr_ts_process(olsr_message);
+                olsrProcessTs((olsrMessage_t*)olsr_message);
                 break;
             default:
                 DEBUG_PRINT_OLSR_RECEIVE("WRONG MESSAGE\n");
