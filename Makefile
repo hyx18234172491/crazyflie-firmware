@@ -1,6 +1,6 @@
-<<<<<<< HEAD
 # CrazyFlie's Makefile
 # Copyright (c) 2011-2021 Bitcraze AB
+
 
 # This Makefile compiles all the object file to ./bin/ and the resulting firmware
 # image in ./cfX.elf and ./cfX.bin
