@@ -75,7 +75,7 @@ static void olsrSendTaskInit(dwDevice_t *dev)
 static void olsrRecvTaskInit(dwDevice_t *dev)
 {
   DEBUG_PRINT_OLSR_SYSTEM("START_OLSR_RECV_TASK_INIT\n");
-  if(xTaskCreate(olsrRecvTask, "OLSR_RECV", 4*configMINIMAL_STACK_SIZE, dev,LPS_DECK_TASK_PRI, NULL)==pdPASS)
+  if(xTaskCreate(olsrRecvTask, "OLSR_RECV", 4*configMINIMAL_STACK_SIZE, dev,4, NULL)==pdPASS)
     {
       DEBUG_PRINT_OLSR_SYSTEM("RECV TASK CREATE SUCCESSFUL\n");
     }
@@ -112,13 +112,13 @@ static void olsrTaskInit(dwDevice_t *dev)
 {
     DEBUG_PRINT_OLSR_SYSTEM("TASK_INIT");
     // olsrPacketLossTaskInit();
-    //olsrHelloTaskInit();
-    //olsrTcTaskInit();
+    olsrHelloTaskInit();
+    olsrTcTaskInit();
     olsrTsTaskInit();
     olsrSendTaskInit(dev);
     olsrRecvTaskInit(dev);
     // olsrAppTaskInit();
-    //initSimTopology();
+    initSimTopology();
 }
 
 static void olsrInit(dwDevice_t *dev) 

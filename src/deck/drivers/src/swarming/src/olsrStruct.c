@@ -1165,15 +1165,16 @@ void olsrPrintRangingTableTuple(olsrRangingTuple_t *tuple) {
 |  Tp  |  Rr  |  Tf  |  Re  |
 +------+------+------+------+
 */
-  DEBUG_PRINT_OLSR_TS("Rp:(%u)%llu\tTr:(%u)%llu\tRf:(%u)%llu\n",
-                      tuple->Rp.m_seqenceNumber, tuple->Rp.m_timestamp.full,
-                      tuple->Tr.m_seqenceNumber, tuple->Tr.m_timestamp.full,
-                      tuple->Rf.m_seqenceNumber, tuple->Rf.m_timestamp.full);
-  DEBUG_PRINT_OLSR_TS("Tp:(%u)%llu\tRr:(%u)%llu\tTf:(%u)%llu\tRe:(%u)%llu\n",
-                      tuple->Tp.m_seqenceNumber, tuple->Tp.m_timestamp.full,
-                      tuple->Rr.m_seqenceNumber, tuple->Rr.m_timestamp.full,
-                      tuple->Tf.m_seqenceNumber, tuple->Tf.m_timestamp.full,
-                      tuple->Re.m_seqenceNumber, tuple->Re.m_timestamp.full);
+//  DEBUG_PRINT_OLSR_TS("Rp:(%u)%llu\tTr:(%u)%llu\tRf:(%u)%llu\n",
+//                      tuple->Rp.m_seqenceNumber, tuple->Rp.m_timestamp.full,
+//                      tuple->Tr.m_seqenceNumber, tuple->Tr.m_timestamp.full,
+//                      tuple->Rf.m_seqenceNumber, tuple->Rf.m_timestamp.full);
+//  DEBUG_PRINT_OLSR_TS("Tp:(%u)%llu\tRr:(%u)%llu\tTf:(%u)%llu\tRe:(%u)%llu\n",
+//                      tuple->Tp.m_seqenceNumber, tuple->Tp.m_timestamp.full,
+//                      tuple->Rr.m_seqenceNumber, tuple->Rr.m_timestamp.full,
+//                      tuple->Tf.m_seqenceNumber, tuple->Tf.m_timestamp.full,
+//                      tuple->Re.m_seqenceNumber, tuple->Re.m_timestamp.full);
+  DEBUG_PRINT_OLSR_TS("addr:%u, nextDeliveryTime:%lu \n", tuple->m_tsAddress, tuple->m_nextDeliveryTime);
 }
 
 void olsrPrintRangingTable(olsrRangingTable_t *rangingTable) {
@@ -1187,16 +1188,22 @@ bool olsrDelRangingTupleByAddr(olsrRangingTable_t *rangingTable, setIndex_t addr
 }
 
 bool olsrRangingTableClearExpire(olsrRangingTable_t *rangingTable) {
-  setIndex_t next = -1;
+  setIndex_t candidate = rangingTable->fullQueueEntry;
+  olsrTime_t now = xTaskGetTickCount();
   bool isChange = false;
-  for (setIndex_t i = rangingTable->fullQueueEntry; i != -1; i = next) {
-    next = rangingTable->setData[i].next;
-    if (rangingTable->setData[i].data.m_expiration <= xTaskGetTickCount()) {
-      isChange = olsrDelRangingTupleByAddr(rangingTable, rangingTable->setData[i].data.m_tsAddress);
-      if (isChange) {
-        DEBUG_PRINT_OLSR_TS("neighbor %u expiration occurred!\n", rangingTable->setData[i].data.m_tsAddress);
-      }
+  while(candidate != -1)
+  {
+    olsrRangingTableItem_t tmp = rangingTable->setData[candidate];
+    if(tmp.data.m_expiration < now)
+    {
+      setIndex_t nextIt = tmp.next;
+      DEBUG_PRINT_OLSR_TS("neighbor %u expiration occurred!\n", rangingTable->setData[candidate].data.m_tsAddress);
+      olsrRangingTableFree(rangingTable, candidate);
+      candidate = nextIt;
+      isChange = true;
+      continue;
     }
+    candidate = tmp.next;
   }
   return isChange;
 }

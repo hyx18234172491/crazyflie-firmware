@@ -24,8 +24,8 @@
  */
 
 //#define DEBUG_OLSR_SYSTEM
-#define DEBUG_OLSR_SEND
-#define DEBUG_OLSR_RECEIVE
+//#define DEBUG_OLSR_SEND
+//#define DEBUG_OLSR_RECEIVE
 #define DEBUG_OLSR_HELLO
 #define DEBUG_OLSR_TC
 #define DEBUG_OLSR_TS
