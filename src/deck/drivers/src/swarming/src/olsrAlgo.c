@@ -29,9 +29,10 @@ static uint16_t g_ansn = 0;
 static SemaphoreHandle_t olsrAnsnLock;
 static SemaphoreHandle_t olsrAllSetLock;
 // static bool m_linkTupleTimerFirstTime  = true;
-static int g_ts_receive_error_count = 0;
-static int g_ts_receive_count = 0;
-static int g_ts_compute_error = 0;
+static uint16_t g_ts_receive_error_count = 0;
+//static int g_ts_receive_count = 0;
+static uint16_t g_ts_compute_error = 0;
+static uint16_t g_ts_compute_count = 0;
 static uint16_t idVelocityX;
 static uint16_t idVelocityY;
 static uint16_t idVelocityZ;
@@ -172,6 +173,7 @@ void olsrTxCallback(dwDevice_t *dev) {
 //packet process
 
 int16_t olsrTsComputeDistance(olsrRangingTuple_t *tuple) {
+  g_ts_compute_count++;
   int64_t tRound1, tReply1, tRound2, tReply2, diff1, diff2, tprop_ctn;
 
   tRound1 = (tuple->Rr.m_timestamp.full - tuple->Tp.m_timestamp.full + MAX_TIMESTAMP) % MAX_TIMESTAMP;
@@ -211,7 +213,7 @@ void olsrProcessTs(const olsrMessage_t* tsMsg, const olsrTimestampTuple_t *rxOTS
   olsrTsMessageHeader_t *tsMessageHeader = (olsrTsMessageHeader_t *) tsMsg;
   olsrAddr_t peerSrcAddr = tsMessageHeader->m_originatorAddress;
   olsrAddr_t peerSpeed = tsMessageHeader->m_velocity; //TODO Speed type uint16
-  g_ts_receive_count++;
+  //g_ts_receive_count++;
   if (rxOTS->m_timestamp.full < olsr_ts_otspool[olsr_ts_otspool_idx].m_timestamp.full) {
     DEBUG_PRINT_OLSR_TS("ts out of date \n");
     g_ts_receive_error_count++;
@@ -1785,7 +1787,7 @@ LOG_GROUP_START(TSranging)
         LOG_ADD(LOG_INT16, distTo8, distanceTowards+8)
         LOG_ADD(LOG_INT16, distTo9, distanceTowards+9)
         LOG_ADD(LOG_FLOAT, velocity, &velocity)
-        LOG_ADD(LOG_INT16, total, &g_ts_receive_count)
-        LOG_ADD(LOG_INT16, error, &g_ts_receive_error_count)
-        LOG_ADD(LOG_INT16, compute_error, &g_ts_compute_error )
+        LOG_ADD(LOG_UINT16, compute, &g_ts_compute_count)
+        LOG_ADD(LOG_UINT16, receive_error, &g_ts_receive_error_count)
+        LOG_ADD(LOG_UINT16, compute_error, &g_ts_compute_error )
 LOG_GROUP_STOP(TSranging)
