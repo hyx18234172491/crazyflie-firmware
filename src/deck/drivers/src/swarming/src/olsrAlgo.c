@@ -30,14 +30,17 @@ static SemaphoreHandle_t olsrAnsnLock;
 static SemaphoreHandle_t olsrAllSetLock;
 // static bool m_linkTupleTimerFirstTime  = true;
 static uint16_t g_ts_receive_error_count = 0;
-//static int g_ts_receive_count = 0;
+static uint16_t g_ts_receive_count = 0;
 static uint16_t g_ts_compute_error = 0;
 static uint16_t g_ts_compute_count = 0;
+static uint16_t g_ts_send_count = 0;
 static uint16_t idVelocityX;
 static uint16_t idVelocityY;
 static uint16_t idVelocityZ;
 static float velocity;
 static int16_t distanceTowards[10];
+static uint16_t g_receive_count[10];
+static uint16_t g_compute_from[10];
 int jitter = 0;
 
 int olsr_ts_otspool_idx = 0;
@@ -213,7 +216,7 @@ void olsrProcessTs(const olsrMessage_t* tsMsg, const olsrTimestampTuple_t *rxOTS
   olsrTsMessageHeader_t *tsMessageHeader = (olsrTsMessageHeader_t *) tsMsg;
   olsrAddr_t peerSrcAddr = tsMessageHeader->m_originatorAddress;
   olsrAddr_t peerSpeed = tsMessageHeader->m_velocity; //TODO Speed type uint16
-  //g_ts_receive_count++;
+  g_ts_receive_count++;
   if (rxOTS->m_timestamp.full < olsr_ts_otspool[olsr_ts_otspool_idx].m_timestamp.full) {
     DEBUG_PRINT_OLSR_TS("ts out of date \n");
     g_ts_receive_error_count++;
@@ -254,6 +257,7 @@ void olsrProcessTs(const olsrMessage_t* tsMsg, const olsrTimestampTuple_t *rxOTS
     }
   }
   olsrRangingTuple_t *tuple = &olsrRangingTable.setData[peerIndex].data;
+  g_receive_count[tuple->m_tsAddress]++;
   //update field expiration
   tuple->m_expiration = xTaskGetTickCount() + M2T(OLSR_RANGING_TABLE_HOLD_TIME);
   //update the RangingTable Re, always store the newest rxOTS
@@ -281,6 +285,7 @@ void olsrProcessTs(const olsrMessage_t* tsMsg, const olsrTimestampTuple_t *rxOTS
   if (tuple->Tr.m_timestamp.full && tuple->Rf.m_timestamp.full && tuple->Tf.m_timestamp.full) {
     tuple->m_distance = olsrTsComputeDistance(tuple);
     distanceTowards[tuple->m_tsAddress] = tuple->m_distance;
+    g_compute_from[tuple->m_tsAddress]++;
 		if (tuple->m_distance>1000 || tuple->m_distance<-100)
 				DEBUG_PRINT_OLSR_TS("Ranging distance \t\t\t\t\t\tcomputed=%d\n", tuple->m_distance);
 		else
@@ -1501,6 +1506,7 @@ olsrTime_t olsrSendTs() {
       nextSendTime = t->data.m_nextDeliveryTime;
     }
   }
+  g_ts_send_count++;
   xQueueSend(g_olsrSendQueue, &tsMsg, portMAX_DELAY);
   return nextSendTime;
 }
@@ -1775,19 +1781,38 @@ void olsr_recv_task(void *ptr){
 
 }
 
-
 LOG_GROUP_START(TSranging)
-        LOG_ADD(LOG_INT16, distTo1, distanceTowards+1)
-        LOG_ADD(LOG_INT16, distTo2, distanceTowards+2)
-        LOG_ADD(LOG_INT16, distTo3, distanceTowards+3)
-        LOG_ADD(LOG_INT16, distTo4, distanceTowards+4)
-        LOG_ADD(LOG_INT16, distTo5, distanceTowards+5)
-        LOG_ADD(LOG_INT16, distTo6, distanceTowards+6)
-        LOG_ADD(LOG_INT16, distTo7, distanceTowards+7)
-        LOG_ADD(LOG_INT16, distTo8, distanceTowards+8)
-        LOG_ADD(LOG_INT16, distTo9, distanceTowards+9)
-        LOG_ADD(LOG_FLOAT, velocity, &velocity)
-        LOG_ADD(LOG_UINT16, compute, &g_ts_compute_count)
+        LOG_ADD(LOG_INT16, distTo1, distanceTowards + 1)
+        LOG_ADD(LOG_INT16, distTo2, distanceTowards + 2)
+        LOG_ADD(LOG_INT16, distTo3, distanceTowards + 3)
+        LOG_ADD(LOG_INT16, distTo4, distanceTowards + 4)
+        LOG_ADD(LOG_INT16, distTo5, distanceTowards + 5)
+        LOG_ADD(LOG_INT16, distTo6, distanceTowards + 6)
+        LOG_ADD(LOG_INT16, distTo7, distanceTowards + 7)
+        LOG_ADD(LOG_INT16, distTo8, distanceTowards + 8)
+        LOG_ADD(LOG_INT16, distTo9, distanceTowards + 9)
+        LOG_ADD(LOG_UINT16, received_from_1, g_receive_count + 1)
+        LOG_ADD(LOG_UINT16, received_from_2, g_receive_count + 2)
+        LOG_ADD(LOG_UINT16, received_from_3, g_receive_count + 3)
+        LOG_ADD(LOG_UINT16, received_from_4, g_receive_count + 4)
+        LOG_ADD(LOG_UINT16, received_from_5, g_receive_count + 5)
+        LOG_ADD(LOG_UINT16, received_from_6, g_receive_count + 6)
+        LOG_ADD(LOG_UINT16, received_from_7, g_receive_count + 7)
+        LOG_ADD(LOG_UINT16, received_from_8, g_receive_count + 8)
+        LOG_ADD(LOG_UINT16, received_from_9, g_receive_count + 9)
+        LOG_ADD(LOG_UINT16, compute_from_1, g_compute_from + 1)
+        LOG_ADD(LOG_UINT16, compute_from_2, g_compute_from + 2)
+        LOG_ADD(LOG_UINT16, compute_from_3, g_compute_from + 3)
+        LOG_ADD(LOG_UINT16, compute_from_4, g_compute_from + 4)
+        LOG_ADD(LOG_UINT16, compute_from_5, g_compute_from + 5)
+        LOG_ADD(LOG_UINT16, compute_from_6, g_compute_from + 6)
+        LOG_ADD(LOG_UINT16, compute_from_7, g_compute_from + 7)
+        LOG_ADD(LOG_UINT16, compute_from_8, g_compute_from + 8)
+        LOG_ADD(LOG_UINT16, compute_from_9, g_compute_from + 9)
+        LOG_ADD(LOG_UINT16, total_compute, &g_ts_compute_count)
+        LOG_ADD(LOG_UINT16, total_receive, &g_ts_receive_count)
+        LOG_ADD(LOG_UINT16, total_send, &g_ts_send_count)
         LOG_ADD(LOG_UINT16, receive_error, &g_ts_receive_error_count)
-        LOG_ADD(LOG_UINT16, compute_error, &g_ts_compute_error )
+        LOG_ADD(LOG_UINT16, compute_error, &g_ts_compute_error)
+        LOG_ADD(LOG_FLOAT, velocity, &velocity)
 LOG_GROUP_STOP(TSranging)
