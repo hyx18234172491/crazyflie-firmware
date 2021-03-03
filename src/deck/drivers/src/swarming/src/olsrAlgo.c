@@ -1499,9 +1499,9 @@ olsrTime_t olsrSendTs() {
       t->data.Re.m_timestamp.full = 0;
       sendUnitNumber++;
     }
-    jitter = (int) (rand() / (float) RAND_MAX * 9) - 4;// the rand part should not exceed TS_INTERVAL_MIN/2
-//    jitter = 0;//TODO remove after debug
-    t->data.m_nextDeliveryTime = xTaskGetTickCount() + t->data.m_period + jitter;
+    //jitter = (int) (rand() / (float) RAND_MAX * 9) - 4;// the rand part should not exceed TS_INTERVAL_MIN/2
+    jitter = rand() % 40;//TODO remove after debug
+    t->data.m_nextDeliveryTime = xTaskGetTickCount() + t->data.m_period + M2T(jitter);
     if (t->data.m_nextDeliveryTime < nextSendTime) {
       nextSendTime = t->data.m_nextDeliveryTime;
     }
@@ -1791,15 +1791,15 @@ LOG_GROUP_START(TSranging)
         LOG_ADD(LOG_INT16, distTo7, distanceTowards + 7)
         LOG_ADD(LOG_INT16, distTo8, distanceTowards + 8)
         LOG_ADD(LOG_INT16, distTo9, distanceTowards + 9)
-        LOG_ADD(LOG_UINT16, received_from_1, g_receive_count + 1)
-        LOG_ADD(LOG_UINT16, received_from_2, g_receive_count + 2)
-        LOG_ADD(LOG_UINT16, received_from_3, g_receive_count + 3)
-        LOG_ADD(LOG_UINT16, received_from_4, g_receive_count + 4)
-        LOG_ADD(LOG_UINT16, received_from_5, g_receive_count + 5)
-        LOG_ADD(LOG_UINT16, received_from_6, g_receive_count + 6)
-        LOG_ADD(LOG_UINT16, received_from_7, g_receive_count + 7)
-        LOG_ADD(LOG_UINT16, received_from_8, g_receive_count + 8)
-        LOG_ADD(LOG_UINT16, received_from_9, g_receive_count + 9)
+        LOG_ADD(LOG_UINT16, receive_from_1, g_receive_count + 1)
+        LOG_ADD(LOG_UINT16, receive_from_2, g_receive_count + 2)
+        LOG_ADD(LOG_UINT16, receive_from_3, g_receive_count + 3)
+        LOG_ADD(LOG_UINT16, receive_from_4, g_receive_count + 4)
+        LOG_ADD(LOG_UINT16, receive_from_5, g_receive_count + 5)
+        LOG_ADD(LOG_UINT16, receive_from_6, g_receive_count + 6)
+        LOG_ADD(LOG_UINT16, receive_from_7, g_receive_count + 7)
+        LOG_ADD(LOG_UINT16, receive_from_8, g_receive_count + 8)
+        LOG_ADD(LOG_UINT16, receive_from_9, g_receive_count + 9)
         LOG_ADD(LOG_UINT16, compute_from_1, g_compute_from + 1)
         LOG_ADD(LOG_UINT16, compute_from_2, g_compute_from + 2)
         LOG_ADD(LOG_UINT16, compute_from_3, g_compute_from + 3)
