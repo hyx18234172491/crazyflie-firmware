@@ -41,7 +41,6 @@ static float velocity;
 static int16_t distanceTowards[10];
 static uint16_t g_receive_count[10];
 static uint16_t g_compute_from[10];
-int jitter = 0;
 
 int olsr_ts_otspool_idx = 0;
 olsrTimestampTuple_t olsr_ts_otspool[TS_OTSPOOL_MAXSIZE] = {0};
@@ -1473,13 +1472,13 @@ olsrTime_t olsrSendTs() {
   int sendUnitNumber = 0;
   olsrTsMessageBodyUnit_t *tsMsgBodyUnit = (olsrTsMessageBodyUnit_t *) msgPtr;
   //DEBUG_PRINT_OLSR_TS("before clear expire, table size : %d \n", olsrRangingTable.size);
-  olsrRangingTableClearExpire(&olsrRangingTable);
+  //olsrRangingTableClearExpire(&olsrRangingTable);
   //DEBUG_PRINT_OLSR_TS("after clear expire, table size : %d \n", olsrRangingTable.size);
   DEBUG_PRINT_OLSR_TS("before sort rangingtable \n");
-  olsrPrintRangingTable(&olsrRangingTable);
-  olsrSortRangingTable(&olsrRangingTable);
+  //olsrPrintRangingTable(&olsrRangingTable);
+  //olsrSortRangingTable(&olsrRangingTable);
   DEBUG_PRINT_OLSR_TS("after sort rangingtable \n");
-  olsrPrintRangingTable(&olsrRangingTable);
+  //olsrPrintRangingTable(&olsrRangingTable);
   //DEBUG_PRINT_OLSR_TS("Re: %llu \n", olsrRangingTable.setData[olsrRangingTable.fullQueueEntry].data.Re.m_timestamp.full);
   for (setIndex_t index = olsrRangingTable.fullQueueEntry; index != -1; index = olsrRangingTable.setData[index].next) {
     olsrRangingTableItem_t *t = &olsrRangingTable.setData[index];
@@ -1488,7 +1487,7 @@ olsrTime_t olsrSendTs() {
       break;
     }
 
-    if (t->data.m_nextDeliveryTime <= xTaskGetTickCount() + TS_INTERVAL_MIN && t->data.Re.m_timestamp.full) {
+    if (t->data.Re.m_timestamp.full) {
       tsMsgBodyUnit->m_tsAddr = t->data.m_tsAddress;
       tsMsgBodyUnit->m_sequence = t->data.Re.m_seqenceNumber;
       tsMsgBodyUnit->m_dwTimeLow32 = t->data.Re.m_timestamp.low32;
@@ -1500,14 +1499,17 @@ olsrTime_t olsrSendTs() {
       sendUnitNumber++;
     }
     //jitter = (int) (rand() / (float) RAND_MAX * 9) - 4;// the rand part should not exceed TS_INTERVAL_MIN/2
-    jitter = rand() % 40;//TODO remove after debug
+    int jitter = rand() % 40;
     t->data.m_nextDeliveryTime = xTaskGetTickCount() + t->data.m_period + M2T(jitter);
     if (t->data.m_nextDeliveryTime < nextSendTime) {
       nextSendTime = t->data.m_nextDeliveryTime;
     }
   }
-  g_ts_send_count++;
-  xQueueSend(g_olsrSendQueue, &tsMsg, portMAX_DELAY);
+
+  if (g_ts_send_count < 6000) {
+    g_ts_send_count++;
+    xQueueSend(g_olsrSendQueue, &tsMsg, portMAX_DELAY);
+  }
   return nextSendTime;
 }
 
