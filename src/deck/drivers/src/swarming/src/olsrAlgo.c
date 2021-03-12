@@ -32,6 +32,14 @@ static SemaphoreHandle_t olsrAllSetLock;
 static int g_ts_receive_error_count = 0;
 static int g_ts_receive_count = 0;
 static int g_ts_compute_error = 0;
+
+#ifdef USING_ETX
+static int g_etxTimer = 0;
+static short g_etxWindows = 3;
+static float g_etxAlph = 0.8;
+static float g_etxMax = 99999;
+#endif
+
 static uint16_t idVelocityX;
 static uint16_t idVelocityY;
 static uint16_t idVelocityZ;
@@ -412,6 +420,13 @@ static void linkSensing(const olsrMessage_t* helloMsg)
       newLinkTuple.m_neighborAddr = helloMsg->m_messageHeader.m_originatorAddress;
       newLinkTuple.m_symTime = now - M2T(1000);
       newLinkTuple.m_expirationTime = now + helloMsg->m_messageHeader.m_vTime;
+#ifdef USING_ETX
+      newLinkTuple.m_lq = 0;
+      newLinkTuple.m_nlq = g_etxAlph;
+      newLinkTuple.m_etx = g_etxMax;
+      newLinkTuple.m_count = 1;
+#endif
+
       linkTuple = olsrInsertToLinkSet(&olsrLinkSet,&newLinkTuple);
       if(linkTuple==-1)
         {
@@ -425,6 +440,9 @@ static void linkSensing(const olsrMessage_t* helloMsg)
       updated = true;
     }
   olsrLinkSet.setData[linkTuple].data.m_asymTime = now +helloMsg->m_messageHeader.m_vTime;
+#ifdef USING_ETX
+  olsrLinkSet.setData[linkTuple].data.m_count++;
+#endif
   olsrHelloMessage_t* helloMsgBody = (olsrHelloMessage_t*)(helloMsg->m_messagePayload);
   for(uint8_t i = 0;i < helloMsgBody->m_helloHeader.m_linkMessageNumber;i++)
     {
@@ -439,6 +457,9 @@ static void linkSensing(const olsrMessage_t* helloMsg)
         }
       if(helloMsgBody->m_linkMessage[i].m_addresses == myAddress)
         {
+#ifdef USING_ETX
+  olsrLinkSet.setData[linkTuple].data.m_nlq = helloMsgBody->m_linkMessage[i].m_lq;
+#endif
           if(lt == OLSR_LOST_LINK)
             {
               DEBUG_PRINT_OLSR_LINK("this addr %d is lost link\n",helloMsgBody->m_linkMessage[i].m_addresses);
@@ -1362,6 +1383,9 @@ void olsrSendHello()
         olsrLinkMessage_t linkMessage;//6
         linkMessage.m_linkCode = (linkType & 0x03) | ((nbType << 2) & 0x0f);
         linkMessage.m_addressUsedSize = 1;
+        #ifdef USING_ETX
+        linkMessage.m_lq = olsrLinkSet.setData[linkTupleIndex].data.m_lq;
+        #endif
         linkMessage.m_addresses = olsrLinkSet.setData[linkTupleIndex].data.m_neighborAddr;
         if(helloMessage.m_helloHeader.m_linkMessageNumber==LINK_MESSAGE_MAX_NUM) break;
         helloMessage.m_linkMessage[helloMessage.m_helloHeader.m_linkMessageNumber++] = linkMessage;
@@ -1396,8 +1420,13 @@ void olsrSendTc()
   while(mprSelectorIt != -1 && pos<TC_PAYLOAD_MAX_NUM)
     {
       olsrMprSelectorSetItem_t tmp = olsrMprSelectorSet.setData[mprSelectorIt];
+      setIndex_t link = olsrFindInLinkByAddr(&olsrLinkSet, tmp.data.m_addr);
       tcMsg.m_content[pos].m_address = tmp.data.m_addr;
+      #ifdef USING_ETX
+      tcMsg.m_content[pos++].m_distance = (link==-1)?g_etxMax:olsrLinkSet.setData[link].data.m_etx;
+      #else
       tcMsg.m_content[pos++].m_distance = 1;
+      #endif
       mprSelectorIt = tmp.next;
     }
   memcpy(msg.m_messagePayload,&tcMsg,2+pos*sizeof(olsrTopologyMessageUint_t));
@@ -1618,6 +1647,19 @@ bool olsrMprSelectorTupleTimerExpire()
     }
   return isChange;   
 }
+#ifdef USING_ETX
+void olsrEtxCompute()
+{
+  for(setIndex_t idx = olsrLinkSet.fullQueueEntry; idx!=-1;idx = olsrLinkSet.setData[idx].next)
+    {
+      olsrLinkTuple_t item = olsrLinkSet.setData[idx].data;
+      float hi = item.m_count>=g_etxWindows?1:(item.m_count/g_etxWindows);
+      item.m_lq = item.m_lq*(1-g_etxAlph)+hi*g_etxAlph;
+      item.m_etx = item.m_lq*item.m_nlq==0?g_etxMax:1/(item.m_lq*item.m_nlq);
+      item.m_count = 0;
+    }
+}
+#endif
 // all task defination
 void olsrHelloTask(void *ptr)
 {
@@ -1628,6 +1670,12 @@ void olsrHelloTask(void *ptr)
       xSemaphoreTake(olsrAllSetLock,portMAX_DELAY);
       olsrLinkTupleClearExpire();
       olsrSendHello();
+      #ifdef USING_ETX
+      if(++g_etxTimer%g_etxWindows == 0)
+        {
+          olsrEtxCompute();
+        }
+      #endif
       xSemaphoreGive(olsrAllSetLock);
   }
 }

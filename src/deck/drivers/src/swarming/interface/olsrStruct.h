@@ -6,7 +6,7 @@
 #include"adhocdeck.h"
 #include <string.h>
 #include "mac.h"
-
+#define USING_ETX
 /*
 *********************Recv&SendQueue*************************
 */
@@ -18,7 +18,11 @@ void olsrStructInitAll(dwDevice_t *dev);
 */
 typedef portTickType olsrTime_t;
 typedef uint16_t olsrAddr_t;
+#ifdef USING_ETX
+typedef float olsrDist_t;
+#else 
 typedef short olsrDist_t;
+#endif
 typedef short setIndex_t;
 
 #define TOPOLOGY_SET_SIZE 30
@@ -87,6 +91,12 @@ typedef struct
   olsrAddr_t m_localAddr;
   olsrAddr_t m_neighborAddr;
   /// The link is considered bidirectional until this time.
+  #ifdef USING_ETX
+  float m_lq;
+  float m_nlq;
+  float m_etx;
+  int m_count;
+  #endif
   olsrTime_t m_symTime;
   /// The link is considered unidirectional until this time.
   olsrTime_t m_asymTime;

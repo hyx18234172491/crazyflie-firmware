@@ -94,6 +94,7 @@
 #define DATA_PAYLOAD_MAX_NUM  MESSAGE_PAYLOAD_MAX_SIZE-sizeof(olsrDataMessageHeader_t)
 #define TS_PAYLOAD_MAX_NUM  9 //((MESSAGE_PAYLOAD_MAX_SIZE-sizeof(olsrTsMessageHeader_t))/sizeof(olsrTsMessageBodyUnit_t))
 
+
 typedef struct{
     uint16_t m_packetLength;
     uint16_t m_packetSeq;
@@ -145,6 +146,7 @@ typedef struct{
     uint8_t m_reserved;
     uint16_t m_addressUsedSize;
     olsrAddr_t m_addresses; //this item may be vector if multi-interface support is needed.
+    float m_lq;
 } __attribute__((packed)) olsrLinkMessage_t; //6
 
 typedef struct{
