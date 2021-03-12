@@ -253,6 +253,7 @@ void olsrProcessTs(const olsrMessage_t *tsMsg, const olsrTimestampTuple_t *rxOTS
     }
   }
   olsrRangingTuple_t *tuple = &olsrRangingTable.setData[peerIndex].data;
+
   //update field expiration
   tuple->m_expiration = xTaskGetTickCount() + M2T(OLSR_RANGING_TABLE_HOLD_TIME);
   //update the RangingTable Re, always store the newest rxOTS
@@ -281,10 +282,11 @@ void olsrProcessTs(const olsrMessage_t *tsMsg, const olsrTimestampTuple_t *rxOTS
     tuple->m_distance = olsrTsComputeDistance(tuple);
     distanceTowards[tuple->m_tsAddress] = tuple->m_distance;
     g_compute_from[tuple->m_tsAddress]++;
+
     if (tuple->m_distance > 1000 || tuple->m_distance < -100)
-        DEBUG_PRINT_OLSR_TS("Ranging distance \t\t\t\t\t\tcomputed=%d\n", tuple->m_distance);
+      DEBUG_PRINT_OLSR_TS("Ranging distance \t\t\t\t\t\tcomputed=%d\n", tuple->m_distance);
     else
-        DEBUG_PRINT_OLSR_TS("Ranging distance computed=%d\n", tuple->m_distance);
+      DEBUG_PRINT_OLSR_TS("Ranging distance computed=%d\n", tuple->m_distance);
   } else if (tuple->Rf.m_timestamp.full && tuple->Tf.m_timestamp.full) {
     DEBUG_PRINT_OLSR_TS("Rangingtable move left\n");
     tuple->Rp = tuple->Rf;
@@ -294,6 +296,16 @@ void olsrProcessTs(const olsrMessage_t *tsMsg, const olsrTimestampTuple_t *rxOTS
     tuple->Rr = tuple->Re;
     tuple->Tr.m_timestamp.full = 0;
   }
+  DEBUG_PRINT_OLSR_TS("\t\t neighborV:%d myV:%d \n", tsMessageHeader->m_velocity, (short) (velocity * 100));
+  // TODO: 加上自己的速度
+  tuple->m_period = 20 * tuple->m_distance / (tsMessageHeader->m_velocity + (short) (velocity * 100) + 0.001);
+  if (tuple->m_period > TS_INTERVAL_MAX) {
+    tuple->m_period = TS_INTERVAL_MAX;
+  }
+  if (tuple->m_period < TS_INTERVAL_MIN) {
+    tuple->m_period = TS_INTERVAL_MIN;
+  }
+  DEBUG_PRINT_OLSR_TS("\t\t\tperiod is : %d\n", tuple->m_period);
 }
 
 static void incrementAnsn() {
@@ -1303,10 +1315,10 @@ olsrTime_t olsrSendTs() {
   //DEBUG_PRINT_OLSR_TS("before clear expire, table size : %d \n", olsrRangingTable.size);
   //olsrRangingTableClearExpire(&olsrRangingTable);
   //DEBUG_PRINT_OLSR_TS("after clear expire, table size : %d \n", olsrRangingTable.size);
-  DEBUG_PRINT_OLSR_TS("before sort rangingtable \n");
+//  DEBUG_PRINT_OLSR_TS("before sort rangingtable \n");
   //olsrPrintRangingTable(&olsrRangingTable);
   //olsrSortRangingTable(&olsrRangingTable);
-  DEBUG_PRINT_OLSR_TS("after sort rangingtable \n");
+//  DEBUG_PRINT_OLSR_TS("after sort rangingtable \n");
   //olsrPrintRangingTable(&olsrRangingTable);
   //DEBUG_PRINT_OLSR_TS("Re: %llu \n", olsrRangingTable.setData[olsrRangingTable.fullQueueEntry].data.Re.m_timestamp.full);
   for (setIndex_t index = olsrRangingTable.fullQueueEntry; index != -1; index = olsrRangingTable.setData[index].next) {
@@ -1328,8 +1340,8 @@ olsrTime_t olsrSendTs() {
       sendUnitNumber++;
     }
     //jitter = (int) (rand() / (float) RAND_MAX * 9) - 4;// the rand part should not exceed TS_INTERVAL_MIN/2
-    int jitter = rand() % 40;
-    t->data.m_nextDeliveryTime = xTaskGetTickCount() + t->data.m_period + M2T(jitter);
+//    int jitter = rand() % 40;
+    t->data.m_nextDeliveryTime = xTaskGetTickCount() + t->data.m_period;
     if (t->data.m_nextDeliveryTime < nextSendTime) {
       nextSendTime = t->data.m_nextDeliveryTime;
     }
@@ -1516,13 +1528,13 @@ void olsrTsTask(void *ptr) {
     xSemaphoreTake(olsrAllSetLock, portMAX_DELAY);
     olsrTime_t nextSendTime = olsrSendTs();
     olsrTime_t currentTime = xTaskGetTickCount();
-//    if (nextSendTime < currentTime + M2T(TS_INTERVAL_MIN)) {
-//      nextSendTime = currentTime + M2T(TS_INTERVAL_MIN);
-//    }
+    if (nextSendTime < currentTime + M2T(TS_INTERVAL_MIN)) {
+      nextSendTime = currentTime + M2T(TS_INTERVAL_MIN);
+    }
     xSemaphoreGive(olsrAllSetLock);
 
-    vTaskDelay(M2T(TS_INTERVAL + 20));
-//    vTaskDelay(nextSendTime - currentTime);
+//    vTaskDelay(TS_INTERVAL);
+    vTaskDelay(nextSendTime - currentTime);
   }
 }
 
