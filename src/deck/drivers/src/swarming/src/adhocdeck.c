@@ -106,8 +106,11 @@ static void txCallback(dwDevice_t *dev) {
 }
 
 static void rxCallback(dwDevice_t *dev) {
+  #ifdef OLSR_PACKET_TEST 
+  olsrPacketLossCallBack(dev);
+  #else  
   olsrRxCallback(dev);
-  // olsrPacketLossCallBack(dev);
+  #endif
 }
 
 static void rxTimeoutCallback(dwDevice_t *dev) {

@@ -25,6 +25,8 @@
 
 #define OLSR_TOP_CLEAR_INTERVAL 3000
 
+#define OLSR_PACKET_TEST
+
 /// Unspecified link type.
 #define OLSR_UNSPEC_LINK        0
 /// Asymmetric link type.
