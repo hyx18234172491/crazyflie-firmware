@@ -116,10 +116,10 @@ static void olsrTaskInit(dwDevice_t *dev)
     #else
     olsrHelloTaskInit();
     olsrTcTaskInit();
-    olsrTsTaskInit();
+    // olsrTsTaskInit();
     olsrSendTaskInit(dev);
     olsrRecvTaskInit(dev);
-    olsrAppTaskInit();
+    // olsrAppTaskInit();
     initSimTopology();
     #endif
 }

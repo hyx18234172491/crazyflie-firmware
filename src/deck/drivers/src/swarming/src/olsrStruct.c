@@ -288,7 +288,11 @@ void olsrPrintLinkSet(olsrLinkSet_t *linkSet)
   while(it != -1)
     {
       olsrLinkSetItem_t tmp = linkSet->setData[it];
+      #ifdef USING_ETX
+      DEBUG_PRINT_OLSR_LINK("linkSet: localAddr is %u, neighborAddr is %u ,symtime is %u etx:%f\n",tmp.data.m_localAddr,tmp.data.m_neighborAddr,tmp.data.m_symTime,tmp.data.m_etx);
+      #else
       DEBUG_PRINT_OLSR_LINK("linkSet: localAddr is %u, neighborAddr is %u ,symtime is %u\n",tmp.data.m_localAddr,tmp.data.m_neighborAddr,tmp.data.m_symTime);
+      #endif
       it = tmp.next;
     }
 }

@@ -37,7 +37,7 @@ static int g_ts_compute_error = 0;
 static int g_etxTimer = 0;
 static short g_etxWindows = 3;
 static float g_etxAlph = 0.8;
-static float g_etxMax = 99999;
+static float g_etxMax = 1;
 #endif
 
 static uint16_t idVelocityX;
@@ -807,7 +807,6 @@ void olsrProcessHello(const olsrMessage_t* helloMsg)
 //
 void olsrProcessTc(const olsrMessage_t* tcMsg)
 {
-  olsrPrintLinkSet(&olsrLinkSet);
   olsrTime_t now = xTaskGetTickCount();
   olsrAddr_t originator = tcMsg->m_messageHeader.m_originatorAddress;
   olsrAddr_t sender = tcMsg->m_messageHeader.m_relayAddress;
@@ -1654,9 +1653,13 @@ void olsrEtxCompute()
     {
       olsrLinkTuple_t item = olsrLinkSet.setData[idx].data;
       float hi = item.m_count>=g_etxWindows?1:(item.m_count/g_etxWindows);
-      item.m_lq = item.m_lq*(1-g_etxAlph)+hi*g_etxAlph;
-      item.m_etx = item.m_lq*item.m_nlq==0?g_etxMax:1/(item.m_lq*item.m_nlq);
-      item.m_count = 0;
+      olsrLinkSet.setData[idx].data.m_lq = item.m_lq*(1-g_etxAlph)+hi*g_etxAlph;
+      olsrLinkSet.setData[idx].data.m_etx = item.m_lq*item.m_nlq==0?g_etxMax:1/(item.m_lq*item.m_nlq);
+      DEBUG_PRINT_OLSR_LINK("compute count =%d,lq =%f,nlq=%f,etx=%f\n",item.m_count,\
+                            olsrLinkSet.setData[idx].data.m_lq,\
+                            olsrLinkSet.setData[idx].data.m_nlq,\
+                            olsrLinkSet.setData[idx].data.m_etx);
+      olsrLinkSet.setData[idx].data.m_count = 0;     
     }
 }
 #endif

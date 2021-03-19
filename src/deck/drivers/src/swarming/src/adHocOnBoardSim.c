@@ -22,10 +22,10 @@ void initSimTopology()
     {
         hashTable[i] = -1;
     }
-    hashTable[7] = 0;
-    hashTable[13] = 1;
-    hashTable[14] = 2;
-    hashTable[18] = 3;
+    hashTable[8] = 0;
+    hashTable[12] = 1;
+    hashTable[17] = 2;
+    hashTable[27] = 3;
     hashTable[29] = 4;
 }
 
