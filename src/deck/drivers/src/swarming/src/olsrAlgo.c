@@ -298,7 +298,7 @@ void olsrProcessTs(const olsrMessage_t *tsMsg, const olsrTimestampTuple_t *rxOTS
   }
   DEBUG_PRINT_OLSR_TS("\t\t neighborV:%d myV:%d \n", tsMessageHeader->m_velocity, (short) (velocity * 100));
   // TODO: 加上自己的速度
-  tuple->m_period = 20 * tuple->m_distance / (tsMessageHeader->m_velocity + (short) (velocity * 100) + 0.001);
+  tuple->m_period = 10 * tuple->m_distance / (tsMessageHeader->m_velocity + (short) (velocity * 100) + 0.001);
   if (tuple->m_period > TS_INTERVAL_MAX) {
     tuple->m_period = TS_INTERVAL_MAX;
   }
