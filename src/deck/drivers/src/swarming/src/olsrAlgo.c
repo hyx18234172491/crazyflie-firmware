@@ -284,9 +284,9 @@ void olsrProcessTs(const olsrMessage_t *tsMsg, const olsrTimestampTuple_t *rxOTS
     g_compute_from[tuple->m_tsAddress]++;
 
     if (tuple->m_distance > 1000 || tuple->m_distance < -100)
-      DEBUG_PRINT_OLSR_TS("Ranging distance \t\t\t\t\t\tcomputed=%d\n", tuple->m_distance);
+        DEBUG_PRINT_OLSR_TS("Ranging distance \t\t\t\t\t\tcomputed=%d\n", tuple->m_distance);
     else
-      DEBUG_PRINT_OLSR_TS("Ranging distance computed=%d\n", tuple->m_distance);
+        DEBUG_PRINT_OLSR_TS("Ranging distance computed=%d\n", tuple->m_distance);
   } else if (tuple->Rf.m_timestamp.full && tuple->Tf.m_timestamp.full) {
     DEBUG_PRINT_OLSR_TS("Rangingtable move left\n");
     tuple->Rp = tuple->Rf;
@@ -297,7 +297,7 @@ void olsrProcessTs(const olsrMessage_t *tsMsg, const olsrTimestampTuple_t *rxOTS
     tuple->Tr.m_timestamp.full = 0;
   }
   DEBUG_PRINT_OLSR_TS("\t\t neighborV:%d myV:%d \n", tsMessageHeader->m_velocity, (short) (velocity * 100));
-  // TODO: 加上自己的速度
+#ifdef TS_VARIABLE_PERIOD
   tuple->m_period = 10 * tuple->m_distance / (tsMessageHeader->m_velocity + (short) (velocity * 100) + 0.001);
   if (tuple->m_period > TS_INTERVAL_MAX) {
     tuple->m_period = TS_INTERVAL_MAX;
@@ -306,6 +306,7 @@ void olsrProcessTs(const olsrMessage_t *tsMsg, const olsrTimestampTuple_t *rxOTS
     tuple->m_period = TS_INTERVAL_MIN;
   }
   DEBUG_PRINT_OLSR_TS("\t\t\tperiod is : %d\n", tuple->m_period);
+#endif
 }
 
 static void incrementAnsn() {
@@ -1313,39 +1314,76 @@ olsrTime_t olsrSendTs() {
   int sendUnitNumber = 0;
   olsrTsMessageBodyUnit_t *tsMsgBodyUnit = (olsrTsMessageBodyUnit_t *) msgPtr;
   //DEBUG_PRINT_OLSR_TS("before clear expire, table size : %d \n", olsrRangingTable.size);
-  //olsrRangingTableClearExpire(&olsrRangingTable);
+//  olsrRangingTableClearExpire(&olsrRangingTable);
   //DEBUG_PRINT_OLSR_TS("after clear expire, table size : %d \n", olsrRangingTable.size);
 //  DEBUG_PRINT_OLSR_TS("before sort rangingtable \n");
   //olsrPrintRangingTable(&olsrRangingTable);
-  //olsrSortRangingTable(&olsrRangingTable);
-//  DEBUG_PRINT_OLSR_TS("after sort rangingtable \n");
-  //olsrPrintRangingTable(&olsrRangingTable);
-  //DEBUG_PRINT_OLSR_TS("Re: %llu \n", olsrRangingTable.setData[olsrRangingTable.fullQueueEntry].data.Re.m_timestamp.full);
+#ifdef TS_SORT_TABLE
+  olsrSortRangingTable(&olsrRangingTable);
   for (setIndex_t index = olsrRangingTable.fullQueueEntry; index != -1; index = olsrRangingTable.setData[index].next) {
-    olsrRangingTableItem_t *t = &olsrRangingTable.setData[index];
+  olsrRangingTableItem_t *t = &olsrRangingTable.setData[index];
+  if (sendUnitNumber >= TS_PAYLOAD_MAX_NUM) {
+    break;
+  }
+  if (tsMsgBodyUnit + 1 > msgPtrEnd) {
+    DEBUG_PRINT_OLSR_TS("tsMsgBodyUnit + 1 > msgPtrEnd \n");
+    break;
+  }
+
+  if (t->data.Re.m_timestamp.full) {
+    tsMsgBodyUnit->m_tsAddr = t->data.m_tsAddress;
+    tsMsgBodyUnit->m_sequence = t->data.Re.m_seqenceNumber;
+    tsMsgBodyUnit->m_dwTimeLow32 = t->data.Re.m_timestamp.low32;
+    tsMsgBodyUnit->m_dwTimeHigh8 = t->data.Re.m_timestamp.high8;
+    tsMsgHeader->m_messageSize += sizeof(olsrTsMessageBodyUnit_t);
+    tsMsgBodyUnit++;
+    t->data.Re.m_seqenceNumber = 0;
+    t->data.Re.m_timestamp.full = 0;
+    sendUnitNumber++;
+  }
+
+  t->data.m_nextDeliveryTime = xTaskGetTickCount() + t->data.m_period;
+  if (t->data.m_nextDeliveryTime < nextSendTime) {
+    nextSendTime = t->data.m_nextDeliveryTime;
+  }
+}
+#else
+  for (olsrAddr_t i = 1; i <= TS_ADDR_MAX; i++) {
+    if (i == myAddress) {
+      continue;
+    }
+    if (sendUnitNumber >= TS_PAYLOAD_MAX_NUM) {
+      break;
+    }
     if (tsMsgBodyUnit + 1 > msgPtrEnd) {
       DEBUG_PRINT_OLSR_TS("tsMsgBodyUnit + 1 > msgPtrEnd \n");
       break;
     }
+    setIndex_t index = olsrFindInRangingTable(&olsrRangingTable, i);
+    if (index != -1) {
+      olsrRangingTableItem_t *t = &olsrRangingTable.setData[index];
+      if (t->data.Re.m_timestamp.full) {
+        tsMsgBodyUnit->m_tsAddr = t->data.m_tsAddress;
+        tsMsgBodyUnit->m_sequence = t->data.Re.m_seqenceNumber;
+        tsMsgBodyUnit->m_dwTimeLow32 = t->data.Re.m_timestamp.low32;
+        tsMsgBodyUnit->m_dwTimeHigh8 = t->data.Re.m_timestamp.high8;
+        tsMsgHeader->m_messageSize += sizeof(olsrTsMessageBodyUnit_t);
+        tsMsgBodyUnit++;
+        t->data.Re.m_seqenceNumber = 0;
+        t->data.Re.m_timestamp.full = 0;
+        sendUnitNumber++;
+      }
 
-    if (t->data.Re.m_timestamp.full) {
-      tsMsgBodyUnit->m_tsAddr = t->data.m_tsAddress;
-      tsMsgBodyUnit->m_sequence = t->data.Re.m_seqenceNumber;
-      tsMsgBodyUnit->m_dwTimeLow32 = t->data.Re.m_timestamp.low32;
-      tsMsgBodyUnit->m_dwTimeHigh8 = t->data.Re.m_timestamp.high8;
-      tsMsgHeader->m_messageSize += sizeof(olsrTsMessageBodyUnit_t);
-      tsMsgBodyUnit++;
-      t->data.Re.m_seqenceNumber = 0;
-      t->data.Re.m_timestamp.full = 0;
-      sendUnitNumber++;
-    }
-    //jitter = (int) (rand() / (float) RAND_MAX * 9) - 4;// the rand part should not exceed TS_INTERVAL_MIN/2
-//    int jitter = rand() % 40;
-    t->data.m_nextDeliveryTime = xTaskGetTickCount() + t->data.m_period;
-    if (t->data.m_nextDeliveryTime < nextSendTime) {
-      nextSendTime = t->data.m_nextDeliveryTime;
+      t->data.m_nextDeliveryTime = xTaskGetTickCount() + t->data.m_period;
+      if (t->data.m_nextDeliveryTime < nextSendTime) {
+        nextSendTime = t->data.m_nextDeliveryTime;
+      }
     }
   }
+#endif
+//  DEBUG_PRINT_OLSR_TS("after sort rangingtable \n");
+  //olsrPrintRangingTable(&olsrRangingTable);
+  //DEBUG_PRINT_OLSR_TS("Re: %llu \n", olsrRangingTable.setData[olsrRangingTable.fullQueueEntry].data.Re.m_timestamp.full);
 
   g_ts_send_count++;
   xQueueSend(g_olsrSendQueue, &tsMsg, portMAX_DELAY);
@@ -1359,7 +1397,7 @@ void olsrNeighborLoss(olsrAddr_t addr[], uint8_t length) {
   }
   // mprCompute();
 }
-bool olsrLinkTupleClearExpire() // 
+bool olsrLinkTupleClearExpire() //
 {
   /*
  link->nb->nb2->mpr->mprs
@@ -1532,9 +1570,14 @@ void olsrTsTask(void *ptr) {
       nextSendTime = currentTime + M2T(TS_INTERVAL_MIN);
     }
     xSemaphoreGive(olsrAllSetLock);
-
-//    vTaskDelay(TS_INTERVAL);
+    int randNumber = rand() % (TS_INTERVAL_WINDOW_SIZE / 2);
+#ifdef TS_VARIABLE_PERIOD
     vTaskDelay(nextSendTime - currentTime);
+#else
+    vTaskDelay(TS_INTERVAL);
+#endif
+//    vTaskDelay(TS_INTERVAL + rand() % (TS_INTERVAL_WINDOW_SIZE / 2));
+
   }
 }
 

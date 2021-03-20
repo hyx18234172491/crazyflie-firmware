@@ -41,6 +41,8 @@
 //#define DEBUG_OLSR_FORWARD
 //#define DEBUG_OLSR_APP
 //#define DEBUG_OLSR_SIM
+//#define TS_VARIABLE_PERIOD
+//#define TS_SORT_TABLE
 
 #ifdef DEBUG_OLSR_SYSTEM
 #define DEBUG_PRINT_OLSR_SYSTEM(fmt, ...) DEBUG_PRINT("SYSTEM: "fmt,  ##__VA_ARGS__)
