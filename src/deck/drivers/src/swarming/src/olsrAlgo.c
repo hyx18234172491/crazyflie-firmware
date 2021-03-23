@@ -38,9 +38,9 @@ static uint16_t idVelocityX;
 static uint16_t idVelocityY;
 static uint16_t idVelocityZ;
 static float velocity;
-static int16_t distanceTowards[10];
-static uint16_t g_receive_count[10];
-static uint16_t g_compute_from[10];
+static int16_t distanceTowards[20];
+static uint16_t g_receive_count[20];
+static uint16_t g_compute_from[20];
 
 int olsr_ts_otspool_idx = 0;
 olsrTimestampTuple_t olsr_ts_otspool[TS_OTSPOOL_MAXSIZE] = {0};
@@ -1650,6 +1650,8 @@ LOG_GROUP_START(TSranging)
         LOG_ADD(LOG_INT16, distTo7, distanceTowards + 7)
         LOG_ADD(LOG_INT16, distTo8, distanceTowards + 8)
         LOG_ADD(LOG_INT16, distTo9, distanceTowards + 9)
+        LOG_ADD(LOG_INT16, distTo10, distanceTowards + 10)
+        LOG_ADD(LOG_INT16, distTo11, distanceTowards + 11)
         LOG_ADD(LOG_UINT16, receive_from_1, g_receive_count + 1)
         LOG_ADD(LOG_UINT16, receive_from_2, g_receive_count + 2)
         LOG_ADD(LOG_UINT16, receive_from_3, g_receive_count + 3)
@@ -1659,6 +1661,8 @@ LOG_GROUP_START(TSranging)
         LOG_ADD(LOG_UINT16, receive_from_7, g_receive_count + 7)
         LOG_ADD(LOG_UINT16, receive_from_8, g_receive_count + 8)
         LOG_ADD(LOG_UINT16, receive_from_9, g_receive_count + 9)
+        LOG_ADD(LOG_UINT16, receive_from_10, g_receive_count + 10)
+        LOG_ADD(LOG_UINT16, receive_from_11, g_receive_count + 11)
         LOG_ADD(LOG_UINT16, compute_from_1, g_compute_from + 1)
         LOG_ADD(LOG_UINT16, compute_from_2, g_compute_from + 2)
         LOG_ADD(LOG_UINT16, compute_from_3, g_compute_from + 3)
@@ -1668,6 +1672,8 @@ LOG_GROUP_START(TSranging)
         LOG_ADD(LOG_UINT16, compute_from_7, g_compute_from + 7)
         LOG_ADD(LOG_UINT16, compute_from_8, g_compute_from + 8)
         LOG_ADD(LOG_UINT16, compute_from_9, g_compute_from + 9)
+        LOG_ADD(LOG_UINT16, compute_from_10, g_compute_from + 10)
+        LOG_ADD(LOG_UINT16, compute_from_11, g_compute_from + 11)
         LOG_ADD(LOG_UINT16, total_compute, &g_ts_compute_count)
         LOG_ADD(LOG_UINT16, total_receive, &g_ts_receive_count)
         LOG_ADD(LOG_UINT16, total_send, &g_ts_send_count)
