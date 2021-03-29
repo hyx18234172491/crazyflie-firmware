@@ -30,10 +30,10 @@ static SemaphoreHandle_t olsrAnsnLock;
 static SemaphoreHandle_t olsrAllSetLock;
 // static bool m_linkTupleTimerFirstTime  = true;
 static uint16_t g_ts_receive_error_count = 0;
-static uint16_t g_ts_receive_count = 0;
+static uint32_t g_ts_receive_count = 0;
 static uint16_t g_ts_compute_error = 0;
-static uint16_t g_ts_compute_count = 0;
-static uint16_t g_ts_send_count = 0;
+static uint32_t g_ts_compute_count = 0;
+static uint32_t g_ts_send_count = 0;
 static uint16_t idVelocityX;
 static uint16_t idVelocityY;
 static uint16_t idVelocityZ;
@@ -1674,9 +1674,9 @@ LOG_GROUP_START(TSranging)
         LOG_ADD(LOG_UINT16, compute_from_9, g_compute_from + 9)
         LOG_ADD(LOG_UINT16, compute_from_10, g_compute_from + 10)
         LOG_ADD(LOG_UINT16, compute_from_11, g_compute_from + 11)
-        LOG_ADD(LOG_UINT16, total_compute, &g_ts_compute_count)
-        LOG_ADD(LOG_UINT16, total_receive, &g_ts_receive_count)
-        LOG_ADD(LOG_UINT16, total_send, &g_ts_send_count)
+        LOG_ADD(LOG_UINT32, total_compute, &g_ts_compute_count)
+        LOG_ADD(LOG_UINT32, total_receive, &g_ts_receive_count)
+        LOG_ADD(LOG_UINT32, total_send, &g_ts_send_count)
         LOG_ADD(LOG_UINT16, receive_error, &g_ts_receive_error_count)
         LOG_ADD(LOG_UINT16, compute_error, &g_ts_compute_error)
         LOG_ADD(LOG_FLOAT, velocity, &velocity)
