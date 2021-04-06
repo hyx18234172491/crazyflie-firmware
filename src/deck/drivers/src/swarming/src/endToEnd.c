@@ -3,8 +3,8 @@
 #include "olsrDebug.h"
 #include "uwbOlsr.h"
 #include "log.h"
-#define SENDER_ADDRESS 28
-#define RECEIVER_ADDRESS 29
+#define SENDER_ADDRESS 1
+#define RECEIVER_ADDRESS 2
 #define TOTAL_PACKET_NUM 1000
 bool isSender = false;
 bool isReceiver = false;
