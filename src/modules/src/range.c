@@ -28,11 +28,13 @@
 
 #include "log.h"
 
+#include "debug.h"
 #include "range.h"
 #include "stabilizer_types.h"
 #include "estimator.h"
 
 static uint16_t ranges[RANGE_T_END] = {0,};
+static uint16_t roiIndex[1] = {0};
 
 void rangeSet(rangeDirection_t direction, float range_m)
 {
@@ -41,9 +43,15 @@ void rangeSet(rangeDirection_t direction, float range_m)
   ranges[direction] = range_m * 1000;
 }
 
+void roiSet(uint16_t index)
+{
+  roiIndex[0] = index;
+  DEBUG_PRINT("[INFO]roiIndex in roiSet(): %d\n", roiIndex[0]);
+}
+
 float rangeGet(rangeDirection_t direction)
 {
-    if (direction > (RANGE_T_END-1)) return 0;
+  if (direction > (RANGE_T_END-1)) return 0;
 
   return ranges[direction];
 }
@@ -89,4 +97,9 @@ LOG_ADD_CORE(LOG_UINT16, right, &ranges[rangeRight])
  * @brief Distance from the Z-ranger (bottom) sensor to an obstacle [mm]
  */
 LOG_ADD_CORE(LOG_UINT16, zrange, &ranges[rangeDown])
+
+/**
+ * @brief Index of selected ROI
+ */
+LOG_ADD_CORE(LOG_UINT16, roiindex, &roiIndex[0])
 LOG_GROUP_STOP(range)

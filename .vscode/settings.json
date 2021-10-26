@@ -3,5 +3,27 @@
         "**/generated": true,
         "**/node_modules": true,
         "**/bower_components": true
+    },
+    "files.associations": {
+        "*.cjson": "jsonc",
+        "*.wxss": "css",
+        "*.wxs": "javascript",
+        "system.h": "c",
+        "vl53l1x.h": "c",
+        "vl53l1_api.h": "c",
+        "vl53l1_platform_user_data.h": "c",
+        "log.h": "c",
+        "array": "c",
+        "deque": "c",
+        "vector": "c",
+        "string_view": "c",
+        "range.h": "c",
+        "pca95x4.h": "c",
+        "static_mem.h": "c",
+        "debug.h": "c",
+        "deck.h": "c",
+        "param.h": "c",
+        "freertos.h": "c",
+        "stdlib.h": "c"
     }
 }

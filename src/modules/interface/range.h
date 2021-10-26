@@ -46,6 +46,13 @@ typedef enum {
 void rangeSet(rangeDirection_t direction, float range_m);
 
 /**
+ * Set the ROI for a certain direction
+ *
+ * @param roiIndex ROI selection
+ */
+void roiSet(uint16_t roiIndex);
+
+/**
  * Get the range for a certain direction
  *
  * @param direction Direction of the range

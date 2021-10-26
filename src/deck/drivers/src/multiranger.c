@@ -59,27 +59,21 @@ NO_DMA_CCM_SAFE_ZERO_INIT static VL53L1_Dev_t devUp;
 NO_DMA_CCM_SAFE_ZERO_INIT static VL53L1_Dev_t devLeft;
 NO_DMA_CCM_SAFE_ZERO_INIT static VL53L1_Dev_t devRight;
 
-static bool mrInitSensor(VL53L1_Dev_t *pdev, uint32_t pca95pin, char *name)
+// 16 ROI configurations
+VL53L1_UserRoi_t roiConfig[16]; 
+uint16_t roiIndex, x, y;
+
+static void mrRoiSetup()
 {
-  bool status;
-
-  // Bring up VL53 by releasing XSHUT
-  pca95x4SetOutput(pca95pin);
-  // Let VL53 boot
-  vTaskDelay(M2T(2));
-  // Init VL53
-  if (vl53l1xInit(pdev, I2C1_DEV))
-  {
-      DEBUG_PRINT("Init %s sensor [OK]\n", name);
-      status = true;
-  }
-  else
-  {
-      DEBUG_PRINT("Init %s sensor [FAIL]\n", name);
-      status = false;
-  }
-
-  return status;
+    roiIndex = 0;
+	for (y = 0; y < 4; y++) {
+		for (x = 0; x < 4; x++) {
+            VL53L1_UserRoi_t cur = {4*x, (15-4*y), (4*x+3), (15-4*y-3)};
+			roiConfig[roiIndex] = cur;
+			roiIndex++;
+		}
+	}
+    roiIndex = 0;
 }
 
 static uint16_t mrGetMeasurementAndRestart(VL53L1_Dev_t *dev)
@@ -99,44 +93,79 @@ static uint16_t mrGetMeasurementAndRestart(VL53L1_Dev_t *dev)
     range = rangingData.RangeMilliMeter;
 
     VL53L1_StopMeasurement(dev);
+    status = VL53L1_SetUserROI(&devFront, &roiConfig[roiIndex]);
+
     status = VL53L1_StartMeasurement(dev);
     status = status;
 
     return range;
 }
 
-static void mrTask(void *param)
+static void dynamicFrontTask(void *param)
 {
+    mrRoiSetup();
     VL53L1_Error status = VL53L1_ERROR_NONE;
 
     systemWaitStart();
 
-    // Restart all sensors
+    // Restart the front sensor
     status = VL53L1_StopMeasurement(&devFront);
     status = VL53L1_StartMeasurement(&devFront);
-    status = VL53L1_StopMeasurement(&devBack);
-    status = VL53L1_StartMeasurement(&devBack);
-    status = VL53L1_StopMeasurement(&devUp);
-    status = VL53L1_StartMeasurement(&devUp);
-    status = VL53L1_StopMeasurement(&devLeft);
-    status = VL53L1_StartMeasurement(&devLeft);
-    status = VL53L1_StopMeasurement(&devRight);
-    status = VL53L1_StartMeasurement(&devRight);
     status = status;
 
     TickType_t lastWakeTime = xTaskGetTickCount();
 
-    while (1)
+    while(1)
     {
         vTaskDelayUntil(&lastWakeTime, M2T(100));
+        DEBUG_PRINT("[INFO]dynamicFrontTask is looping\n");
+        DEBUG_PRINT("[INFO]roiIndex in dynamicFrontTask(): %d\n", roiIndex);
 
+        // Select ROI config circularly
+        roiIndex++;
+        if(roiIndex == 15) roiIndex = 0;
         rangeSet(rangeFront, mrGetMeasurementAndRestart(&devFront)/1000.0f);
-        rangeSet(rangeBack, mrGetMeasurementAndRestart(&devBack)/1000.0f);
-        rangeSet(rangeUp, mrGetMeasurementAndRestart(&devUp)/1000.0f);
-        rangeSet(rangeLeft, mrGetMeasurementAndRestart(&devLeft)/1000.0f);
-        rangeSet(rangeRight, mrGetMeasurementAndRestart(&devRight)/1000.0f);
+        roiSet(roiIndex);
+
+        // Test ROI setting
+        VL53L1_UserRoi_t pRoi;
+        VL53L1_GetUserROI(&devFront, &pRoi);
+        DEBUG_PRINT("[INFO]pRoi->front: %d\n", (int)pRoi.TopLeftX);
     }
 }
+
+// static void mrTask(void *param)
+// {
+//     VL53L1_Error status = VL53L1_ERROR_NONE;
+
+//     systemWaitStart();
+
+//     // Restart all sensors
+//     status = VL53L1_StopMeasurement(&devFront);
+//     status = VL53L1_StartMeasurement(&devFront);
+//     status = VL53L1_StopMeasurement(&devBack);
+//     status = VL53L1_StartMeasurement(&devBack);
+//     status = VL53L1_StopMeasurement(&devUp);
+//     status = VL53L1_StartMeasurement(&devUp);
+//     status = VL53L1_StopMeasurement(&devLeft);
+//     status = VL53L1_StartMeasurement(&devLeft);
+//     status = VL53L1_StopMeasurement(&devRight);
+//     status = VL53L1_StartMeasurement(&devRight);
+//     status = status;
+
+//     TickType_t lastWakeTime = xTaskGetTickCount();
+
+//     while (1)
+//     {
+//         vTaskDelayUntil(&lastWakeTime, M2T(100));
+
+//         rangeSet(rangeFront, mrGetMeasurementAndRestart(&devFront)/1000.0f);
+//         rangeSet(rangeBack, mrGetMeasurementAndRestart(&devBack)/1000.0f);
+//         rangeSet(rangeUp, mrGetMeasurementAndRestart(&devUp)/1000.0f);
+//         rangeSet(rangeLeft, mrGetMeasurementAndRestart(&devLeft)/1000.0f);
+//         rangeSet(rangeRight, mrGetMeasurementAndRestart(&devRight)/1000.0f);
+//     }
+// }
 
 static void mrInit()
 {
@@ -161,8 +190,31 @@ static void mrInit()
 
     isInit = true;
 
-    xTaskCreate(mrTask, MULTIRANGER_TASK_NAME, MULTIRANGER_TASK_STACKSIZE, NULL,
+    xTaskCreate(dynamicFrontTask, MULTIRANGER_TASK_NAME, MULTIRANGER_TASK_STACKSIZE, NULL,
         MULTIRANGER_TASK_PRI, NULL);
+}
+
+static bool mrInitSensor(VL53L1_Dev_t *pdev, uint32_t pca95pin, char *name)
+{
+  bool status;
+
+  // Bring up VL53 by releasing XSHUT
+  pca95x4SetOutput(pca95pin);
+  // Let VL53 boot
+  vTaskDelay(M2T(2));
+  // Init VL53
+  if (vl53l1xInit(pdev, I2C1_DEV))
+  {
+      DEBUG_PRINT("Init %s sensor [OK]\n", name);
+      status = true;
+  }
+  else
+  {
+      DEBUG_PRINT("Init %s sensor [FAIL]\n", name);
+      status = false;
+  }
+
+  return status;
 }
 
 static bool mrTest()

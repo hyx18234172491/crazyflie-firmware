@@ -1,15 +1,15 @@
 [submodule "vendor/CMSIS"]
 	path = vendor/CMSIS
-	url = https://github.com/ARM-software/CMSIS_5.git
+	url = https://github.com.cnpmjs.org/ARM-software/CMSIS_5.git
 [submodule "vendor/FreeRTOS"]
 	path = vendor/FreeRTOS
-	url = https://github.com/FreeRTOS/FreeRTOS-Kernel.git
+	url = https://github.com.cnpmjs.org/FreeRTOS/FreeRTOS-Kernel.git
 [submodule "vendor/cmock"]
 	path = vendor/cmock
-	url = https://github.com/throwtheswitch/cmock.git
+	url = https://github.com.cnpmjs.org/throwtheswitch/cmock.git
 [submodule "vendor/libdw1000"]
 	path = vendor/libdw1000
-	url = https://github.com/bitcraze/libdw1000.git
+	url = https://github.com.cnpmjs.org/bitcraze/libdw1000.git
 [submodule "vendor/unity"]
 	path = vendor/unity
-	url = https://github.com/throwtheswitch/unity.git
+	url = https://github.com.cnpmjs.org/throwtheswitch/unity.git
