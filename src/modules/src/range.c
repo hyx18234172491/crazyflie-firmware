@@ -35,6 +35,11 @@
 
 static uint16_t ranges[RANGE_T_END] = {0,};
 static uint16_t roiIndex[1] = {0};
+static uint16_t topLeftX[1] = {0};
+static uint16_t topLeftY[1] = {0};
+static uint16_t botRightX[1] = {0};
+static uint16_t botRightY[1] = {0};
+static uint16_t orientation[1] = {0};
 
 void rangeSet(rangeDirection_t direction, float range_m)
 {
@@ -47,6 +52,31 @@ void roiSet(uint16_t index)
 {
   roiIndex[0] = index;
   DEBUG_PRINT("[INFO]roiIndex in roiSet(): %d\n", roiIndex[0]);
+}
+
+void topLeftXSet(uint16_t index)
+{
+  topLeftX[0] = index;
+}
+
+void topLeftYSet(uint16_t index)
+{
+  topLeftY[0] = index;
+}
+
+void botRightXSet(uint16_t index)
+{
+  botRightX[0] = index;
+}
+
+void botRightYSet(uint16_t index)
+{
+  botRightY[0] = index;
+}
+
+void orientationSet(uint16_t index)
+{
+  orientation[0] = index;
 }
 
 float rangeGet(rangeDirection_t direction)
@@ -99,7 +129,38 @@ LOG_ADD_CORE(LOG_UINT16, right, &ranges[rangeRight])
 LOG_ADD_CORE(LOG_UINT16, zrange, &ranges[rangeDown])
 
 /**
+ * @brief Distance from the some sensor to an obstacle [mm]
+ */
+LOG_ADD_CORE(LOG_UINT16, single, &ranges[rangeSingle])
+
+/**
  * @brief Index of selected ROI
  */
 LOG_ADD_CORE(LOG_UINT16, roiindex, &roiIndex[0])
+
+/**
+ * @brief Index of selected ROI
+ */
+LOG_ADD_CORE(LOG_UINT16, topleftx, &topLeftX[0])
+
+/**
+ * @brief Index of selected ROI
+ */
+LOG_ADD_CORE(LOG_UINT16, toplefty, &topLeftY[0])
+
+/**
+ * @brief Index of selected ROI
+ */
+LOG_ADD_CORE(LOG_UINT16, botrightx, &botRightX[0])
+
+/**
+ * @brief Index of selected ROI
+ */
+LOG_ADD_CORE(LOG_UINT16, botrighty, &botRightY[0])
+
+/**
+ * @brief Index of orientation
+ */
+LOG_ADD_CORE(LOG_UINT16, orientation, &orientation[0])
+
 LOG_GROUP_STOP(range)

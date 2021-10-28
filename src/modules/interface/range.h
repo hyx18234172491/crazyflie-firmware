@@ -34,6 +34,7 @@ typedef enum {
     rangeRight,
     rangeUp,
     rangeDown,
+    rangeSingle,
     RANGE_T_END,
 } rangeDirection_t;
 
@@ -50,7 +51,12 @@ void rangeSet(rangeDirection_t direction, float range_m);
  *
  * @param roiIndex ROI selection
  */
-void roiSet(uint16_t roiIndex);
+void roiSet(uint16_t index);
+void topLeftXSet(uint16_t index);
+void topLeftYSet(uint16_t index);
+void botRightXSet(uint16_t index);
+void botRightYSet(uint16_t index);
+void orientationSet(uint16_t index);
 
 /**
  * Get the range for a certain direction

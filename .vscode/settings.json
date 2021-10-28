@@ -24,6 +24,7 @@
         "deck.h": "c",
         "param.h": "c",
         "freertos.h": "c",
-        "stdlib.h": "c"
+        "stdlib.h": "c",
+        "stabilizer_types.h": "c"
     }
 }
