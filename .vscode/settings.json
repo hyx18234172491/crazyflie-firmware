@@ -25,6 +25,8 @@
         "param.h": "c",
         "freertos.h": "c",
         "stdlib.h": "c",
-        "stabilizer_types.h": "c"
+        "stabilizer_types.h": "c",
+        "*.tcc": "c",
+        "algorithm": "c"
     }
 }

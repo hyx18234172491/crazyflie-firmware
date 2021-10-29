@@ -59,12 +59,13 @@ NO_DMA_CCM_SAFE_ZERO_INIT static VL53L1_Dev_t devUp;
 NO_DMA_CCM_SAFE_ZERO_INIT static VL53L1_Dev_t devLeft;
 NO_DMA_CCM_SAFE_ZERO_INIT static VL53L1_Dev_t devRight;
 
+// VL53L1_Dev_t devOri[] = [devFront, devBack, devUp, devLeft, devRight];
 /**
  * Mode of ROI setting, setting by PARAMETER.
  * 0 | Default value, select ROI according to the following coornidates.
  * 1 | select ROI according the pre-generated coornidate array and the polling index.
  */
-uint16_t mode = 0;
+uint16_t mode = 1;
 // coornidate pair for mode 0, setting by PARAMETER.
 uint16_t topLeftX = 0, topLeftY = 15, botRightX = 15, botRightY = 0;
 // coornidate pairs for mode 1, setting by beforeRanging()
@@ -138,8 +139,8 @@ static void mrSingleTask(void *param)
     systemWaitStart();
 
     // Restart the sensor
-    status = VL53L1_StopMeasurement(&devUp);
-    status = VL53L1_StartMeasurement(&devUp);
+    status = VL53L1_StopMeasurement(&devFront);
+    status = VL53L1_StartMeasurement(&devFront);
     status = status;
 
     TickType_t lastWakeTime = xTaskGetTickCount();
@@ -152,7 +153,7 @@ static void mrSingleTask(void *param)
         roiIndex++;
         if(roiIndex == 16) roiIndex = 0;
 
-        rangeSet(rangeSingle, mrGetMeasurementAndRestart(&devUp)/1000.0f);
+        rangeSet(rangeSingle, mrGetMeasurementAndRestart(&devFront)/1000.0f);
         roiSet(roiIndex);
         topLeftXSet(topLeftX);
         topLeftYSet(topLeftY);
@@ -162,7 +163,7 @@ static void mrSingleTask(void *param)
 
         // Test ROI setting
         VL53L1_UserRoi_t pRoi;
-        VL53L1_GetUserROI(&devUp, &pRoi);
+        VL53L1_GetUserROI(&devFront, &pRoi);
         // DEBUG_PRINT("[INFO]pRoi: %d, %d, %d, %d\n", (int)pRoi.TopLeftX, (int)pRoi.TopLeftY, (int)pRoi.BotRightX, (int)pRoi.BotRightY);
     }
 }
