@@ -129,7 +129,7 @@ LOG_ADD_CORE(LOG_UINT16, right, &ranges[rangeRight])
 LOG_ADD_CORE(LOG_UINT16, zrange, &ranges[rangeDown])
 
 /**
- * @brief Distance from the some sensor to an obstacle [mm]
+ * @brief Distance from the certain sensor to an obstacle [mm]
  */
 LOG_ADD_CORE(LOG_UINT16, single, &ranges[rangeSingle])
 
@@ -139,27 +139,27 @@ LOG_ADD_CORE(LOG_UINT16, single, &ranges[rangeSingle])
 LOG_ADD_CORE(LOG_UINT16, roiindex, &roiIndex[0])
 
 /**
- * @brief Index of selected ROI
+ * @brief Top-left point's x-coordinate of the ROI
  */
 LOG_ADD_CORE(LOG_UINT16, topleftx, &topLeftX[0])
 
 /**
- * @brief Index of selected ROI
+ * @brief Top-left point's y-coordinate of the ROI
  */
 LOG_ADD_CORE(LOG_UINT16, toplefty, &topLeftY[0])
 
 /**
- * @brief Index of selected ROI
+ * @brief Bottom-right point's x-coordinate of the ROI
  */
 LOG_ADD_CORE(LOG_UINT16, botrightx, &botRightX[0])
 
 /**
- * @brief Index of selected ROI
+ * @brief Bottom-right point's y-coordinate of the ROI
  */
 LOG_ADD_CORE(LOG_UINT16, botrighty, &botRightY[0])
 
 /**
- * @brief Index of orientation
+ * @brief TODO, orientation selection
  */
 LOG_ADD_CORE(LOG_UINT16, orientation, &orientation[0])
 

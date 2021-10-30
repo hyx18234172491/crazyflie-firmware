@@ -62,8 +62,8 @@ NO_DMA_CCM_SAFE_ZERO_INIT static VL53L1_Dev_t devRight;
 // VL53L1_Dev_t devOri[] = [devFront, devBack, devUp, devLeft, devRight];
 /**
  * Mode of ROI setting, setting by PARAMETER.
- * 0 | Default value, select ROI according to the following coornidates.
- * 1 | select ROI according the pre-generated coornidate array and the polling index.
+ * 0 | Default value, select ROI according to the setting coornidates.
+ * 1 | Select ROI according to the pre-generated coornidate array and the polling index.
  */
 uint16_t mode = 1;
 // coornidate pair for mode 0, setting by PARAMETER.
@@ -294,13 +294,15 @@ PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcMultiranger, &isInit)
 
 PARAM_GROUP_STOP(deck)
 
-
+/**
+ * Parameter group for the multi ranger deck.
+ */
 PARAM_GROUP_START(mrdeck)
 PARAM_ADD_CORE(PARAM_UINT16, mode, &mode)
 PARAM_ADD_CORE(PARAM_UINT16, orientation, &orientation)
 
-PARAM_ADD_CORE(PARAM_UINT16, topLeftX, &topLeftX)
-PARAM_ADD_CORE(PARAM_UINT16, topLeftY, &topLeftY)
-PARAM_ADD_CORE(PARAM_UINT16, botRightX, &botRightX)
-PARAM_ADD_CORE(PARAM_UINT16, botRightY, &botRightY)
+PARAM_ADD_CORE(PARAM_UINT16, topleftx, &topLeftX)
+PARAM_ADD_CORE(PARAM_UINT16, toplefty, &topLeftY)
+PARAM_ADD_CORE(PARAM_UINT16, botrightx, &botRightX)
+PARAM_ADD_CORE(PARAM_UINT16, botrighty, &botRightY)
 PARAM_GROUP_STOP(mrdeck)
