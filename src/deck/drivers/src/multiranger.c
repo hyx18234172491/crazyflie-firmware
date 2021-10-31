@@ -59,6 +59,7 @@ NO_DMA_CCM_SAFE_ZERO_INIT static VL53L1_Dev_t devUp;
 NO_DMA_CCM_SAFE_ZERO_INIT static VL53L1_Dev_t devLeft;
 NO_DMA_CCM_SAFE_ZERO_INIT static VL53L1_Dev_t devRight;
 
+#define OFFSET 2
 // VL53L1_Dev_t devOri[] = [devFront, devBack, devUp, devLeft, devRight];
 /**
  * Mode of ROI setting, setting by PARAMETER.
@@ -69,7 +70,7 @@ uint16_t mode = 1;
 // coornidate pair for mode 0, setting by PARAMETER.
 uint16_t topLeftX = 0, topLeftY = 15, botRightX = 15, botRightY = 0;
 // coornidate pairs for mode 1, setting by beforeRanging()
-VL53L1_UserRoi_t roiConfig[16];
+VL53L1_UserRoi_t roiConfig[(16/OFFSET) * (16/OFFSET)];
 uint16_t roiIndex;
 
 /**
@@ -89,9 +90,9 @@ static void beforeRanging()
 {
     uint16_t x, y;
     roiIndex = 0;
-	for (y = 0; y < 4; y++) {
-		for (x = 0; x < 4; x++) {
-            VL53L1_UserRoi_t cur = {4*x, (15-4*y), (4*x+3), (15-4*y-3)};
+	for (y = 0; y < (16 / OFFSET); y++) {
+		for (x = 0; x < (16 / OFFSET); x++) {
+            VL53L1_UserRoi_t cur = {OFFSET*x, (15-OFFSET*y), (OFFSET*x+3), (15-OFFSET*y-3)};
 			roiConfig[roiIndex] = cur;
 			roiIndex++;
 		}
@@ -151,7 +152,7 @@ static void mrSingleTask(void *param)
 
         // Select ROI config circularly
         roiIndex++;
-        if(roiIndex == 16) roiIndex = 0;
+        if(roiIndex == (16/OFFSET) * (16/OFFSET)) roiIndex = 0;
 
         rangeSet(rangeSingle, mrGetMeasurementAndRestart(&devFront)/1000.0f);
         roiSet(roiIndex);
