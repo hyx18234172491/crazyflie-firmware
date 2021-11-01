@@ -7,7 +7,7 @@
  *
  * LPS node firmware.
  *
- * Copyright 2018, Bitcraze AB
+ * Copyright 2021, Bitcraze AB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -59,28 +59,47 @@ NO_DMA_CCM_SAFE_ZERO_INIT static VL53L1_Dev_t devUp;
 NO_DMA_CCM_SAFE_ZERO_INIT static VL53L1_Dev_t devLeft;
 NO_DMA_CCM_SAFE_ZERO_INIT static VL53L1_Dev_t devRight;
 
-static bool mrInitSensor(VL53L1_Dev_t *pdev, uint32_t pca95pin, char *name)
+#define OFFSET 2
+// VL53L1_Dev_t devOri[] = [devFront, devBack, devUp, devLeft, devRight];
+/**
+ * Mode of ROI setting, setting by PARAMETER.
+ * 0 | Default value, select ROI according to the setting coornidates.
+ * 1 | Select ROI according to the pre-generated coornidate array and the polling index.
+ */
+uint16_t mode = 1;
+// coornidate pair for mode 0, setting by PARAMETER.
+uint16_t topLeftX = 0, topLeftY = 15, botRightX = 15, botRightY = 0;
+// coornidate pairs for mode 1, setting by beforeRanging()
+VL53L1_UserRoi_t roiConfig[(16/OFFSET) * (16/OFFSET)];
+uint16_t roiIndex;
+
+/**
+ * Ranging orientation, setting by PARAMETER.
+ * 1 | front
+ * 2 | back
+ * 3 | up
+ * 4 | left
+ * 5 | right
+ */
+uint16_t orientation = 3;
+
+/**
+ * Pre-generate ROI coornidates for mode 1, set the orientation.
+ */
+static void beforeRanging()
 {
-  bool status;
-
-  // Bring up VL53 by releasing XSHUT
-  pca95x4SetOutput(pca95pin);
-  // Let VL53 boot
-  vTaskDelay(M2T(2));
-  // Init VL53
-  if (vl53l1xInit(pdev, I2C1_DEV))
-  {
-      DEBUG_PRINT("Init %s sensor [OK]\n", name);
-      status = true;
-  }
-  else
-  {
-      DEBUG_PRINT("Init %s sensor [FAIL]\n", name);
-      status = false;
-  }
-
-  return status;
+    uint16_t x, y;
+    roiIndex = 0;
+	for (y = 0; y < (16 / OFFSET); y++) {
+		for (x = 0; x < (16 / OFFSET); x++) {
+            VL53L1_UserRoi_t cur = {OFFSET*x, (15-OFFSET*y), (OFFSET*x+3), (15-OFFSET*y-3)};
+			roiConfig[roiIndex] = cur;
+			roiIndex++;
+		}
+	}
+    roiIndex = 0;
 }
+
 
 static uint16_t mrGetMeasurementAndRestart(VL53L1_Dev_t *dev)
 {
@@ -99,42 +118,54 @@ static uint16_t mrGetMeasurementAndRestart(VL53L1_Dev_t *dev)
     range = rangingData.RangeMilliMeter;
 
     VL53L1_StopMeasurement(dev);
+
+    if(mode == 0) {
+        VL53L1_UserRoi_t roiConfigStruct = {topLeftX, topLeftY, botRightX, botRightY};
+        status = VL53L1_SetUserROI(dev, &roiConfigStruct);
+    } else {
+        status = VL53L1_SetUserROI(dev, &roiConfig[roiIndex]);
+    }
+    
     status = VL53L1_StartMeasurement(dev);
     status = status;
 
     return range;
 }
 
-static void mrTask(void *param)
+static void mrSingleTask(void *param)
 {
+    beforeRanging();
     VL53L1_Error status = VL53L1_ERROR_NONE;
 
     systemWaitStart();
 
-    // Restart all sensors
+    // Restart the sensor
     status = VL53L1_StopMeasurement(&devFront);
     status = VL53L1_StartMeasurement(&devFront);
-    status = VL53L1_StopMeasurement(&devBack);
-    status = VL53L1_StartMeasurement(&devBack);
-    status = VL53L1_StopMeasurement(&devUp);
-    status = VL53L1_StartMeasurement(&devUp);
-    status = VL53L1_StopMeasurement(&devLeft);
-    status = VL53L1_StartMeasurement(&devLeft);
-    status = VL53L1_StopMeasurement(&devRight);
-    status = VL53L1_StartMeasurement(&devRight);
     status = status;
 
     TickType_t lastWakeTime = xTaskGetTickCount();
 
-    while (1)
+    while(1)
     {
-        vTaskDelayUntil(&lastWakeTime, M2T(100));
+        vTaskDelayUntil(&lastWakeTime, M2T(30));
 
-        rangeSet(rangeFront, mrGetMeasurementAndRestart(&devFront)/1000.0f);
-        rangeSet(rangeBack, mrGetMeasurementAndRestart(&devBack)/1000.0f);
-        rangeSet(rangeUp, mrGetMeasurementAndRestart(&devUp)/1000.0f);
-        rangeSet(rangeLeft, mrGetMeasurementAndRestart(&devLeft)/1000.0f);
-        rangeSet(rangeRight, mrGetMeasurementAndRestart(&devRight)/1000.0f);
+        // Select ROI config circularly
+        roiIndex++;
+        if(roiIndex == (16/OFFSET) * (16/OFFSET)) roiIndex = 0;
+
+        rangeSet(rangeSingle, mrGetMeasurementAndRestart(&devFront)/1000.0f);
+        roiSet(roiIndex);
+        topLeftXSet(topLeftX);
+        topLeftYSet(topLeftY);
+        botRightXSet(botRightX);
+        botRightYSet(botRightY);
+        orientationSet(orientation);
+
+        // Test ROI setting
+        VL53L1_UserRoi_t pRoi;
+        VL53L1_GetUserROI(&devFront, &pRoi);
+        // DEBUG_PRINT("[INFO]pRoi: %d, %d, %d, %d\n", (int)pRoi.TopLeftX, (int)pRoi.TopLeftY, (int)pRoi.BotRightX, (int)pRoi.BotRightY);
     }
 }
 
@@ -161,8 +192,30 @@ static void mrInit()
 
     isInit = true;
 
-    xTaskCreate(mrTask, MULTIRANGER_TASK_NAME, MULTIRANGER_TASK_STACKSIZE, NULL,
-        MULTIRANGER_TASK_PRI, NULL);
+    xTaskCreate(mrSingleTask, MULTIRANGER_TASK_NAME, MULTIRANGER_TASK_STACKSIZE, NULL, MULTIRANGER_TASK_PRI, NULL);
+}
+
+static bool mrInitSensor(VL53L1_Dev_t *pdev, uint32_t pca95pin, char *name)
+{
+  bool status;
+
+  // Bring up VL53 by releasing XSHUT
+  pca95x4SetOutput(pca95pin);
+  // Let VL53 boot
+  vTaskDelay(M2T(2));
+  // Init VL53
+  if (vl53l1xInit(pdev, I2C1_DEV))
+  {
+      DEBUG_PRINT("Init %s sensor [OK]\n", name);
+      status = true;
+  }
+  else
+  {
+      DEBUG_PRINT("Init %s sensor [FAIL]\n", name);
+      status = false;
+  }
+
+  return status;
 }
 
 static bool mrTest()
@@ -188,9 +241,10 @@ static bool mrTest()
 static const DeckDriver multiranger_deck = {
     .vid = 0xBC,
     .pid = 0x0C,
-    .name = "bcMultiranger",
+    .name = "seuSingleranger",
 
-    .usedGpio = 0, // FIXME: set the used pins
+    .usedGpio = 0,
+    .usedPeriph = DECK_USING_I2C,
 
     .init = mrInit,
     .test = mrTest,
@@ -205,4 +259,18 @@ PARAM_GROUP_START(deck)
  */
 PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcMultiranger, &isInit)
 
+
 PARAM_GROUP_STOP(deck)
+
+/**
+ * Parameter group for the multi-ranger deck in single mode.
+ */
+PARAM_GROUP_START(mrdeck)
+PARAM_ADD_CORE(PARAM_UINT16, mode, &mode)
+PARAM_ADD_CORE(PARAM_UINT16, orientation, &orientation)
+
+PARAM_ADD_CORE(PARAM_UINT16, topleftx, &topLeftX)
+PARAM_ADD_CORE(PARAM_UINT16, toplefty, &topLeftY)
+PARAM_ADD_CORE(PARAM_UINT16, botrightx, &botRightX)
+PARAM_ADD_CORE(PARAM_UINT16, botrighty, &botRightY)
+PARAM_GROUP_STOP(mrdeck)

@@ -51,7 +51,7 @@ void rangeSet(rangeDirection_t direction, float range_m)
 void roiSet(uint16_t index)
 {
   roiIndex[0] = index;
-  DEBUG_PRINT("[INFO]roiIndex in roiSet(): %d\n", roiIndex[0]);
+  // DEBUG_PRINT("[INFO]roiIndex in roiSet(): %d\n", roiIndex[0]);
 }
 
 void topLeftXSet(uint16_t index)
