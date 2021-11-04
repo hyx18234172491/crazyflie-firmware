@@ -46,12 +46,13 @@ void rangeSet(rangeDirection_t direction, float range_m)
   if (direction > (RANGE_T_END-1)) return;
 
   ranges[direction] = range_m * 1000;
+  // DEBUG_PRINT("[INFO]range_m in rangeSet(): %f\n", range_m);
 }
 
 void roiSet(uint16_t index)
 {
   roiIndex[0] = index;
-  // DEBUG_PRINT("[INFO]roiIndex in roiSet(): %d\n", roiIndex[0]);
+  DEBUG_PRINT("[INFO]roiIndex in roiSet(): %d\n", roiIndex[0]);
 }
 
 void topLeftXSet(uint16_t index)
