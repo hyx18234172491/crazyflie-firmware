@@ -156,7 +156,7 @@ static void mrSingleTask(void *param)
 
         // Select ROI config circularly
         roiIndex++;
-        if(roiIndex == (16/OFFSET) * (16/OFFSET)) roiIndex = 0;
+        if(roiIndex == COUNT * COUNT) roiIndex = 0;
 
         rangeSet(rangeSingle, mrGetMeasurementAndRestart(&devFront)/1000.0f);
         roiSet(roiIndex);
