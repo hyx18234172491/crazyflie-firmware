@@ -1,0 +1,6 @@
+config SWARM_RANGING_PROTOCOL
+    bool "Enable basic swarm ranging protocol"
+    default y
+    help
+      The swarm ranging protocol provide the ranging service
+      which obtain the distance between each couple drones.

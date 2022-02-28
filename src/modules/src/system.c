@@ -70,6 +70,7 @@
 #include "peer_localization.h"
 #include "cfassert.h"
 #include "i2cdev.h"
+#include "autoconf.h"
 
 #ifndef START_DISARMED
 #define ARM_INIT true
@@ -82,6 +83,8 @@ static bool selftestPassed;
 static bool armed = ARM_INIT;
 static bool forceArm;
 static bool isInit;
+
+static char nrf_version[16];
 
 STATIC_MEM_TASK_ALLOC(systemTask, SYSTEM_TASK_STACKSIZE);
 
@@ -137,7 +140,7 @@ void systemInit(void)
   buzzerInit();
   peerLocalizationInit();
 
-#ifdef APP_ENABLED
+#ifdef CONFIG_APP_ENABLE
   appInit();
 #endif
 
@@ -164,7 +167,7 @@ void systemTask(void *arg)
   ledInit();
   ledSet(CHG_LED, 1);
 
-#ifdef DEBUG_QUEUE_MONITOR
+#ifdef CONFIG_DEBUG_QUEUE_MONITOR
   queueMonitorInit();
 #endif
 
@@ -185,7 +188,11 @@ void systemTask(void *arg)
   commanderInit();
 
   StateEstimatorType estimator = anyEstimator;
+
+  #ifdef CONFIG_ESTIMATOR_KALMAN_ENABLE
   estimatorKalmanTaskInit();
+  #endif
+
   deckInit();
   estimator = deckGetRequiredEstimator();
   stabilizerInit(estimator);
@@ -199,6 +206,8 @@ void systemTask(void *arg)
 #ifdef PROXIMITY_ENABLED
   proximityInit();
 #endif
+
+  systemRequestNRFVersion();
 
   //Test the modules
   DEBUG_PRINT("About to run tests in system.c.\n");
@@ -226,10 +235,14 @@ void systemTask(void *arg)
     pass = false;
     DEBUG_PRINT("stabilizer [FAIL]\n");
   }
+
+  #ifdef CONFIG_ESTIMATOR_KALMAN_ENABLE
   if (estimatorKalmanTaskTest() == false) {
     pass = false;
     DEBUG_PRINT("estimatorKalmanTask [FAIL]\n");
   }
+  #endif
+
   if (deckTest() == false) {
     pass = false;
     DEBUG_PRINT("deck [FAIL]\n");
@@ -330,6 +343,38 @@ bool systemIsArmed()
   return armed || forceArm;
 }
 
+void systemRequestShutdown()
+{
+  SyslinkPacket slp;
+
+  slp.type = SYSLINK_PM_ONOFF_SWITCHOFF;
+  slp.length = 0;
+  syslinkSendPacket(&slp);
+}
+
+void systemRequestNRFVersion()
+{
+  SyslinkPacket slp;
+
+  slp.type = SYSLINK_SYS_NRF_VERSION;
+  slp.length = 0;
+  syslinkSendPacket(&slp);
+}
+
+void systemSyslinkReceive(SyslinkPacket *slp)
+{
+  if (slp->type == SYSLINK_SYS_NRF_VERSION)
+  {
+    size_t len = slp->length - 2;
+
+    if (sizeof(nrf_version) - 1 <=  len) {
+      len = sizeof(nrf_version) - 1;
+    }
+    memcpy(&nrf_version, &slp->data[0], len);
+    DEBUG_PRINT("NRF51 version: %s\n", nrf_version);
+  }
+}
+
 void vApplicationIdleHook( void )
 {
   static uint32_t tickOfLatestWatchdogReset = M2T(0);
@@ -389,7 +434,7 @@ PARAM_ADD_CORE(PARAM_INT8 | PARAM_RONLY, selftestPassed, &selftestPassed)
 /**
  * @brief Set to nonzero to force system to be armed
  */
-PARAM_ADD(PARAM_INT8, forceArm, &forceArm)
+PARAM_ADD(PARAM_INT8 | PARAM_PERSISTENT, forceArm, &forceArm)
 
 PARAM_GROUP_STOP(sytem)
 

@@ -41,12 +41,15 @@
 #include "libdw1000.h"
 #include "stabilizer_types.h"
 
+#include "autoconf.h"
+
 // Timestamp counter frequency
 #define LOCODECK_TS_FREQ (499.2e6 * 128)
 
 #define LOCODECK_ANTENNA_OFFSET 154.6   // In meters
 #define LOCODECK_ANTENNA_DELAY  ((LOCODECK_ANTENNA_OFFSET * LOCODECK_TS_FREQ) / SPEED_OF_LIGHT) // In radio ticks
 
+#ifndef CONFIG_SWARM_RANGING_PROTOCOL
 typedef enum uwbEvent_e {
   eventTimeout,
   eventPacketReceived,
@@ -54,13 +57,17 @@ typedef enum uwbEvent_e {
   eventReceiveTimeout,
   eventReceiveFailed,
 } uwbEvent_t;
+#endif
 
 typedef uint64_t locoAddress_t;
 
+#ifndef CONFIG_SWARM_RANGING_PROTOCOL
 #define LPS_NUMBER_OF_ALGORITHMS 3
+#endif
 
 #define LPS_AUTO_MODE_SWITCH_PERIOD M2T(1000)
 
+#ifndef CONFIG_SWARM_RANGING_PROTOCOL
 typedef enum {
   lpsMode_auto = 0,
   lpsMode_TWR = 1,
@@ -74,20 +81,22 @@ typedef struct {
   volatile uint16_t rangingState;
 
   // Requested and current ranging mode
-  lpsMode_t userRequestedMode;
-  lpsMode_t currentRangingMode;
+  // lpsMode_t userRequestedMode;
+  // lpsMode_t currentRangingMode;
 
   // State of the ranging mode auto detection
   bool modeAutoSearchDoInitialize;
   bool modeAutoSearchActive;
   uint32_t nextSwitchTick;
 } lpsAlgoOptions_t;
+#endif
 
 bool locoDeckGetAnchorPosition(const uint8_t anchorId, point_t* position);
 uint8_t locoDeckGetAnchorIdList(uint8_t unorderedAnchorList[], const int maxListSize);
 uint8_t locoDeckGetActiveAnchorIdList(uint8_t unorderedAnchorList[], const int maxListSize);
 
-// Callbacks for uwb algorithms
+#ifndef CONFIG_SWARM_RANGING_PROTOCOL
+Callbacks for uwb algorithms
 typedef struct uwbAlgorithm_s {
   void (*init)(dwDevice_t *dev);
   uint32_t (*onEvent)(dwDevice_t *dev, uwbEvent_t event);
@@ -96,6 +105,7 @@ typedef struct uwbAlgorithm_s {
   uint8_t (*getAnchorIdList)(uint8_t unorderedAnchorList[], const int maxListSize);
   uint8_t (*getActiveAnchorIdList)(uint8_t unorderedAnchorList[], const int maxListSize);
 } uwbAlgorithm_t;
+#endif
 
 #include <FreeRTOS.h>
 
@@ -105,17 +115,19 @@ typedef struct uwbAlgorithm_s {
 // Returns true if packet will be send, false instead
 bool lpsSendLppShort(uint8_t destId, void* data, size_t length);
 
+#ifndef CONFIG_SWARM_RANGING_PROTOCOL
 typedef struct {
   uint8_t dest;
   uint8_t length;
   uint8_t data[30];
 } lpsLppShortPacket_t;
 
-// Poll if there is a LPS short configuration packet to send
-// Return true if the packet data has been filled in shortPacket
-// Return false if no packet to send
-// Function to be used by the LPS algorithm
+Poll if there is a LPS short configuration packet to send
+Return true if the packet data has been filled in shortPacket
+Return false if no packet to send
+Function to be used by the LPS algorithm
 bool lpsGetLppShort(lpsLppShortPacket_t* shortPacket);
+#endif
 
 uint16_t locoDeckGetRangingState();
 void locoDeckSetRangingState(const uint16_t newState);
@@ -125,10 +137,12 @@ void locoDeckSetRangingState(const uint16_t newState);
 
 #define LPP_SHORT_ANCHORPOS 0x01
 
+#ifndef CONFIG_SWARM_RANGING_PROTOCOL
 struct lppShortAnchorPos_s {
   float x;
   float y;
   float z;
 } __attribute__((packed));
+#endif
 
 #endif // __LOCODECK_H__

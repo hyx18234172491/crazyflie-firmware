@@ -1,0 +1,5 @@
+obj-y += adhocdeck.o
+obj-y += rangingProtocolStruct.o
+obj-y += rangingProtocolAlgo.o
+obj-y += rangingProtocolTask.o
+obj-y += rangingProtocolInit.o

@@ -3,5 +3,9 @@
         "**/generated": true,
         "**/node_modules": true,
         "**/bower_components": true
+    },
+    "files.associations": {
+        "adhocdeck.h": "c",
+        "rangingprotocolalgo.h": "c"
     }
 }

@@ -41,6 +41,7 @@
 
 #include "sensors.h"
 #include "commander.h"
+#include "crtp_commander_high_level.h"
 #include "crtp_localization_service.h"
 #include "controller.h"
 #include "power_distribution.h"
@@ -66,6 +67,8 @@ static setpoint_t setpoint;
 static sensorData_t sensorData;
 static state_t state;
 static control_t control;
+// For scratch storage - never logged or passed to other subsystems.
+static setpoint_t tempSetpoint;
 
 static StateEstimatorType estimatorType;
 static ControllerType controllerType;
@@ -256,6 +259,10 @@ static void stabilizerTask(void* param)
       stateEstimator(&state, tick);
       compressState();
 
+      if (crtpCommanderHighLevelGetSetpoint(&tempSetpoint, &state, tick)) {
+        commanderSetSetpoint(&tempSetpoint, COMMANDER_PRIORITY_HIGHLEVEL);
+      }
+
       commanderGetSetpoint(&setpoint, &state);
       compressSetpoint();
 
@@ -277,21 +284,23 @@ static void stabilizerTask(void* param)
         powerDistribution(&control);
       }
 
+#ifdef CONFIG_DECK_USD
       // Log data to uSD card if configured
-      if (   usddeckLoggingEnabled()
+      if (usddeckLoggingEnabled()
           && usddeckLoggingMode() == usddeckLoggingMode_SynchronousStabilizer
           && RATE_DO_EXECUTE(usddeckFrequency(), tick)) {
         usddeckTriggerLogging();
       }
-    }
-    calcSensorToOutputLatency(&sensorData);
-    tick++;
-    STATS_CNT_RATE_EVENT(&stabilizerRate);
+#endif
+      calcSensorToOutputLatency(&sensorData);
+      tick++;
+      STATS_CNT_RATE_EVENT(&stabilizerRate);
 
-    if (!rateSupervisorValidate(&rateSupervisorContext, xTaskGetTickCount())) {
-      if (!rateWarningDisplayed) {
-        DEBUG_PRINT("WARNING: stabilizer loop rate is off (%lu)\n", rateSupervisorLatestCount(&rateSupervisorContext));
-        rateWarningDisplayed = true;
+      if (!rateSupervisorValidate(&rateSupervisorContext, xTaskGetTickCount())) {
+        if (!rateWarningDisplayed) {
+          DEBUG_PRINT("WARNING: stabilizer loop rate is off (%lu)\n", rateSupervisorLatestCount(&rateSupervisorContext));
+          rateWarningDisplayed = true;
+        }
       }
     }
   }
@@ -319,11 +328,11 @@ void stabilizerSetEmergencyStopTimeout(int timeout)
  */
 PARAM_GROUP_START(stabilizer)
 /**
- * @brief Estimator type Any(0), complementary(1), kalman(2) (Default: 1)
+ * @brief Estimator type Any(0), complementary(1), kalman(2) (Default: 0)
  */
 PARAM_ADD_CORE(PARAM_UINT8, estimator, &estimatorType)
 /**
- * @brief Controller type Any(0), PID(1), Mellinger(2), INDI(3) (Default: 1)
+ * @brief Controller type Any(0), PID(1), Mellinger(2), INDI(3) (Default: 0)
  */
 PARAM_ADD_CORE(PARAM_UINT8, controller, &controllerType)
 /**
@@ -493,7 +502,13 @@ LOG_ADD(LOG_UINT32, intToOut, &inToOutLatency)
 LOG_GROUP_STOP(stabilizer)
 
 /**
- * Log group for accelerometer data
+ * Log group for accelerometer sensor measurement, based on body frame.
+ * Compensated for a miss-alignment by gravity at startup.
+ *
+ * For data on measurement noise please see information from the sensor
+ * manufacturer. To see what accelerometer sensor is in your Crazyflie or Bolt
+ * please check documentation on the Bitcraze webpage or check the parameter
+ * group `imu_sensors`.
  */
 LOG_GROUP_START(acc)
 
@@ -522,7 +537,12 @@ LOG_GROUP_STOP(accSec)
 #endif
 
 /**
- * Log group for the barometer
+ * Log group for the barometer.
+ *
+ * For data on measurement noise please see information from the sensor
+ * manufacturer. To see what barometer sensor is in your Crazyflie or Bolt
+ * please check documentation on the Bitcraze webpage or check the parameter
+ * group `imu_sensors`.
  */
 LOG_GROUP_START(baro)
 
@@ -544,6 +564,11 @@ LOG_GROUP_STOP(baro)
 
 /**
  * Log group for gyroscopes.
+ *
+ * For data on measurement noise please see information from the sensor
+ * manufacturer. To see what gyroscope sensor is in your Crazyflie or Bolt
+ * please check documentation on the Bitcraze webpage or check the parameter
+ * group `imu_sensors`.
  */
 LOG_GROUP_START(gyro)
 

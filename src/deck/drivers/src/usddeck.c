@@ -53,6 +53,7 @@
 #include "sensors.h"
 #include "debug.h"
 #include "led.h"
+#include "pm.h"
 
 #include "statsCnt.h"
 #include "log.h"
@@ -91,6 +92,10 @@
 #define MAX_USD_LOG_EVENTS                (20)
 #define FIXED_FREQUENCY_EVENT_ID          (0xFFFF)
 #define FIXED_FREQUENCY_EVENT_NAME        "fixedFrequency"
+
+
+/* set to true when graceful shutdown is triggered */
+static volatile bool in_shutdown = false;
 
 typedef struct usdLogEventConfig_s {
   uint16_t eventId;
@@ -237,6 +242,7 @@ static crc32Context_t crcContext;
 static xTimerHandle timer;
 static void usdTimer(xTimerHandle timer);
 
+static SemaphoreHandle_t shutdownMutex;
 
 // Handling from the memory module
 static uint32_t handleMemGetSize(void) { return usddeckFileSize(); }
@@ -440,6 +446,8 @@ static void usdInit(DeckInfo *info)
 
     logFileMutex = xSemaphoreCreateMutex();
     logBufferMutex = xSemaphoreCreateMutex();
+    shutdownMutex = xSemaphoreCreateMutex();
+
     /* try to mount drives before creating the tasks */
     if (f_mount(&FatFs, "", 1) == FR_OK) {
       DEBUG_PRINT("mount SD-Card [OK].\n");
@@ -519,6 +527,14 @@ static void usddeckEventtriggerCallback(const eventtrigger *event)
       break;
     }
   }
+}
+
+static void usdGracefulShutdownCallback()
+{
+  uint32_t timeout = 15; /* ms */
+  in_shutdown = true;
+  vTaskResume(xHandleWriteTask);
+  xSemaphoreTake(shutdownMutex, M2T(timeout));
 }
 
 static void usdLogTask(void* prm)
@@ -682,6 +698,8 @@ static void usdLogTask(void* prm)
     xHandleWriteTask = 0;
     enableLogging = usdLogConfig.enableOnStartup; // enable logging if desired
 
+    pmRegisterGracefulShutdownCallback(usdGracefulShutdownCallback);
+
     /* create usd-write task */
     xTaskCreate(usdWriteTask, USDWRITE_TASK_NAME,
                 USDWRITE_TASK_STACKSIZE, 0,
@@ -788,7 +806,7 @@ static void usdWriteTask(void* prm)
 
   vTaskDelay(M2T(50));
 
-  while (true) {
+  while (!in_shutdown) {
     vTaskSuspend(NULL);
     if (enableLogging) {
       // reset stats
@@ -997,6 +1015,11 @@ static void usdWriteTask(void* prm)
       }
     }
   }
+
+  if (in_shutdown) {
+    xSemaphoreGive(shutdownMutex);
+  }
+
   /* something went wrong */
   xHandleWriteTask = 0;
   vTaskDelete(NULL);
@@ -1033,7 +1056,7 @@ static const DeckDriver usd_deck = {
     .vid = 0xBC,
     .pid = 0x08,
     .name = "bcUSD",
-    .usedGpio = DECK_USING_MISO|DECK_USING_MOSI|DECK_USING_SCK|DECK_USING_IO_4,
+    .usedGpio = DECK_USING_IO_4,
     .usedPeriph = DECK_USING_SPI,
     .init = usdInit,
     .test = usdTest,
