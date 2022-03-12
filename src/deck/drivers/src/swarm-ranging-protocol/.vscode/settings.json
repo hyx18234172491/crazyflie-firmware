@@ -24,6 +24,7 @@
         "lpstdoa3tag.h": "c",
         "lpstwrtag.h": "c",
         "stm32fxxx.h": "c",
-        "stm32f4xx.h": "c"
+        "stm32f4xx.h": "c",
+        "floodingalgo.h": "c"
     }
 }

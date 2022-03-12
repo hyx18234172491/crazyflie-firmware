@@ -11,6 +11,7 @@
 void TxCallback(dwDevice_t *dev);
 void RxCallback(dwDevice_t *dev) ;
 void TsTask(void *ptr);
+void FTask(void *ptr);
 void SendTask(void *ptr);
 void RecvTask(void *ptr);
 void TaskStructInit(dwDevice_t *dev);

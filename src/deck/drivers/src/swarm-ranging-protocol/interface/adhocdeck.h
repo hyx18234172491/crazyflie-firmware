@@ -101,5 +101,6 @@ struct lppShortAnchorPos_s {
 
 #define MAC802154_TYPE_OLSR 4
 #define MAC802154_TYPE_TS 5
+#define MAC802154_TYPE_F 6
 
 #endif // __ADHOCDECK_H__

@@ -6,6 +6,7 @@
     },
     "files.associations": {
         "adhocdeck.h": "c",
-        "rangingprotocolalgo.h": "c"
+        "rangingprotocolalgo.h": "c",
+        "floodingalgo.h": "c"
     }
 }

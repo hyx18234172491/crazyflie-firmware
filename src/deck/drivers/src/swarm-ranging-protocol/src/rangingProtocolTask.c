@@ -12,6 +12,7 @@
 #include "rangingProtocolTask.h"
 #include "rangingProtocolDebug.h"
 #include "rangingProtocolPacket.h"
+#include "floodingAlgo.h"
 
 #define SEND_QUEUE_LENGTH 15
 #define RECV_QUEUE_LENGTH 15
@@ -27,11 +28,18 @@ static float velocity;
 static QueueHandle_t globalSendQueue;
 static QueueHandle_t globalRecvQueue;
 static SemaphoreHandle_t globalSetLock;
-// about message
-static uint16_t globalMessageSeq = 0;
+// about global message
 packet_t txPacketCache = {0};
 tsPacketWithTimestamp_t rxPacketWTsCache = {0};
+packet_t *rxPacketCache = &rxPacketWTsCache.packet;
+// about Ts message
+static uint16_t globalMessageSeq = 0;
 packet_t txTsPacket = {0};
+// about F message
+#ifdef CONFIG_SWARM_FLOODING
+packet_t txFPacket = {0};
+bool isFForwarding = false;
+#endif
 
 const int antennaDelay = (ANTENNA_OFFSET * 499.2e6 * 128) / 299792458.0; // In radio tick
 
@@ -65,7 +73,7 @@ static uint16_t getMessageSeq()
 void TxCallback(dwDevice_t *dev)
 {
     if (txPacketCache.fcf_s.type != MAC802154_TYPE_TS) return;
-    DEBUG_PRINT_TASK("TX CALLBACK SUCCESS\n");
+    // DEBUG_PRINT_TASK("TX CALLBACK SUCCESS\n");
 
     message_t *message = (message_t *) txPacketCache.payload;
     tsMessage_t *tsMessage = (tsMessage_t *) message->messagePayload;
@@ -88,26 +96,18 @@ void RxCallback(dwDevice_t *dev)
     }
     DEBUG_PRINT_TASK("RX CALLBACK SUCCESS\n");
 
-    packet_t *rxPacket = &rxPacketWTsCache.packet;
-    memset(rxPacket, 0, sizeof(packet_t));
-    dwGetData(dwDevice, (uint8_t *) rxPacket, dataLength);
+    memset(rxPacketCache, 0, sizeof(packet_t));
+    dwGetData(dwDevice, (uint8_t *) rxPacketCache, dataLength);
 
-    dwTime_t *arriveTimestamp = &rxPacketWTsCache.rxTimestamp.timestamp;
-    dwGetReceiveTimestamp(dev, arriveTimestamp);
-    arriveTimestamp->full -= (antennaDelay / 2);
-
-    message_t *message = (message_t *) &rxPacket->payload;
-    // DEBUG_PRINT_TASK_DATA("rx MESSAGE LENGTH IS: %u\n", message->messageHeader.messageLength);
-    tsMessageHeader_t *tsMessageHeader = (tsMessageHeader_t *) message->messagePayload;
-    rxPacketWTsCache.rxTimestamp.sequenceNumber = tsMessageHeader->messageSequence;
-    // DEBUG_PRINT_TASK_DATA("ARRIVETIMESTAMP IS: %llu\n", rxPacketWTs.rxTimestamp.timestamp.full);
-    // DEBUG_PRINT_TASK_DATA("rx originatorAddress: %u\n", tsMessageHeader->originatorAddress);
-    // DEBUG_PRINT_TASK_DATA("rx lastTxSequence: %u\n", tsMessageHeader->lastTxSequence);
-    // DEBUG_PRINT_TASK_DATA("rx TxSequence: %u\n", tsMessageHeader->messageSequence);
-
-    if (rxPacket->fcf_s.type != MAC802154_TYPE_TS) 
+    if(rxPacketCache->fcf_s.type == MAC802154_TYPE_TS)
     {
-        return;
+        dwTime_t *arriveTimestamp = &rxPacketWTsCache.rxTimestamp.timestamp;
+        dwGetReceiveTimestamp(dev, arriveTimestamp);
+        arriveTimestamp->full -= (antennaDelay / 2);
+
+        message_t *message = (message_t *) &rxPacketCache->payload;
+        tsMessageHeader_t *tsMessageHeader = (tsMessageHeader_t *) message->messagePayload;
+        rxPacketWTsCache.rxTimestamp.sequenceNumber = tsMessageHeader->messageSequence;
     }
 
     xQueueSend(globalRecvQueue, &rxPacketWTsCache, portMAX_DELAY);
@@ -116,7 +116,7 @@ void RxCallback(dwDevice_t *dev)
 // TS task
 static tsTime_t SendTs()
 {
-    DEBUG_PRINT_TASK("START SEND TS\n");
+    // DEBUG_PRINT_TASK("START SEND TS\n");
 
     tsTime_t tsNextSendTime = xTaskGetTickCount() + M2T(TS_INTERVAL_MAX) + M2T(TS_INTERVAL_MIN);
     uint16_t tsMessageSeq = getMessageSeq();
@@ -159,14 +159,33 @@ void TsTask(void *ptr)
     }
 }
 
+// F task
+#ifdef CONFIG_SWARM_FLOODING
+void FTask(void *ptr)
+{
+    MAC80215_PACKET_INIT(txFPacket, MAC802154_TYPE_F);
+    // task loop
+    while (true)
+    {
+        xSemaphoreTake(globalSetLock, portMAX_DELAY);
+        // critical section
+        GenerateF(myAddress, &txFPacket, 3);
+        DEBUG_PRINT_TASK("START SEND F\n");
+        xQueueSend(globalSendQueue, &txFPacket, portMAX_DELAY);
+        //
+        xSemaphoreGive(globalSetLock);
+        vTaskDelay(M2T(F_INTERVAL));
+    }
+}
+#endif
+
 // send task
 void SendTask(void *ptr)
 {
-    // 重看
     TickType_t timeToWaitForSendQueue;
     timeToWaitForSendQueue = portMAX_DELAY;
     dwDevice = (dwDevice_t *) ptr;
-    MAC80215_PACKET_INIT(txPacketCache, MAC802154_TYPE_TS);
+    // MAC80215_PACKET_INIT(txPacketCache, MAC802154_TYPE_TS);
     // task loop
     while(true)
     {    
@@ -181,6 +200,7 @@ void SendTask(void *ptr)
             dwReceivePermanently(dwDevice, true);
             dwSetData(dwDevice, (uint8_t *) &txPacketCache, MAC802154_HEADER_LENGTH + messageLength);
             dwStartTransmit(dwDevice);
+            DEBUG_PRINT_TASK("SEND SUCCESS\n");
         }   
         vTaskDelay(70);
     }
@@ -189,18 +209,10 @@ void SendTask(void *ptr)
 // receive task
 static void PacketDispatch(tsPacketWithTimestamp_t *rxPacketWTs)
 {
-    DEBUG_PRINT_TASK("START DISPATCH\n");
-
+    DEBUG_PRINT_TASK("ENTER DISPATCH\n");
     tsTimestampTuple_t *rxTimestamp = &rxPacketWTs->rxTimestamp;
     packet_t *packet = (packet_t *) &rxPacketWTs->packet;
     message_t *message = (message_t *) &packet->payload;
-
-    // DEBUG_PRINT_TASK_DATA("Dispatch messageLength: %u\n", message->messageHeader.messageLength);
-    // tsMessage_t *testTsMessage = (tsMessage_t *) message->messagePayload;
-    // DEBUG_PRINT_TASK_DATA("Dispatch lastTxSequence: %u\n", testTsMessage->tsMessageHeader.lastTxSequence);
-    // DEBUG_PRINT_TASK_DATA("Dispatch messageSequence: %u\n", testTsMessage->tsMessageHeader.messageSequence);
-    // DEBUG_PRINT_TASK_DATA("Dispatch messageSize %u\n", testTsMessage->tsMessageHeader.messageSize); 
-    // DEBUG_PRINT_TASK_DATA("Dispatch originatorAddress: %u\n", testTsMessage->tsMessageHeader.originatorAddress);
 
     xSemaphoreTake(globalSetLock, portMAX_DELAY);
 
@@ -209,11 +221,23 @@ static void PacketDispatch(tsPacketWithTimestamp_t *rxPacketWTs)
     switch (type)
     {
     case MAC802154_TYPE_TS:
-        DEBUG_PRINT_TASK("DISPATCH TO TS_ALGO\n");
-        //DEBUG_PRINT_ALGO("DISPATCH\n");
         UpdateRxTs(message, rxTimestamp, myAddress);
         break;
     
+    #ifdef CONFIG_SWARM_FLOODING
+    case MAC802154_TYPE_F:
+        DEBUG_PRINT_TASK("F MESSAGE HANDLE\n");
+        CheckRxF(message, myAddress, &isFForwarding);
+        // DEBUG_PRINT_TASK_DATA("ISFORWARDING: %u\n", isFForwarding);
+        // 允许转发则转发
+        if(isFForwarding)
+        {
+            UpdateRxF(message);
+            xQueueSend(globalSendQueue, packet, portMAX_DELAY);
+        }
+        break;
+    #endif
+
     default:
         break;
     }
@@ -225,14 +249,7 @@ void RecvTask(void *ptr)
 {
     while(xQueueReceive(globalRecvQueue, &rxPacketWTsCache, portMAX_DELAY))
     {
-        // packet_t *testPacket = &rxPacketWTsCache.packet;
-        // message_t *testMessage = (message_t *) testPacket->payload;
-        // DEBUG_PRINT_TASK_DATA("recv messageLength: %u\n", testMessage->messageHeader.messageLength);
-        // tsMessage_t *testTsMessage = (tsMessage_t *) testMessage->messagePayload;
-        // DEBUG_PRINT_TASK_DATA("recv lastTxSequence: %u\n", testTsMessage->tsMessageHeader.lastTxSequence);
-        // DEBUG_PRINT_TASK_DATA("recv messageSequence: %u\n", testTsMessage->tsMessageHeader.messageSequence);
-        // DEBUG_PRINT_TASK_DATA("recv messageSize %u\n", testTsMessage->tsMessageHeader.messageSize); 
-        // DEBUG_PRINT_TASK_DATA("recv originatorAddress: %u\n", testTsMessage->tsMessageHeader.originatorAddress);
+        DEBUG_PRINT_TASK("RECV SUCCESS\n");
         PacketDispatch(&rxPacketWTsCache);
     }
 }

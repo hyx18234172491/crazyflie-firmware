@@ -24,7 +24,7 @@ static float tsVelocity;
 
 void GenerateTs(uint16_t tsMessageSeq, float velocity, uint16_t myAddress, tsTime_t *tsNextSendTime, packet_t *txTsPacket)
 {
-    DEBUG_PRINT_ALGO("START GENERATE TS\n");
+    // DEBUG_PRINT_ALGO("START GENERATE TS\n");
     // jitter and velocity
     int jitter = 0;
     tsVelocity = velocity;
@@ -34,6 +34,7 @@ void GenerateTs(uint16_t tsMessageSeq, float velocity, uint16_t myAddress, tsTim
     // TsPrintRangingTable(&tsRangingTable);
     // generate TS message header
     message_t *tsMessage = (message_t *) txTsPacket->payload;
+    // 修改
     tsMessageHeader_t *tsMessageHeader = (tsMessageHeader_t *) tsMessage->messagePayload;
     tsTimestampTuple_t *tsTx = &tsTxPool[tsTxPoolIndex];
     tsMessageHeader->messageSize = sizeof(tsMessageHeader_t);
@@ -85,14 +86,14 @@ void GenerateTs(uint16_t tsMessageSeq, float velocity, uint16_t myAddress, tsTim
 
 void UpdateTxTs(dwTime_t txTimestamp, uint16_t packetSeq)
 {
-    DEBUG_PRINT_ALGO("START UPDATE TX TS\n");
+    // DEBUG_PRINT_ALGO("START UPDATE TX TS\n");
 
     tsTxPoolIndex++;
     tsTxPoolIndex %= TS_TX_POOL_MAXSIZE;
     tsTxPool[tsTxPoolIndex].sequenceNumber = packetSeq;
     tsTxPool[tsTxPoolIndex].timestamp = txTimestamp;
 
-    DEBUG_PRINT_ALGO_DATA("last seq: %u\n", tsTxPool[tsTxPoolIndex].sequenceNumber);
+    // DEBUG_PRINT_ALGO_DATA("last seq: %u\n", tsTxPool[tsTxPoolIndex].sequenceNumber);
 }
 
 int16_t TsComputeDistance(tsRangingTuple_t *rangingTuple)
@@ -144,7 +145,7 @@ void UpdateRxTs(const message_t* message, const tsTimestampTuple_t *rxTimestamp,
     //若收到的数据包的时间戳小于最新发送的数据包的时间戳，则收到的数据包已过期
     if(rxTimestamp->timestamp.full < tsTxPool[tsTxPoolIndex].timestamp.full)
     {
-        DEBUG_PRINT_ALGO_DATA("ERROR\n");
+        // DEBUG_PRINT_ALGO_DATA("ERROR\n");
         tsReceiveErrorCount++;
         return;
     }
@@ -239,12 +240,12 @@ void UpdateRxTs(const message_t* message, const tsTimestampTuple_t *rxTimestamp,
         if(rangingTuple02->distance > 1000 || rangingTuple02->distance < -100)
         {
             // DEBUG_PRINT_ALGO("TS COMPUTE DISTANCE ERROR\n");
-            DEBUG_PRINT_ALGO_DATA("compute error\n");
+            // DEBUG_PRINT_ALGO_DATA("compute error\n");
         }
         else
         {
             // DEBUG_PRINT_ALGO("TS COMPUTE DISTANCE SUCCESS\n");
-            DEBUG_PRINT_ALGO_DATA("compute: %d\n", rangingTuple02->distance);
+            // DEBUG_PRINT_ALGO_DATA("compute: %d\n", rangingTuple02->distance);
         }
     }
     else if(rangingTuple02->Rf.timestamp.full && rangingTuple02->Tf.timestamp.full)

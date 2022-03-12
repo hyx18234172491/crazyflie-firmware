@@ -9,6 +9,7 @@
 #include "rangingProtocolDebug.h"
 #include "rangingProtocolStruct.h"
 #include "rangingProtocolTask.h"
+#include "floodingStruct.h"
 
 point_t anchorPosition[2];
 
@@ -23,6 +24,20 @@ static void TsTaskInit()
         DEBUG_PRINT_INIT("TS TASK INIT FAILED\n");
     }
 }
+
+#ifdef CONFIG_SWARM_FLOODING
+static void FTaskInit()
+{
+    if(xTaskCreate(FTask, "F_TASK", MINIMAL_STACK_SIZE, NULL, LPS_DECK_TASK_PRI, NULL) == pdPASS)
+    {
+        DEBUG_PRINT_INIT("F TASK INIT SUCCESS\n");
+    }
+    else
+    {
+        DEBUG_PRINT_INIT("F TASK INIT FAILED\n");
+    }
+}
+#endif
 
 static void SendTaskInit(dwDevice_t *dev)
 {
@@ -55,6 +70,9 @@ static void TaskInit(dwDevice_t *dev)
     RecvTaskInit(dev);
 
     TsTaskInit();
+    #ifdef CONFIG_SWARM_FLOODING
+    FTaskInit();
+    #endif
 }
 
 static void DataInit()
@@ -68,6 +86,10 @@ static void StructInit()
 {
     DEBUG_PRINT_INIT("START STRUCT INIT\n");
     TsRangingTableInit(&tsRangingTable);
+    #ifdef CONFIG_SWARM_FLOODING
+    FCheckTableInit(&fCheckTable);
+    FTopologyTableInit(&fTopologyTable);   
+    #endif
 }
 
 static void Init(dwDevice_t *dev)

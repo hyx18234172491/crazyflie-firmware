@@ -6,7 +6,7 @@
 // ranging table
 void TsRangingTableInit(tsRangingTable_t *rangingTable) 
 {
-  DEBUG_PRINT_STRUCT("START RANGING TABLE INIT\n");
+  // DEBUG_PRINT_STRUCT("START RANGING TABLE INIT\n");
   itemIndex_t i;
   for (i = 0; i < RANGING_TABLE_ITEM_SET_SIZE - 1; i++) 
   {
@@ -24,7 +24,7 @@ static bool TsRangingTableFree(tsRangingTable_t *rangingTable, itemIndex_t delIt
   {
     return true;
   }
-  DEBUG_PRINT_STRUCT("START RANGING TABLE FREE\n");
+  // DEBUG_PRINT_STRUCT("START RANGING TABLE FREE\n");
   //del from full queue
   itemIndex_t currentItemIndex = rangingTable->fullQueueEntry;
   if (delItemIndex == currentItemIndex) 
@@ -57,7 +57,7 @@ static bool TsRangingTableFree(tsRangingTable_t *rangingTable, itemIndex_t delIt
 
 bool TsRangingTableClearExpire(tsRangingTable_t *rangingTable) 
 {
-  DEBUG_PRINT_STRUCT("START RANGING CLEAR EXPIRE\n");
+  // DEBUG_PRINT_STRUCT("START RANGING CLEAR EXPIRE\n");
   itemIndex_t candidate = rangingTable->fullQueueEntry;
   tsTime_t currentTime = xTaskGetTickCount();
   bool isChanged = false;
@@ -83,7 +83,7 @@ void TsSortRangingTable(tsRangingTable_t *rangingTable)
   {
     return;
   }
-  DEBUG_PRINT_STRUCT("START RANGING TABLE SORT\n");
+  // DEBUG_PRINT_STRUCT("START RANGING TABLE SORT\n");
   itemIndex_t headItemIndex = rangingTable->fullQueueEntry;
   itemIndex_t currentItemIndex = rangingTable->itemSet[headItemIndex].next;
   rangingTable->itemSet[headItemIndex].next = -1;
@@ -129,7 +129,7 @@ void TsPrintRangingTable(tsRangingTable_t *rangingTable)
 
 itemIndex_t TsFindInRangingTable(tsRangingTable_t *rangingTable, tsAddress_t address)
 {
-  DEBUG_PRINT_STRUCT("START RANGING TABLE FIND\n");
+  // DEBUG_PRINT_STRUCT("START RANGING TABLE FIND\n");
   itemIndex_t index = rangingTable->fullQueueEntry;
   while (index != -1) 
   {
@@ -151,7 +151,7 @@ static itemIndex_t TsRangingTableMalloc(tsRangingTable_t *rangingTable)
   }
   else 
   {
-    DEBUG_PRINT_STRUCT("START RANGING TABLE MALLOC\n");
+    // DEBUG_PRINT_STRUCT("START RANGING TABLE MALLOC\n");
     itemIndex_t candidate = rangingTable->freeQueueEntry;
     rangingTable->freeQueueEntry = rangingTable->itemSet[candidate].next;
     // insert to full queue
@@ -164,7 +164,7 @@ static itemIndex_t TsRangingTableMalloc(tsRangingTable_t *rangingTable)
 
 itemIndex_t TsRangingTableInsert(tsRangingTable_t *rangingTable, tsRangingTuple_t *tuple) 
 {
-  DEBUG_PRINT_STRUCT("START RANGING TABLE INSERT\n");
+  // DEBUG_PRINT_STRUCT("START RANGING TABLE INSERT\n");
   itemIndex_t candidate = TsRangingTableMalloc(rangingTable);
   if (candidate != -1) 
   {
