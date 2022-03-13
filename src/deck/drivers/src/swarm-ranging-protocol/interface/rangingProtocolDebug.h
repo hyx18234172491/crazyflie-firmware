@@ -7,7 +7,7 @@
 //#define DEBUG_TASK
 //#define DEBUG_ALGO
 //#define DEBUG_STRUCT
-#define DEBUG_ALGO_DATA
+//#define DEBUG_ALGO_DATA
 //#define DEBUG_TASK_DATA
 //#define DEBUG_STRUCT_DATA
 

@@ -227,10 +227,8 @@ static void PacketDispatch(tsPacketWithTimestamp_t *rxPacketWTs)
     #ifdef CONFIG_SWARM_FLOODING
     case MAC802154_TYPE_F:
         DEBUG_PRINT_TASK("F MESSAGE HANDLE\n");
-        CheckRxF(message, myAddress, &isFForwarding);
-        // DEBUG_PRINT_TASK_DATA("ISFORWARDING: %u\n", isFForwarding);
-        // 允许转发则转发
-        if(isFForwarding)
+        // 检验泛洪信息是否重复，允许转发则转发
+        if(CheckRxF(message, myAddress))
         {
             UpdateRxF(message);
             xQueueSend(globalSendQueue, packet, portMAX_DELAY);

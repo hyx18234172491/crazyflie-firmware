@@ -30,7 +30,6 @@ fCheckTable_t fCheckTable;
 typedef struct {
     uint16_t originatorAddress;
     uint16_t destinationAddress;
-    uint16_t sequence; //删除
     uint16_t distance;
 } __attribute__((packed)) fTopologyTableTuple_t;
 

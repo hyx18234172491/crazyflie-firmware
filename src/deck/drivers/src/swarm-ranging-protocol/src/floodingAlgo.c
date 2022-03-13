@@ -51,7 +51,6 @@ void GenerateF(uint16_t myAddress, packet_t *txFPacket, uint8_t timeToLive)
         // 更新泛洪拓扑表
         fTopologyTableTuple.originatorAddress = myAddress;
         fTopologyTableTuple.destinationAddress = rangingTableItem->rangingTuple.peerAddress;
-        fTopologyTableTuple.sequence = fMessageTopologySeq;
         fTopologyTableTuple.distance = rangingTableItem->rangingTuple.distance;
         index_t topologyTableItemIndex = FFindInTopologyTable(&fTopologyTable, myAddress, rangingTableItem->rangingTuple.peerAddress);
         // 没有记录，进行插入
@@ -67,7 +66,6 @@ void GenerateF(uint16_t myAddress, packet_t *txFPacket, uint8_t timeToLive)
         else
         {
             fTopologyTableTuple_t *topologyTuple = &fTopologyTable.fTopologyTableItemSet[topologyTableItemIndex].fTopologyTableTuple;
-            topologyTuple->sequence = fTopologyTableTuple.sequence;
             topologyTuple->distance = fTopologyTableTuple.distance;
         }
         // 更新数据
@@ -82,21 +80,20 @@ void GenerateF(uint16_t myAddress, packet_t *txFPacket, uint8_t timeToLive)
     message->messageHeader.messageLength = sizeof(messageHeader_t) + fMessageHeader->size;
 }
 
-void CheckRxF(const message_t* message, uint16_t myAddress, bool *isForwarding) //改正
+bool CheckRxF(const message_t* message, uint16_t myAddress)
 {
     DEBUG_PRINT_ALGO("START CHECK RX F\n");
-    *isForwarding = false;
     // 解析报文
     fMessageHeader_t *fMessageHeader = (fMessageHeader_t *) message->messagePayload;
     // 如果原地址是自己则直接返回
     if (fMessageHeader->originatorAddress == myAddress)
     {
-        return;
+        return false;
     }
     // 检查TTL信息，若为0则直接返回，反之则继续
     if (fMessageHeader->timeToLive == 0)
     {
-        return;
+        return false;
     }
     else
     {
@@ -111,20 +108,20 @@ void CheckRxF(const message_t* message, uint16_t myAddress, bool *isForwarding) 
     {
         // TODO: 处理泛洪检查表空间已满情况
         candidate = FCheckTableInsert(&fCheckTable, fMessageHeader->originatorAddress, fMessageHeader->sequence);
-        *isForwarding = true;
+        return true;
     }
     // candidate不为-1，检查序列号是否重复
     else
     {
-        // 如果序列号相等或小于，则不转发，直接返回
+        // 如果序列号相等或小于，则不转发，返回false
         if(fMessageHeader->sequence <= fCheckTable.fCheckTableItemSet[candidate].sequence)
         {
-            return;
+            return false;
         }
         // 反之，需要转发，并更新序列号
         else
         {
-            *isForwarding = true;
+            return true;
             fCheckTable.fCheckTableItemSet[candidate].sequence = fMessageHeader->sequence;
         }
     }
@@ -143,7 +140,6 @@ void UpdateRxF(const message_t* message)
     {
         fTopologyTableTuple.originatorAddress = fMessagePayloadUnit->originatorAddress;
         fTopologyTableTuple.destinationAddress = fMessagePayloadUnit->destinationAddress;
-        fTopologyTableTuple.sequence = fMessagePayloadUnit->sequence;
         fTopologyTableTuple.distance = fMessagePayloadUnit->distance;
         // DEBUG_PRINT_ALGO_DATA("F TABLE ORIGINATORADDRESS: %u\n", fTopologyTableTuple.originatorAddress);
         // DEBUG_PRINT_ALGO_DATA("F TABLE DESTINATIONADDRESS: %u\n", fTopologyTableTuple.destinationAddress);
@@ -161,16 +157,13 @@ void UpdateRxF(const message_t* message)
             }
         }
         // 如果有记录且记录的序列号为最新，则更新记录
-        else if (fTopologyTable.fTopologyTableItemSet[topologyTableItemIndex].fTopologyTableTuple.sequence < fTopologyTableTuple.sequence)
+        else
         {
             fTopologyTableTuple_t *topologyTuple = &fTopologyTable.fTopologyTableItemSet[topologyTableItemIndex].fTopologyTableTuple;
-            topologyTuple->sequence = fTopologyTableTuple.sequence;
             topologyTuple->distance = fTopologyTableTuple.distance;
-            DEBUG_PRINT_ALGO_DATA("F TABLE ORIGINATORADDRESS: %u\n", topologyTuple->originatorAddress);
-            DEBUG_PRINT_ALGO_DATA("F TABLE DESTINATIONADDRESS: %u\n", topologyTuple->destinationAddress);
-            DEBUG_PRINT_ALGO_DATA("F TABLE SEQUENCE: %u\n", topologyTuple->sequence);
-            DEBUG_PRINT_ALGO_DATA("F TABLE DISTANCE: %u\n", topologyTuple->distance);
+            // DEBUG_PRINT_ALGO_DATA("F TABLE ORIGINATORADDRESS: %u\n", topologyTuple->originatorAddress);
+            // DEBUG_PRINT_ALGO_DATA("F TABLE DESTINATIONADDRESS: %u\n", topologyTuple->destinationAddress);
+            // DEBUG_PRINT_ALGO_DATA("F TABLE DISTANCE: %u\n", topologyTuple->distance);
         }
     }
-    // FPrintTopologyTable(&fTopologyTable);
 }
