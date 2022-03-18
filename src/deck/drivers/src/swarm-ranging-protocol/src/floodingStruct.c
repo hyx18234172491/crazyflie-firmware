@@ -23,7 +23,19 @@ static index_t FCheckTableMalloc(fCheckTable_t *checkTable)
     // 检查表内没有剩余空间
     if(checkTable->fCheckTableFreeEntry == -1)
     {
-        return -1;
+        // return -1;
+        // TODO: 没有剩余空间了就将队列最后一个元素剔除，并将新元素插入队头
+        index_t candidate = checkTable->fCheckTableFullEntry;
+        while (checkTable->fCheckTableItemSet[checkTable->fCheckTableItemSet[candidate].next].next != -1)
+        {
+            candidate = checkTable->fCheckTableItemSet[candidate].next;
+        }
+        index_t tmp = checkTable->fCheckTableFullEntry;
+        checkTable->fCheckTableFullEntry = checkTable->fCheckTableItemSet[candidate].next;
+        checkTable->fCheckTableItemSet[candidate].next = -1;
+        checkTable->fCheckTableItemSet[checkTable->fCheckTableFullEntry].next = tmp;
+        candidate = checkTable->fCheckTableFullEntry;
+        return candidate;
     }
     // 检查表内有剩余空间，进行分配
     else
@@ -54,19 +66,29 @@ index_t FFindInCheckTable(fCheckTable_t *checkTable, uint16_t originatorAddress)
 {
     DEBUG_PRINT_STRUCT("START CHECK TABLE FIND\n");
     index_t candidate = checkTable->fCheckTableFullEntry;
-    while (candidate != -1)
+    // 头情况:头部是目标，则直接返回
+    if (checkTable->fCheckTableItemSet[candidate].originatorAddress == originatorAddress)
     {
-        fCheckTableItem_t item = checkTable->fCheckTableItemSet[candidate];
-        if(item.originatorAddress == originatorAddress)
-        {
-            break;
-        }
-        candidate = item.next;
+        return candidate;
     }
+    // 中间情况,包括了尾情况：检测出目标，则将目标排列到队列的最前面
+    while (checkTable->fCheckTableItemSet[candidate].next != -1)
+    {
+        index_t index = checkTable->fCheckTableItemSet[candidate].next;
+        if(fCheckTable.fCheckTableItemSet[index].originatorAddress == originatorAddress)
+        {
+            checkTable->fCheckTableItemSet[candidate].next = checkTable->fCheckTableItemSet[index].next;
+            checkTable->fCheckTableItemSet[index].next = checkTable->fCheckTableFullEntry;
+            checkTable->fCheckTableFullEntry = index;
+            candidate = index;
+            return candidate;
+        }
+        candidate = index;
+    }
+    // 没有检测出目标，则返回-1
+    candidate = checkTable->fCheckTableItemSet[candidate].next;
     return candidate;
 }
-
-// TODO: 泛洪检查表空间释放
 
 // Flooding topology table
 void FTopologyTableInit(fTopologyTable_t *topologyTable)
