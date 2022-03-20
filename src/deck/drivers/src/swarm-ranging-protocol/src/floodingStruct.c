@@ -23,8 +23,7 @@ static index_t FCheckTableMalloc(fCheckTable_t *checkTable)
     // 检查表内没有剩余空间
     if(checkTable->fCheckTableFreeEntry == -1)
     {
-        // return -1;
-        // TODO: 没有剩余空间了就将队列最后一个元素剔除，并将新元素插入队头
+        // 没有剩余空间了就将队列最后一个元素剔除，并将新元素插入队头
         index_t candidate = checkTable->fCheckTableFullEntry;
         while (checkTable->fCheckTableItemSet[checkTable->fCheckTableItemSet[candidate].next].next != -1)
         {
@@ -53,12 +52,9 @@ index_t FCheckTableInsert(fCheckTable_t *checkTable, uint16_t originatorAddress,
 {
     DEBUG_PRINT_STRUCT("START CHECK TABLE INSERT\n");
     index_t candidate = FCheckTableMalloc(checkTable);
-    if (candidate != -1)
-    {
-        checkTable->fCheckTableItemSet[candidate].originatorAddress = originatorAddress;
-        checkTable->fCheckTableItemSet[candidate].sequence = sequence;
-        checkTable->fCheckTableSize++;
-    }
+    checkTable->fCheckTableItemSet[candidate].originatorAddress = originatorAddress;
+    checkTable->fCheckTableItemSet[candidate].sequence = sequence;
+    checkTable->fCheckTableSize++;
     return candidate;
 }
 
@@ -66,28 +62,39 @@ index_t FFindInCheckTable(fCheckTable_t *checkTable, uint16_t originatorAddress)
 {
     DEBUG_PRINT_STRUCT("START CHECK TABLE FIND\n");
     index_t candidate = checkTable->fCheckTableFullEntry;
-    // 头情况:头部是目标，则直接返回
-    if (checkTable->fCheckTableItemSet[candidate].originatorAddress == originatorAddress)
+    // 遍历泛洪查询表，直到找到对应地址项
+    while (candidate != -1)
     {
-        return candidate;
+        if(checkTable->fCheckTableItemSet[candidate].originatorAddress == originatorAddress)
+        {
+            break;
+        }
+        candidate = checkTable->fCheckTableItemSet[candidate].next;
+    }
+    return candidate;
+}
+
+void FSortInCheckTable(fCheckTable_t *checkTable, index_t objectIndex)
+{
+    index_t candidate = checkTable->fCheckTableFullEntry;
+    // 头情况:头部是目标，则直接返回
+    if (objectIndex == checkTable->fCheckTableFullEntry)
+    {
+        return;
     }
     // 中间情况,包括了尾情况：检测出目标，则将目标排列到队列的最前面
     while (checkTable->fCheckTableItemSet[candidate].next != -1)
     {
         index_t index = checkTable->fCheckTableItemSet[candidate].next;
-        if(fCheckTable.fCheckTableItemSet[index].originatorAddress == originatorAddress)
+        if(objectIndex == index)
         {
             checkTable->fCheckTableItemSet[candidate].next = checkTable->fCheckTableItemSet[index].next;
             checkTable->fCheckTableItemSet[index].next = checkTable->fCheckTableFullEntry;
             checkTable->fCheckTableFullEntry = index;
-            candidate = index;
-            return candidate;
+            return;
         }
-        candidate = index;
+        candidate = checkTable->fCheckTableItemSet[candidate].next;
     }
-    // 没有检测出目标，则返回-1
-    candidate = checkTable->fCheckTableItemSet[candidate].next;
-    return candidate;
 }
 
 // Flooding topology table

@@ -51,6 +51,7 @@ fTopologyTable_t fTopologyTable;
 void FCheckTableInit(fCheckTable_t *checkTable);
 index_t FCheckTableInsert(fCheckTable_t *checkTable, uint16_t originatorAddress, uint16_t sequence);
 index_t FFindInCheckTable(fCheckTable_t *checkTable, uint16_t originatorAddress);
+void FSortInCheckTable(fCheckTable_t *checkTable, index_t objectIndex);
 
 // Flooding topology table methods
 void FTopologyTableInit(fTopologyTable_t *topologyTable);

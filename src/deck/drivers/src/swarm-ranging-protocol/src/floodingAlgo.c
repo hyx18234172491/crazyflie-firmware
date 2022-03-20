@@ -121,8 +121,9 @@ bool CheckRxF(const message_t* message, uint16_t myAddress)
         // 反之，需要转发，并更新序列号
         else
         {
-            return true;
             fCheckTable.fCheckTableItemSet[candidate].sequence = fMessageHeader->sequence;
+            FSortInCheckTable(&fCheckTable, candidate);
+            return true;
         }
     }
 }
