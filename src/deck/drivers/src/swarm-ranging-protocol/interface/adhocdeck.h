@@ -99,8 +99,8 @@ struct lppShortAnchorPos_s {
   float z;
 } __attribute__((packed));
 
-#define MAC802154_TYPE_OLSR 4
 #define MAC802154_TYPE_TS 5
 #define MAC802154_TYPE_F 6
+#define MAC802154_TYPE_R 4
 
 #endif // __ADHOCDECK_H__

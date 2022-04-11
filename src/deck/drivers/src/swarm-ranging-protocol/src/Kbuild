@@ -5,3 +5,5 @@ obj-y 							+= rangingProtocolTask.o
 obj-y 							+= rangingProtocolInit.o
 obj-$(CONFIG_SWARM_FLOODING)   	+= floodingStruct.o
 obj-$(CONFIG_SWARM_FLOODING)   	+= floodingAlgo.o
+obj-y				            += routingStruct.o
+obj-y                           += routingAlgo.o

@@ -150,7 +150,7 @@ index_t FFindInTopologyTable(fTopologyTable_t *topologyTable, uint16_t originato
 {
     DEBUG_PRINT_STRUCT("START TOPOLOGY TABLE FIND\n");
     index_t candidate = topologyTable->fTopologyTableFullEntry;
-    DEBUG_PRINT_STRUCT_DATA("CANDIDATE-1: %d\n", candidate);
+    //DEBUG_PRINT_STRUCT_DATA("CANDIDATE-1: %d\n", candidate);
     while (candidate != -1)
     {
         fTopologyTableItem_t item = topologyTable->fTopologyTableItemSet[candidate];
@@ -160,7 +160,7 @@ index_t FFindInTopologyTable(fTopologyTable_t *topologyTable, uint16_t originato
         }
         candidate = item.next;
     }
-    DEBUG_PRINT_STRUCT_DATA("CANDIDATE-2: %d\n", candidate);
+    //DEBUG_PRINT_STRUCT_DATA("CANDIDATE-2: %d\n", candidate);
     return candidate;
 }
 

@@ -13,6 +13,7 @@
 #include "rangingProtocolDebug.h"
 #include "rangingProtocolPacket.h"
 #include "floodingAlgo.h"
+#include "routingAlgo.h"
 
 #define SEND_QUEUE_LENGTH 15
 #define RECV_QUEUE_LENGTH 15
@@ -40,6 +41,8 @@ packet_t txTsPacket = {0};
 packet_t txFPacket = {0};
 bool isFForwarding = false;
 #endif
+// about R Message
+packet_t txRPacket = {0};
 
 const int antennaDelay = (ANTENNA_OFFSET * 499.2e6 * 128) / 299792458.0; // In radio tick
 
@@ -177,6 +180,35 @@ void FTask(void *ptr)
         vTaskDelay(M2T(F_INTERVAL));
     }
 }
+
+// R task
+void RTask(void *ptr)
+{
+    MAC80215_PACKET_INIT(txRPacket, MAC802154_TYPE_R);
+    // task loop
+    while (true)
+    {
+        xSemaphoreTake(globalSetLock, portMAX_DELAY);
+        // critical section
+        Routing();
+        uint16_t destAddress = rand() % 3 + 1;
+        if (destAddress == myAddress)
+        {
+            destAddress = (destAddress + 1) % 3;
+            if (destAddress == 0)
+            {
+                destAddress = 3;
+            }
+        }
+        if(GenerateR(&txRPacket, destAddress, 3))
+        {
+            xQueueSend(globalSendQueue, &txRPacket, portMAX_DELAY);
+        }
+        //
+        xSemaphoreGive(globalSetLock);
+        vTaskDelay(M2T(R_INTERVAL));
+    }
+}
 #endif
 
 // send task
@@ -234,8 +266,17 @@ static void PacketDispatch(tsPacketWithTimestamp_t *rxPacketWTs)
             xQueueSend(globalSendQueue, packet, portMAX_DELAY);
         }
         break;
+
+    case MAC802154_TYPE_R:
+        if (DispatchR(message))
+        {
+            xQueueSend(globalSendQueue, packet, portMAX_DELAY);
+        }
+        break;
+        
     #endif
 
+    
     default:
         break;
     }

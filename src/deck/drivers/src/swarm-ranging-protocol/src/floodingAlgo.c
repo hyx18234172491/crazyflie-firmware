@@ -13,7 +13,7 @@ static int fMessageTopologySeq = 0;
 
 void GenerateF(uint16_t myAddress, packet_t *txFPacket, uint8_t timeToLive)
 {
-    DEBUG_PRINT_ALGO("START GENERATE F\n");
+    //DEBUG_PRINT_ALGO("START GENERATE F\n");
     //泛洪消息报文头生成
     message_t *message = (message_t *) txFPacket->payload;
     fMessageHeader_t *fMessageHeader = (fMessageHeader_t *) message->messagePayload;
@@ -82,7 +82,7 @@ void GenerateF(uint16_t myAddress, packet_t *txFPacket, uint8_t timeToLive)
 
 bool CheckRxF(const message_t* message, uint16_t myAddress)
 {
-    DEBUG_PRINT_ALGO("START CHECK RX F\n");
+    //DEBUG_PRINT_ALGO("START CHECK RX F\n");
     // 解析报文
     fMessageHeader_t *fMessageHeader = (fMessageHeader_t *) message->messagePayload;
     // 如果原地址是自己则直接返回
@@ -130,7 +130,7 @@ bool CheckRxF(const message_t* message, uint16_t myAddress)
 
 void UpdateRxF(const message_t* message)
 {
-    DEBUG_PRINT_ALGO("START UPDATE RX F\n");
+    //DEBUG_PRINT_ALGO("START UPDATE RX F\n");
     // 泛洪消息解析，提取负载部分
     fMessageHeader_t *fMessageHeader = (fMessageHeader_t *) message->messagePayload;
     uint8_t *fMessagePayloadStart = (uint8_t *) message->messagePayload + sizeof(fMessageHeader_t);

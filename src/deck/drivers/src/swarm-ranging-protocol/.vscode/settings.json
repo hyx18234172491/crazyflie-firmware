@@ -25,6 +25,9 @@
         "lpstwrtag.h": "c",
         "stm32fxxx.h": "c",
         "stm32f4xx.h": "c",
-        "floodingalgo.h": "c"
+        "floodingalgo.h": "c",
+        "stdint.h": "c",
+        "stddef.h": "c",
+        "stdlib.h": "c"
     }
 }
