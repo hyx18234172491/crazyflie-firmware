@@ -3,7 +3,7 @@
 
 #include "mac.h"
 
-// Routing message
+// data message
 typedef struct
 {
     uint16_t originatorAddress;
@@ -12,6 +12,6 @@ typedef struct
     uint16_t sequence;
     uint16_t size;
     uint8_t timeToLive;
-} __attribute__((packed)) rMessageHeader_t; // 11 bytes
+} __attribute__((packed)) dMessageHeader_t; // 11 bytes
 
 #endif // __ROUTINGPACKET_H__

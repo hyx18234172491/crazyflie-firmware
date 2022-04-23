@@ -7,6 +7,10 @@
     "files.associations": {
         "adhocdeck.h": "c",
         "rangingprotocolalgo.h": "c",
-        "floodingalgo.h": "c"
+        "floodingalgo.h": "c",
+        "mac.h": "c",
+        "freertos.h": "c",
+        "timers.h": "c",
+        "rangingprotocolstruct.h": "c"
     }
 }

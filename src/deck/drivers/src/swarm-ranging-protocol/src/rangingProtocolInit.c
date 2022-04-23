@@ -103,7 +103,7 @@ static void StructInit()
     #ifdef CONFIG_SWARM_FLOODING
     FCheckTableInit(&fCheckTable);
     FTopologyTableInit(&fTopologyTable);   
-    RoutingTableInit(&routingTable);
+    RoutingShortestTreeInit(routingShortestTree);
     #endif
 }
 

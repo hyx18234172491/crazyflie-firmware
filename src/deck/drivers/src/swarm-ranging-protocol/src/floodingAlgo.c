@@ -14,7 +14,9 @@ static int fMessageTopologySeq = 0;
 void GenerateF(uint16_t myAddress, packet_t *txFPacket, uint8_t timeToLive)
 {
     //DEBUG_PRINT_ALGO("START GENERATE F\n");
-    //泛洪消息报文头生成
+    // 过期项检测及释放
+    FTopologyTableClearExpire(&fTopologyTable);
+    // 泛洪消息报文头生成
     message_t *message = (message_t *) txFPacket->payload;
     fMessageHeader_t *fMessageHeader = (fMessageHeader_t *) message->messagePayload;
     fMessageHeader->originatorAddress = myAddress;
@@ -52,6 +54,7 @@ void GenerateF(uint16_t myAddress, packet_t *txFPacket, uint8_t timeToLive)
         fTopologyTableTuple.originatorAddress = myAddress;
         fTopologyTableTuple.destinationAddress = rangingTableItem->rangingTuple.peerAddress;
         fTopologyTableTuple.distance = rangingTableItem->rangingTuple.distance;
+        fTopologyTableTuple.expiration = xTaskGetTickCount() + M2T(F_TABLE_HOLD_TIME);
         index_t topologyTableItemIndex = FFindInTopologyTable(&fTopologyTable, myAddress, rangingTableItem->rangingTuple.peerAddress);
         // 没有记录，进行插入
         if (topologyTableItemIndex== -1)
@@ -67,6 +70,7 @@ void GenerateF(uint16_t myAddress, packet_t *txFPacket, uint8_t timeToLive)
         {
             fTopologyTableTuple_t *topologyTuple = &fTopologyTable.fTopologyTableItemSet[topologyTableItemIndex].fTopologyTableTuple;
             topologyTuple->distance = fTopologyTableTuple.distance;
+            topologyTuple->expiration = xTaskGetTickCount() + M2T(F_TABLE_HOLD_TIME);
         }
         // 更新数据
         fMessagePayloadUnit++;
@@ -142,6 +146,7 @@ void UpdateRxF(const message_t* message)
         fTopologyTableTuple.originatorAddress = fMessagePayloadUnit->originatorAddress;
         fTopologyTableTuple.destinationAddress = fMessagePayloadUnit->destinationAddress;
         fTopologyTableTuple.distance = fMessagePayloadUnit->distance;
+        fTopologyTableTuple.expiration = xTaskGetTickCount() + M2T(F_TABLE_HOLD_TIME);
         // DEBUG_PRINT_ALGO_DATA("F TABLE ORIGINATORADDRESS: %u\n", fTopologyTableTuple.originatorAddress);
         // DEBUG_PRINT_ALGO_DATA("F TABLE DESTINATIONADDRESS: %u\n", fTopologyTableTuple.destinationAddress);
         // DEBUG_PRINT_ALGO_DATA("F TABLE SEQUENCE: %u\n", fTopologyTableTuple.sequence);
@@ -162,6 +167,7 @@ void UpdateRxF(const message_t* message)
         {
             fTopologyTableTuple_t *topologyTuple = &fTopologyTable.fTopologyTableItemSet[topologyTableItemIndex].fTopologyTableTuple;
             topologyTuple->distance = fTopologyTableTuple.distance;
+            topologyTuple->expiration = xTaskGetTickCount() + M2T(F_TABLE_HOLD_TIME);
             // DEBUG_PRINT_ALGO_DATA("F TABLE ORIGINATORADDRESS: %u\n", topologyTuple->originatorAddress);
             // DEBUG_PRINT_ALGO_DATA("F TABLE DESTINATIONADDRESS: %u\n", topologyTuple->destinationAddress);
             // DEBUG_PRINT_ALGO_DATA("F TABLE DISTANCE: %u\n", topologyTuple->distance);

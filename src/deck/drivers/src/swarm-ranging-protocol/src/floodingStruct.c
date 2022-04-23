@@ -2,6 +2,7 @@
 
 #include "floodingStruct.h"
 #include "rangingProtocolDebug.h"
+#include "rangingProtocolStruct.h"
 
 // flooding check table
 void FCheckTableInit(fCheckTable_t *checkTable)
@@ -177,5 +178,54 @@ void FPrintTopologyTable(fTopologyTable_t *table)
     for (index_t index = table->fTopologyTableFullEntry; index != -1; index = table->fTopologyTableItemSet[index].next)
     {
         FPrintTopologyTableTuple(&table->fTopologyTableItemSet[index].fTopologyTableTuple);
+    }
+}
+
+static void FTopologyTableFree(fTopologyTable_t *table, index_t itemIndex)
+{
+    // item为空
+    if (itemIndex == -1) return;
+    // 从表中释放对应项
+    index_t candidate = table->fTopologyTableFullEntry;
+    if (itemIndex == candidate)
+    {
+        table->fTopologyTableFullEntry = table->fTopologyTableItemSet[candidate].next;
+        table->fTopologyTableItemSet[itemIndex].next = table->fTopologyTableFreeEntry;
+        table->fTopologyTableFreeEntry = itemIndex;
+        table->fTopologyTableSize = table->fTopologyTableSize - 1;
+        return;
+    }
+    else
+    {
+        while (candidate != -1)
+        {
+            if (table->fTopologyTableItemSet[candidate].next == itemIndex)
+            {
+                table->fTopologyTableItemSet[candidate].next = table->fTopologyTableItemSet[itemIndex].next;
+                table->fTopologyTableItemSet[itemIndex].next = table->fTopologyTableFreeEntry;
+                table->fTopologyTableFreeEntry = itemIndex;
+                table->fTopologyTableSize = table->fTopologyTableSize - 1;
+            }
+            candidate = table->fTopologyTableItemSet[candidate].next;
+        }
+        return;
+    }
+}
+
+void FTopologyTableClearExpire(fTopologyTable_t *table)
+{
+    index_t candidate = table->fTopologyTableFullEntry;
+    fTime_t currentTime = xTaskGetTickCount();
+    while (candidate != -1)
+    {
+        fTopologyTableItem_t item = table->fTopologyTableItemSet[candidate];
+        if(item.fTopologyTableTuple.expiration < currentTime)
+        {
+            index_t nextItem = item.next;
+            FTopologyTableFree(table, candidate);
+            candidate = nextItem;
+            continue;
+        }
+        candidate = item.next;
     }
 }

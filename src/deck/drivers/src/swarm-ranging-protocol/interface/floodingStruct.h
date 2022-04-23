@@ -2,6 +2,8 @@
 #define __FLOODINGSTRUCT_H__
 
 #include <stdint.h>
+#include "floodingAlgo.h"
+#include "timers.h"
 
 #define F_CHECK_TABLE_ITEM_SET_MAX_SIZE 10
 #define F_TOPOLOGY_TABLE_ITEM_SET_MAX_SIZE 20
@@ -31,6 +33,7 @@ typedef struct {
     uint16_t originatorAddress;
     uint16_t destinationAddress;
     uint16_t distance;
+    fTime_t expiration;
 } __attribute__((packed)) fTopologyTableTuple_t;
 
 typedef struct {
@@ -58,5 +61,6 @@ void FTopologyTableInit(fTopologyTable_t *topologyTable);
 index_t FTopologyTableInsert(fTopologyTable_t *topologyTable, fTopologyTableTuple_t *topologyTuple);
 index_t FFindInTopologyTable(fTopologyTable_t *topologyTable, uint16_t originatorAddress, uint16_t destinationAddress);
 void FPrintTopologyTable(fTopologyTable_t *table);
+void FTopologyTableClearExpire(fTopologyTable_t *table);
 
 #endif

@@ -163,95 +163,30 @@ index_t FindInNodeStateTable(nodeStateTable_t* nodeStateTable, uint16_t address)
     return candidate;
 }
 
-// 路由表
-void RoutingTableInit(routingTable_t *routingTable)
+// 路由最短树
+void RoutingShortestTreeInit(uint16_t *routingShortestTree_)
 {
-    index_t i;
-    for (i = 0; i < NODE_MAX_SIZE - 1; i++)
-    {
-        routingTable->itemSet[i].next = i + 1;
-    }
-    routingTable->itemSet[i].next = -1;
-    routingTable->freeEntry = 0;
-    routingTable->fullEntry = -1;
-    routingTable->size = 0;
+    memset(routingShortestTree_, 0, NODE_MAX_SIZE * sizeof(uint16_t));
 }
 
-static index_t RoutingTableMalloc(routingTable_t *routingTable)
+void RoutingShortestTreeClear(uint16_t *routingShortestTree_)
 {
-    if (routingTable->freeEntry == -1)
-    {
-        return -1;
-    }
-    else
-    {
-        index_t candidate = routingTable->freeEntry;
-        routingTable->freeEntry = routingTable->itemSet[candidate].next;
-        index_t tmp = routingTable->fullEntry;
-        routingTable->fullEntry = candidate;
-        routingTable->itemSet[candidate].next = tmp;
-        return candidate;
-    }
+    memset(routingShortestTree_, 0, NODE_MAX_SIZE * sizeof(uint16_t));
 }
 
-index_t RoutingTableInsert(routingTable_t *routingTable, uint16_t destinationAddress, uint16_t nextAddress)
+uint16_t RoutingShortestTreeFindRoute(uint16_t *routingShortestTree_, uint16_t destinationAddress)
 {
-    index_t candidate = RoutingTableMalloc(routingTable);
-    // 路由表有剩余空间
-    if(candidate != -1)
+    uint16_t nextAddress = destinationAddress;
+    uint16_t parentAddress = routingShortestTree_[destinationAddress];
+    while(parentAddress != 0)
     {
-        routingTable->itemSet[candidate].destinationAddress = destinationAddress;
-        routingTable->itemSet[candidate].nextAddress = nextAddress;
-
-        routingTable->size++;
-    }
-
-    return candidate;
-}
-
-void RoutingTableUpdate(routingTable_t *routingTable, index_t index, uint16_t nextAddress)
-{
-    if(routingTable->itemSet[index].nextAddress != nextAddress)
-    {
-        routingTable->itemSet[index].nextAddress = nextAddress;
-    }
-}
-
-index_t RoutingTableFind(routingTable_t *routingTable, uint16_t destinationAddress)
-{
-    index_t candidate = routingTable->fullEntry;
-    while(candidate != -1)
-    {
-        routingTableItem_t item = routingTable->itemSet[candidate];
-        if(item.destinationAddress == destinationAddress)
+        if(parentAddress == myAddress)
         {
-            break;
+            return nextAddress;
         }
-        candidate = item.next;
+        nextAddress = parentAddress;
+        parentAddress = routingShortestTree_[parentAddress];
     }
-
-    return candidate;
-}
-
-uint16_t RoutingTableFindRoute(routingTable_t *routingTable, uint16_t destinationAddress)
-{
-    index_t candidate = routingTable->fullEntry;
-    while(candidate != -1)
-    {
-        routingTableItem_t item = routingTable->itemSet[candidate];
-        if(item.destinationAddress == destinationAddress)
-        {
-            break;
-        }
-        candidate = item.next;
-    }
-
-    if (candidate == -1)
-    {
-        return INF;
-    }
-    else
-    {
-        return routingTable->itemSet[candidate].nextAddress;
-    }
+    
+    return INF;
 }
