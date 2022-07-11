@@ -25,28 +25,16 @@
 #include "ranging_struct.h"
 
 #define CS_PIN DECK_GPIO_IO1
-
 // LOCO deck alternative IRQ and RESET pins(IO_2, IO_3) instead of default (RX1,
 // TX1), leaving UART1 free for use
-#ifdef CONFIG_DECK_LOCODECK_USE_ALT_PINS
-#define GPIO_PIN_IRQ DECK_GPIO_IO2
+#define GPIO_PIN_IRQ DECK_GPIO_TX2
 
-#ifndef LOCODECK_ALT_PIN_RESET
-#define GPIO_PIN_RESET DECK_GPIO_IO3
-#else
-#define GPIO_PIN_RESET LOCODECK_ALT_PIN_RESET
-#endif
+#define GPIO_PIN_RESET DECK_GPIO_RX2
 
-#define EXTI_PortSource EXTI_PortSourceGPIOB
-#define EXTI_PinSource EXTI_PinSource5
-#define EXTI_LineN EXTI_Line5
-#else
-#define GPIO_PIN_IRQ DECK_GPIO_RX1
-#define GPIO_PIN_RESET DECK_GPIO_TX1
-#define EXTI_PortSource EXTI_PortSourceGPIOC
-#define EXTI_PinSource EXTI_PinSource11
-#define EXTI_LineN EXTI_Line11
-#endif
+#define EXTI_PortSource EXTI_PortSourceGPIOA
+#define EXTI_PinSource EXTI_PinSource2
+#define EXTI_LineN EXTI_Line2
+
 
 #define DEFAULT_RX_TIMEOUT 0xFFFFF
 
@@ -335,11 +323,8 @@ static void spiRead(const void *header, size_t headerLength, void *data,
   STATS_CNT_RATE_EVENT(&spiReadCount);
 }
 
-#if CONFIG_DECK_LOCODECK_USE_ALT_PINS
-void __attribute__((used)) EXTI5_Callback(void)
-#else
-void __attribute__((used)) EXTI11_Callback(void)
-#endif
+
+void __attribute__((used)) EXTI2_Callback(void)
 {
   portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
 
@@ -491,13 +476,7 @@ static const DeckDriver dwm3000_deck = {
     .vid = 0xAD,
     .pid = 0xAD,
     .name = "DWM3000",
-
-#ifdef CONFIG_DECK_LOCODECK_USE_ALT_PINS
-    .usedGpio = DECK_USING_IO_1 | DECK_USING_IO_2 | DECK_USING_IO_3,
-#else
-    // (PC10/PC11 is UART1 TX/RX)
-    .usedGpio = DECK_USING_IO_1 | DECK_USING_PC10 | DECK_USING_PC11,
-#endif
+    .usedGpio = DECK_USING_IO_1 | DECK_USING_PA2 | DECK_USING_PA3,
     .usedPeriph = DECK_USING_SPI,
     .requiredEstimator = kalmanEstimator,
 #ifdef LOCODECK_NO_LOW_INTERFERENCE
