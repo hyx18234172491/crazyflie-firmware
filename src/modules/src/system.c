@@ -72,6 +72,7 @@
 #include "i2cdev.h"
 #include "autoconf.h"
 #include "vcp_esc_passthrough.h"
+#include "testcrtp.h"
 
 #ifndef CONFIG_MOTORS_START_DISARMED
 #define ARM_INIT true
@@ -194,6 +195,7 @@ void systemTask(void *arg)
   #endif
 
   deckInit();
+  testcrtpInit();
   estimator = deckGetRequiredEstimator();
   stabilizerInit(estimator);
   if (deckGetRequiredLowInterferenceRadioMode() && platformConfigPhysicalLayoutAntennasAreClose())

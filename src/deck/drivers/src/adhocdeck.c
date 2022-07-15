@@ -56,7 +56,6 @@ static TaskHandle_t uwbTaskHandle = 0;
 static TaskHandle_t uwbTxTaskHandle = 0;
 static TaskHandle_t uwbRxTaskHandle = 0;
 static TaskHandle_t uwbRangingTaskHandle = 0;
-static TaskHandle_t crtpTxHandle = 0;
 static SemaphoreHandle_t algoSemaphore;
 static QueueHandle_t txQueue;
 static QueueHandle_t rxQueue;
@@ -292,38 +291,6 @@ static void uwbRangingTask(void* parameters) {
   }
 }
 
-typedef union olsrPacket_u
-{
-  uint8_t raw[30];
-  struct {
-      uint8_t test1;
-      uint16_t test2;
-      uint16_t test3;
-      float test4;
-  } __attribute__((packed)) ;
-}__attribute__((packed)) olsrPacket;
-
-static void crtpTxTask(void* parameters) {
-  while (!isUWBStart) {
-    vTaskDelay(500);
-  }
-  CRTPPacket packet;
-  while (true) {
-    packet.header = CRTP_HEADER(9, 1);
-    olsrPacket payload = {
-      .test1 = 1,
-      .test2 = 2, 
-      .test3 = 3, 
-      .test4 = 4.04
-    };
-    memcpy(packet.data, payload.raw, sizeof(payload));
-    packet.size = sizeof(payload);
-    DEBUG_PRINT("CRTP_TX_TASK\n");
-    crtpSendPacket(&packet);
-    vTaskDelay(M2T(200));
-  }
-} 
-
 static void uwbTask(void *parameters) {
   systemWaitStart();
   uwbInit();
@@ -501,10 +468,7 @@ static void uwbStart() {
                     ADHOC_DECK_TASK_PRI, &uwbTxTaskHandle);     
   xTaskCreate(uwbRxTask, ADHOC_DECK_RX_TASK_NAME, 3 * configMINIMAL_STACK_SIZE, NULL,
                     ADHOC_DECK_TASK_PRI, &uwbRxTaskHandle);
-  xTaskCreate(uwbRangingTask, ADHOC_DECK_RANGING_TX_TASK_NAME, 1 * configMINIMAL_STACK_SIZE, NULL,
-                    ADHOC_DECK_TASK_PRI, &uwbRangingTaskHandle);
-  xTaskCreate(crtpTxTask, CRTP_TX_TEST, 1 * configMINIMAL_STACK_SIZE, NULL,
-                    ADHOC_DECK_TASK_PRI, &crtpTxHandle);                                    
+  xTaskCreate(uwbRangingTask, ADHOC_DECK_RANGING_TX_TASK_NAME, 1 * configMINIMAL_STACK_SIZE, NULL,ADHOC_DECK_TASK_PRI, &uwbRangingTaskHandle);                              
 }
 /*********** Deck driver initialization ***************/
 static void dwm3000Init(DeckInfo *info) {
