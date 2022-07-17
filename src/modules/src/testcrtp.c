@@ -23,7 +23,7 @@ static void crtpTxTask(void* parameters) {
     packet.size = sizeof(payload);
     DEBUG_PRINT("CRTP_TX_TASK\n");
     crtpSendPacket(&packet);
-    vTaskDelay(M2T(200));
+    vTaskDelay(M2T(100));
   }
 }
 
