@@ -38,7 +38,7 @@ static void crtpTxOlsrTask(void* parameters) {
 }
 
 void crtpTransOlsrInit() {
-    xTaskCreate(crtpTxOlsrTask, CRTP_TX_TEST, 1 * configMINIMAL_STACK_SIZE, NULL,
+    xTaskCreate(crtpTxOlsrTask, CRTP_TRANS_OLSR, 1 * configMINIMAL_STACK_SIZE, NULL,
                     ADHOC_DECK_TASK_PRI, &crtpTxHandle);   
 }
 

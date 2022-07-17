@@ -29,7 +29,7 @@ if __name__ == '__main__':
         pk = rd.in_queue.get(block=True, timeout=None)
         port = (pk.header & 0xF0) >> 4
         channel = pk.header & 0x03
-        if port == 9 and channel == 1 and pk.is_data_size_valid():
+        if port == 9 and channel == 2 and pk.is_data_size_valid():
             res = convert(ctypes=[c_uint8, c_uint16, c_uint16, c_float], pattern=pk.data)
             print(i, res)
             i = i + 1
