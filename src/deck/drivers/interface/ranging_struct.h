@@ -5,7 +5,7 @@
 #define RANGING_TABLE_SIZE 60
 // #define MAX_BODY_UNIT_NUMBER \
 //   (FRAME_LEN_MAX - sizeof(Ranging_Message_Header_t)) / sizeof(Body_Unit_t)
-#define MAX_BODY_UNIT_NUMBER 40
+#define MAX_BODY_UNIT_NUMBER 60
 #define RANGING_TABLE_HOLD_TIME 10000
 
 typedef uint16_t address_t;

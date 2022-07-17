@@ -465,11 +465,11 @@ static void uwbStart() {
  /* Create UWB Task */
   xTaskCreate(uwbTask, ADHOC_DECK_TASK_NAME, 3 * configMINIMAL_STACK_SIZE, NULL,
                     ADHOC_DECK_TASK_PRI, &uwbTaskHandle);
-  xTaskCreate(uwbTxTask, ADHOC_DECK_TX_TASK_NAME, 4 * configMINIMAL_STACK_SIZE, NULL,
+  xTaskCreate(uwbTxTask, ADHOC_DECK_TX_TASK_NAME, 3 * configMINIMAL_STACK_SIZE, NULL,
                     ADHOC_DECK_TASK_PRI, &uwbTxTaskHandle);     
-  xTaskCreate(uwbRxTask, ADHOC_DECK_RX_TASK_NAME, 4 * configMINIMAL_STACK_SIZE, NULL,
+  xTaskCreate(uwbRxTask, ADHOC_DECK_RX_TASK_NAME, 3 * configMINIMAL_STACK_SIZE, NULL,
                     ADHOC_DECK_TASK_PRI, &uwbRxTaskHandle);
-  xTaskCreate(uwbRangingTask, ADHOC_DECK_RANGING_TX_TASK_NAME, 8 * configMINIMAL_STACK_SIZE, NULL,
+  xTaskCreate(uwbRangingTask, ADHOC_DECK_RANGING_TX_TASK_NAME, 10 * configMINIMAL_STACK_SIZE, NULL,
                     ADHOC_DECK_TASK_PRI, &uwbRangingTaskHandle);            
 }
 /*********** Deck driver initialization ***************/
