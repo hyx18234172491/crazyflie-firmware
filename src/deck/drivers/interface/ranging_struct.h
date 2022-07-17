@@ -2,11 +2,10 @@
 
 #include "FreeRTOS.h"
 #include "dwTypes.h"
-#define MAX_NEIGHBOR_SIZE 5
-#define RANGING_TABLE_SIZE MAX_NEIGHBOR_SIZE
+#define RANGING_TABLE_SIZE 60
 // #define MAX_BODY_UNIT_NUMBER \
 //   (FRAME_LEN_MAX - sizeof(Ranging_Message_Header_t)) / sizeof(Body_Unit_t)
-#define MAX_BODY_UNIT_NUMBER 5
+#define MAX_BODY_UNIT_NUMBER 40
 #define RANGING_TABLE_HOLD_TIME 10000
 
 typedef uint16_t address_t;
@@ -37,7 +36,7 @@ typedef struct {
 /* Ranging Message */
 typedef struct {
   Ranging_Message_Header_t header; // 18 byte
-  Body_Unit_t bodyUnits[MAX_NEIGHBOR_SIZE]; // 12 byte * MAX_NEIGHBOR_SIZE
+  Body_Unit_t bodyUnits[MAX_BODY_UNIT_NUMBER]; // 12 byte * MAX_NEIGHBOR_SIZE
 } __attribute__((packed)) Ranging_Message_t; // 18 + 12 byte * MAX_NEIGHBOR_SIZE
 
 /* Ranging Message With RX Timestamp, used in RX Queue */
@@ -83,7 +82,6 @@ typedef struct {
   int size;
 } Ranging_Table_Set_t;
 
-Ranging_Table_Set_t rangingTableSet;
 
 /*Ranging Table Set Operations*/
 void rangingTableSetInit(Ranging_Table_Set_t *rangingTableSet);

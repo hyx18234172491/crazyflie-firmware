@@ -68,6 +68,9 @@ static bool isUWBStart = false;
 static STATS_CNT_RATE_DEFINE(spiWriteCount, 1000);
 static STATS_CNT_RATE_DEFINE(spiReadCount, 1000);
 
+
+static Ranging_Table_Set_t rangingTableSet;
+
 static void txCallback() {
   // DEBUG_PRINT("txCallback\n");
   dwTime_t txTime;
@@ -80,7 +83,7 @@ static void txCallback() {
 
 static void rxCallback() {
   // DEBUG_PRINT("rxCallback\n");
-  BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+  // BaseType_t xHigherPriorityTaskWoken = pdFALSE;
   uint32_t dataLength = dwt_read32bitreg(RX_FINFO_ID) & RX_FINFO_RXFLEN_BIT_MASK;
   if (dataLength != 0 && dataLength <= FRAME_LEN_MAX) {
     dwt_readrxdata(rxBuffer, dataLength - FCS_LEN, 0); /* No need to read the FCS/CRC. */
@@ -91,7 +94,7 @@ static void rxCallback() {
   rxMessageWithTimestamp.rxTime = rxTime;
   Ranging_Message_t* rangingMessage = &rxBuffer;
   rxMessageWithTimestamp.rangingMessage = *rangingMessage;
-  xQueueSendFromISR(rxQueue, &rxMessageWithTimestamp, &xHigherPriorityTaskWoken);
+  xQueueSend(rxQueue, &rxMessageWithTimestamp, 0);
   dwt_forcetrxoff();
   dwt_rxenable(DWT_START_RX_IMMEDIATE);
 }
@@ -281,9 +284,8 @@ static void uwbRangingTask(void* parameters) {
   while (!isUWBStart) {
     vTaskDelay(500);
   }
-
+  Ranging_Message_t txPacketCache;
   while (true) {
-    Ranging_Message_t txPacketCache;
     generateRangingMessage(&txPacketCache);
     xQueueSend(txQueue, &txPacketCache, portMAX_DELAY);
     vTaskDelay(TX_PERIOD_IN_MS);
@@ -378,7 +380,7 @@ extern dwOps_t dwt_ops = {
 
 void uwbInit() {
   // Reset the DW3000 chip
-  dwt_ops.reset();
+  // dwt_ops.reset();
   // dwt_softreset(); // TODO softreset failed, check.
   while (!dwt_checkidlerc()) /* Need to make sure DW IC is in IDLE_RC before proceeding */
   {};
@@ -463,11 +465,11 @@ static void uwbStart() {
  /* Create UWB Task */
   xTaskCreate(uwbTask, ADHOC_DECK_TASK_NAME, 3 * configMINIMAL_STACK_SIZE, NULL,
                     ADHOC_DECK_TASK_PRI, &uwbTaskHandle);
-  xTaskCreate(uwbTxTask, ADHOC_DECK_TX_TASK_NAME, 3 * configMINIMAL_STACK_SIZE, NULL,
+  xTaskCreate(uwbTxTask, ADHOC_DECK_TX_TASK_NAME, 4 * configMINIMAL_STACK_SIZE, NULL,
                     ADHOC_DECK_TASK_PRI, &uwbTxTaskHandle);     
-  xTaskCreate(uwbRxTask, ADHOC_DECK_RX_TASK_NAME, 3 * configMINIMAL_STACK_SIZE, NULL,
+  xTaskCreate(uwbRxTask, ADHOC_DECK_RX_TASK_NAME, 4 * configMINIMAL_STACK_SIZE, NULL,
                     ADHOC_DECK_TASK_PRI, &uwbRxTaskHandle);
-  xTaskCreate(uwbRangingTask, ADHOC_DECK_RANGING_TX_TASK_NAME, 1 * configMINIMAL_STACK_SIZE, NULL,
+  xTaskCreate(uwbRangingTask, ADHOC_DECK_RANGING_TX_TASK_NAME, 8 * configMINIMAL_STACK_SIZE, NULL,
                     ADHOC_DECK_TASK_PRI, &uwbRangingTaskHandle);            
 }
 /*********** Deck driver initialization ***************/
@@ -500,12 +502,12 @@ static const DeckDriver dwm3000_deck = {
 #endif
     .usedPeriph = DECK_USING_SPI,
     .requiredEstimator = kalmanEstimator,
-#ifdef LOCODECK_NO_LOW_INTERFERENCE
+// #ifdef LOCODECK_NO_LOW_INTERFERENCE
+//     .requiredLowInterferenceRadioMode = false,
+// #else
+//     .requiredLowInterferenceRadioMode = true,
+// #endif
     .requiredLowInterferenceRadioMode = false,
-#else
-    .requiredLowInterferenceRadioMode = true,
-#endif
-
     .init = dwm3000Init,
     .test = dwm3000Test,
 };
