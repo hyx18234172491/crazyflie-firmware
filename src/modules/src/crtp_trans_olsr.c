@@ -1,3 +1,5 @@
+#include <string.h>
+
 #include "crtp_trans_olsr.h"
 #include "crtp.h"
 #include "FreeRTOS.h"
@@ -20,19 +22,25 @@ typedef enum
 static TaskHandle_t crtpTxHandle = 0;
 
 static void crtpTxOlsrTask(void* parameters) {
-  CRTPPacket packet;
+  CRTPPacket crtpPacket;
+  OLSRPacket olsrPacket;
+  uint16_t seqNumber = 1;
   while (true) {
-    packet.header = CRTP_HEADER(CRTP_PORT_TRANSFER_OLSR, TOTAL_TRANS);
-    olsrPacket payload = {
-      .test1 = 1,
-      .test2 = 2, 
-      .test3 = 3, 
-      .test4 = 4.04
-    };
-    memcpy(packet.data, payload.raw, sizeof(payload));
-    packet.size = sizeof(payload);
+    crtpPacket.header = CRTP_HEADER(CRTP_PORT_TRANSFER_OLSR, TOTAL_TRANS);
+    olsrPacket.header.sender = 1;
+    olsrPacket.header.seqNumber = seqNumber;
+    olsrPacket.payload.units[0].neighbor1 = 3;
+    olsrPacket.payload.units[0].neighbor2 = 4;
+    olsrPacket.payload.units[1].neighbor1 = 5;
+    olsrPacket.payload.units[1].neighbor2 = 6;
+    olsrPacket.payload.units[2].neighbor1 = 7;
+    olsrPacket.payload.units[2].neighbor2 = 8;
+    memcpy(crtpPacket.data, olsrPacket.raw, sizeof(olsrPacket));
+    crtpPacket.size = sizeof(olsrPacket);
+    DEBUG_PRINT("CRTP_TX_TASK_SIZE: %d\n", sizeof(olsrPacket));
     DEBUG_PRINT("CRTP_TX_TASK\n");
-    crtpSendPacket(&packet);
+    crtpSendPacket(&crtpPacket);
+    seqNumber++;
     vTaskDelay(M2T(100));
   }
 }
