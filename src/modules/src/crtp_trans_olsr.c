@@ -37,7 +37,6 @@ static void crtpTxOlsrTask(void* parameters) {
     olsrPacket.payload.units[2].neighbor2 = 8;
     memcpy(crtpPacket.data, olsrPacket.raw, sizeof(olsrPacket));
     crtpPacket.size = sizeof(olsrPacket);
-    DEBUG_PRINT("CRTP_TX_TASK_SIZE: %d\n", sizeof(olsrPacket));
     DEBUG_PRINT("CRTP_TX_TASK\n");
     crtpSendPacket(&crtpPacket);
     seqNumber++;
