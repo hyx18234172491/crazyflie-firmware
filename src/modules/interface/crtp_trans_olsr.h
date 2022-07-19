@@ -4,7 +4,7 @@
 
 typedef union olsrPacket_u
 {
-  uint8_t raw[30];
+  uint8_t raw[9];
   struct {
       uint8_t test1;
       uint16_t test2;

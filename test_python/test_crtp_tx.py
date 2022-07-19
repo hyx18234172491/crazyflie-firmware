@@ -1,12 +1,12 @@
-import matplotlib.pyplot as plt
-import pandas as pd
-import numpy as np
+# import matplotlib.pyplot as plt
+# import pandas as pd
+# import numpy as np
 from cflib.crtp import RadioDriver
 from cflib.crtp.crtpstack import CRTPPacket
 import struct
 from ctypes import *
 
-uri = "radio://0/60/2M/E7E7E7E702"
+uri = "radio://0/2/2M/E7E7E7E7E7"
 
 
 def convert(ctypes: list, pattern: bytearray) -> list:
@@ -30,6 +30,14 @@ if __name__ == '__main__':
         port = (pk.header & 0xF0) >> 4
         channel = pk.header & 0x03
         if port == 9 and channel == 2 and pk.is_data_size_valid():
-            res = convert(ctypes=[c_uint8, c_uint16, c_uint16, c_float], pattern=pk.data)
-            print(i, res)
+            # print(i, pk.data)
+            # print(pk.data[:9])
+            res1 = convert(ctypes=[c_uint8, c_uint16, c_uint16, c_float], pattern=pk.data[:9])
+            print(i, res1)
+            # print(pk.data[9:18])
+            res2 = convert(ctypes=[c_uint8, c_uint16, c_uint16, c_float], pattern=pk.data[9:18])
+            print(i, res2)
+            # print(pk.data[18:27])
+            res3 = convert(ctypes=[c_uint8, c_uint16, c_uint16, c_float], pattern=pk.data[18:27])
+            print(i, res3)
             i = i + 1

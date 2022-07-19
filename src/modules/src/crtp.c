@@ -73,14 +73,14 @@ static xQueueHandle  txQueue;
 #define CRTP_TX_QUEUE_SIZE 120
 #define CRTP_RX_QUEUE_SIZE 16
 
-static void crtpTxOlsrTask(void *param);
+static void crtpTxTask(void *param);
 static void crtpRxTask(void *param);
 
 static xQueueHandle queues[CRTP_NBR_OF_PORTS];
 static volatile CrtpCallback callbacks[CRTP_NBR_OF_PORTS];
 static void updateStats();
 
-STATIC_MEM_TASK_ALLOC_STACK_NO_DMA_CCM_SAFE(crtpTxOlsrTask, CRTP_TX_TASK_STACKSIZE);
+STATIC_MEM_TASK_ALLOC_STACK_NO_DMA_CCM_SAFE(crtpTxTask, CRTP_TX_TASK_STACKSIZE);
 STATIC_MEM_TASK_ALLOC_STACK_NO_DMA_CCM_SAFE(crtpRxTask, CRTP_RX_TASK_STACKSIZE);
 
 void crtpInit(void)
@@ -91,7 +91,7 @@ void crtpInit(void)
   txQueue = xQueueCreate(CRTP_TX_QUEUE_SIZE, sizeof(CRTPPacket));
   DEBUG_QUEUE_MONITOR_REGISTER(txQueue);
 
-  STATIC_MEM_TASK_CREATE(crtpTxOlsrTask, crtpTxOlsrTask, CRTP_TX_TASK_NAME, NULL, CRTP_TX_TASK_PRI);
+  STATIC_MEM_TASK_CREATE(crtpTxTask, crtpTxTask, CRTP_TX_TASK_NAME, NULL, CRTP_TX_TASK_PRI);
   STATIC_MEM_TASK_CREATE(crtpRxTask, crtpRxTask, CRTP_RX_TASK_NAME, NULL, CRTP_RX_TASK_PRI);
 
   isInit = true;
@@ -140,7 +140,7 @@ int crtpGetFreeTxQueuePackets(void)
   return (CRTP_TX_QUEUE_SIZE - uxQueueMessagesWaiting(txQueue));
 }
 
-void crtpTxOlsrTask(void *param)
+void crtpTxTask(void *param)
 {
   CRTPPacket p;
 
