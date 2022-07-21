@@ -23,21 +23,27 @@ def convert(ctypes: list, pattern: bytearray) -> list:
 if __name__ == '__main__':
     rd = RadioDriver()
     rd.connect(uri=uri, link_error_callback=None, link_quality_callback=None)
+    packetSize = 9
     i = 1
     while True:
         rd.receive_packet()
         pk = rd.in_queue.get(block=True, timeout=None)
         port = (pk.header & 0xF0) >> 4
         channel = pk.header & 0x03
-        if port == 9 and channel == 2 and pk.is_data_size_valid():
-            # print(i, pk.data)
-            # print(pk.data[:9])
-            res1 = convert(ctypes=[c_uint8, c_uint16, c_uint16, c_float], pattern=pk.data[:9])
-            print(i, res1)
-            # print(pk.data[9:18])
-            res2 = convert(ctypes=[c_uint8, c_uint16, c_uint16, c_float], pattern=pk.data[9:18])
-            print(i, res2)
-            # print(pk.data[18:27])
-            res3 = convert(ctypes=[c_uint8, c_uint16, c_uint16, c_float], pattern=pk.data[18:27])
-            print(i, res3)
+        # if port == 9 and channel == 2 and pk.is_data_size_valid():
+        #     # print(i, pk.data)
+        #     # print(pk.data[:9])
+        #     res1 = convert(ctypes=[c_uint8, c_uint16, c_uint16, c_float], pattern=pk.data[:packetSize])
+        #     print(i, res1)
+        #     # print(pk.data[9:18])
+        #     res2 = convert(ctypes=[c_uint8, c_uint16, c_uint16, c_float], pattern=pk.data[packetSize:2*packetSize])
+        #     print(i, res2)
+        #     # print(pk.data[18:27])
+        #     res3 = convert(ctypes=[c_uint8, c_uint16, c_uint16, c_float], pattern=pk.data[2*packetSize:3*packetSize])
+        #     print(i, res3)
+        #     i = i + 1
+        if port == 9 and (channel == 1 or channel == 2) and pk.is_data_size_valid():
+            for j in range(0, pk.get_data_size()//packetSize):
+                res = convert(ctypes=[c_uint8, c_uint16, c_uint16, c_float], pattern=pk.data[j*packetSize:(j+1)*packetSize])
+                print(i, res)
             i = i + 1

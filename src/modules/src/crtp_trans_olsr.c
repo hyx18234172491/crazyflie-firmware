@@ -42,7 +42,10 @@ static void crtpTxOlsrTask(void* parameters) {
   olsrPacket pk;
   genetratePacket();
   while (true) {
-    if (packetNum >= 1000) packetNum = 0;
+    if (packetNum >= 1000) 
+    {
+      packetNum = 0;
+    }
     int offset = 0;
     while (packetNum < 1000)
     {
@@ -54,7 +57,15 @@ static void crtpTxOlsrTask(void* parameters) {
       //DEBUG_PRINT("CRTP_TX_TASK:%d\n", packetNum);
       vTaskDelay(M2T(100));
       
-      if (packetNum % 3 == 0)
+      if (packetNum == numberOfPacket)
+      {
+        packet.header = CRTP_HEADER(CRTP_PORT_TRANSFER_OLSR, END_TOTAL_TRANS);
+        packet.size = offset;
+        DEBUG_PRINT("CRTP_TX_TASK END\n");
+        crtpSendPacket(&packet);
+        offset = 0;
+      }
+      else if (packetNum % 3 == 0)
       {
         packet.header = CRTP_HEADER(CRTP_PORT_TRANSFER_OLSR, TOTAL_TRANS);
         packet.size  = offset;
