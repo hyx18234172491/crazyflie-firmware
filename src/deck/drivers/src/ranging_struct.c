@@ -40,6 +40,7 @@ Ranging_Table_Tr_Rr_Candidate_t rangingTableBufferGetCandidate(Ranging_Table_Tr_
     if (rangingTableBuffer->candidates[index].Tf_SeqNumber == neighborRf.seqNumber) {
       candidate.Tr = rangingTableBuffer->candidates[index].Tr;
       candidate.Rr = rangingTableBuffer->candidates[index].Rr;
+      candidate.Tf_SeqNumber = rangingTableBuffer->candidates[index].Tf_SeqNumber;
       break;
     }
 

@@ -265,6 +265,10 @@ void processRangingMessage(Ranging_Message_With_Timestamp_t* rangingMessageWithT
         neighborRangingTable->Tf = TfBuffer[i];
       }
     }
+  } else {
+    neighborRangingTable->Rr = neighborRangingTable->Re;
+    neighborRangingTable->Tr.timestamp.full = 0;
+    neighborRangingTable->Tr.seqNumber = 0;
   }
   Ranging_Table_Tr_Rr_Candidate_t candidate;
   candidate =  rangingTableBufferGetCandidate(&neighborRangingTable->TrRrBuffer, neighborRangingTable->Rf);
