@@ -20,6 +20,17 @@ void rangingTableBufferUpdateTimestamp(Ranging_Table_Tr_Rr_Buffer_t *rangingTabl
   rangingTableBuffer->candidates[rangingTableBuffer->index].Rr = Rr;
 }
 
+void rangingTableBufferUpdateTimestampPredecessor(Ranging_Table_Tr_Rr_Buffer_t *rangingTableBuffer, Timestamp_Tuple_t Tr, Timestamp_Tuple_t Rr) {
+  set_index_t index = rangingTableBuffer->index;
+  if (index == 0) {
+    index = Tr_Rr_BUFFER_SIZE - 1;
+  } else {
+    index--;
+  }
+  rangingTableBuffer->candidates[index].Tr = Tr;
+  rangingTableBuffer->candidates[index].Rr = Rr;
+}
+
 void rangingTableBufferUpdateSeqNumber(Ranging_Table_Tr_Rr_Buffer_t *rangingTableBuffer, uint16_t Tf_SeqNumber) {
   rangingTableBuffer->candidates[rangingTableBuffer->index].Tf_SeqNumber = Tf_SeqNumber;
 }
@@ -50,7 +61,6 @@ Ranging_Table_Tr_Rr_Candidate_t rangingTableBufferGetCandidate(Ranging_Table_Tr_
       index--;
     }
   }
-  DEBUG_PRINT("candidate: seq = %u\n", candidate.Tf_SeqNumber);
   return candidate;
 }
 
@@ -64,6 +74,7 @@ void rangingTableInit(Ranging_Table_t *rangingTable, address_t address) {
   rangingTable->period = TX_PERIOD_IN_MS;
   rangingTable->nextDeliveryTime = xTaskGetTickCount() + rangingTable->period;
   rangingTable->expirationTime = xTaskGetTickCount() + M2T(RANGING_TABLE_HOLD_TIME);
+  rangingTable->state = RECEIVED;
   rangingTableBufferInit(&rangingTable->TrRrBuffer);
 }
 
