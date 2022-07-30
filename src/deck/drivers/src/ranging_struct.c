@@ -78,6 +78,19 @@ void rangingTableInit(Ranging_Table_t *rangingTable, address_t address) {
   rangingTableBufferInit(&rangingTable->TrRrBuffer);
 }
 
+void rangingTableShift(Ranging_Table_t *rangingTable) {
+  rangingTable->Rp = rangingTable->Rf;
+  rangingTable->Tp = rangingTable->Tf;
+  rangingTable->Rr = rangingTable->Re;
+
+  rangingTable->Rf.timestamp.full = 0;
+  rangingTable->Rf.seqNumber = 0;
+  rangingTable->Tf.timestamp.full = 0;
+  rangingTable->Tf.seqNumber = 0;
+  rangingTable->Tr.timestamp.full = 0;
+  rangingTable->Tr.seqNumber = 0;
+}
+
 //TODO add semaphore to protect ranging table structure.
 static set_index_t rangingTableSetMalloc(
     Ranging_Table_Set_t *rangingTableSet) {

@@ -125,92 +125,34 @@ static void uwbTxTask(void *parameters) {
   }
 }
 
-int16_t computeDistance(Ranging_Table_t* table) {
+int16_t computeDistance(Ranging_Table_t* rangingTable) {
 
   int64_t tRound1, tReply1, tRound2, tReply2, diff1, diff2, tprop_ctn;
-  tRound1 = (table->Rr.timestamp.full - table->Tp.timestamp.full + MAX_TIMESTAMP) % MAX_TIMESTAMP;
-  tReply1 = (table->Tr.timestamp.full - table->Rp.timestamp.full + MAX_TIMESTAMP) % MAX_TIMESTAMP;
-  tRound2 = (table->Rf.timestamp.full - table->Tr.timestamp.full + MAX_TIMESTAMP) % MAX_TIMESTAMP;
-  tReply2 = (table->Tf.timestamp.full - table->Rr.timestamp.full + MAX_TIMESTAMP) % MAX_TIMESTAMP;
+  tRound1 = (rangingTable->Rr.timestamp.full - rangingTable->Tp.timestamp.full + MAX_TIMESTAMP) % MAX_TIMESTAMP;
+  tReply1 = (rangingTable->Tr.timestamp.full - rangingTable->Rp.timestamp.full + MAX_TIMESTAMP) % MAX_TIMESTAMP;
+  tRound2 = (rangingTable->Rf.timestamp.full - rangingTable->Tr.timestamp.full + MAX_TIMESTAMP) % MAX_TIMESTAMP;
+  tReply2 = (rangingTable->Tf.timestamp.full - rangingTable->Rr.timestamp.full + MAX_TIMESTAMP) % MAX_TIMESTAMP;
   diff1 = tRound1 - tReply1;
   diff2 = tRound2 - tReply2;
   tprop_ctn = (diff1 * tReply2 + diff2 * tReply1 + diff2 * diff1) / (tRound1 + tRound2 + tReply1 + tReply2);
+  int16_t distance = (int16_t) tprop_ctn * 0.4691763978616; 
 
   bool isErrorOccurred = false;
-
   if (tprop_ctn < -100 || tprop_ctn > 1000) {
     isErrorOccurred = true;
   }
 
   if (tRound2 < 0 || tReply2 < 0) {
-    table->Rf.timestamp.full = 0;
-    table->Tf.timestamp.full = 0;
+    rangingTable->Rf.timestamp.full = 0;
+    rangingTable->Tf.timestamp.full = 0;
     return -0;
   }
 
-  int16_t distance = (int16_t) tprop_ctn * 0.4691763978616;
-  // DEBUG_PRINT("distance=%d cm\r\n", distance);
-
-  /* update ranging table */
-  table->Rp = table->Rf;
-  table->Tp = table->Tf;
-  table->Rr = table->Re;
-
-  table->Rf.timestamp.full = 0;
-  table->Rf.seqNumber = 0;
+  if (isErrorOccurred) {
+    return rangingTable->distance;
+  }
   
-  table->Tf.timestamp.full = 0;
-  table->Tf.seqNumber = 0;
-
-  table->Tr.timestamp.full = 0;
-  table->Tr.seqNumber = 0;
-
-  if (isErrorOccurred) {
-    return table->distance;
-  }
-
-  return (int16_t) distance;
-}
-
-int16_t computeDistance1(Ranging_Table_t* table, Timestamp_Tuple_t Tp, Timestamp_Tuple_t Rp, Timestamp_Tuple_t Tr, Timestamp_Tuple_t Rr, Timestamp_Tuple_t Tf, Timestamp_Tuple_t Rf) {
-
-  int64_t tRound1, tReply1, tRound2, tReply2, diff1, diff2, tprop_ctn;
-  tRound1 = (Rr.timestamp.full - Tp.timestamp.full + MAX_TIMESTAMP) % MAX_TIMESTAMP;
-  tReply1 = (Tr.timestamp.full - Rp.timestamp.full + MAX_TIMESTAMP) % MAX_TIMESTAMP;
-  tRound2 = (Rf.timestamp.full - Tr.timestamp.full + MAX_TIMESTAMP) % MAX_TIMESTAMP;
-  tReply2 = (Tf.timestamp.full - Rr.timestamp.full + MAX_TIMESTAMP) % MAX_TIMESTAMP;
-  diff1 = tRound1 - tReply1;
-  diff2 = tRound2 - tReply2;
-  tprop_ctn = (diff1 * tReply2 + diff2 * tReply1 + diff2 * diff1) / (tRound1 + tRound2 + tReply1 + tReply2);
-
-  bool isErrorOccurred = false;
-
-  if (tprop_ctn < -100 || tprop_ctn > 1000) {
-    isErrorOccurred = true;
-  }
-
-  if (tRound2 < 0 || tReply2 < 0) {
-    Rf.timestamp.full = 0;
-    Tf.timestamp.full = 0;
-    return -0;
-  }
-
-  int16_t distance = (int16_t) tprop_ctn * 0.4691763978616;
-  // DEBUG_PRINT("distance=%d cm\r\n", distance);
-
-  /* update ranging table */
-  table->Rp = table->Rf;
-  table->Tp = table->Tf;
-  table->Rr = table->Re;
-
-  table->Rf.timestamp.full = 0;
-  table->Rf.seqNumber = 0;
-
-  if (isErrorOccurred) {
-    return table->distance;
-  }
-
-  return (int16_t) distance;
+  return distance;
 }
 
 void processRangingMessage(Ranging_Message_With_Timestamp_t* rangingMessageWithTimestamp) {
@@ -290,21 +232,19 @@ void processRangingMessage(Ranging_Message_With_Timestamp_t* rangingMessageWithT
   DEBUG_PRINT("---before trying to compute disance---\n");
   printRangingTable(neighborRangingTable);
 
-  // TODO simplify the following if-else clause
-  if (neighborRangingTable->Tr.timestamp.full && neighborRangingTable->Rf.timestamp.full && neighborRangingTable->Tf.timestamp.full) {
+  // TODO test if works in mismatch scenarios
+  if (neighborRangingTable->Rp.timestamp.full && neighborRangingTable->Tp.timestamp.full
+  && neighborRangingTable->Tr.timestamp.full && neighborRangingTable->Rr.timestamp.full
+  && neighborRangingTable->Rf.timestamp.full && neighborRangingTable->Tf.timestamp.full) {
       DEBUG_PRINT("---compute disance---\n");
-      int16_t distance = computeDistance1(neighborRangingTable, neighborRangingTable->Tp, neighborRangingTable->Rp, neighborRangingTable->Tr, neighborRangingTable->Rr, neighborRangingTable->Tf, neighborRangingTable->Rf);
+      int16_t distance = computeDistance(neighborRangingTable);
       neighborRangingTable->distance = distance;
       distanceTowards[neighborRangingTable->neighborAddress] = distance; 
-  } else if (neighborRangingTable->Rf.timestamp.full && neighborRangingTable->Tf.timestamp.full) {
-      DEBUG_PRINT("---can not compute disance, shift ranging table---\n");
-      neighborRangingTable->Rp = neighborRangingTable->Rf;
-      neighborRangingTable->Tp = neighborRangingTable->Tf;
-      neighborRangingTable->Rr = neighborRangingTable->Re;
-      neighborRangingTable->Rf.timestamp.full = 0;
-      neighborRangingTable->Tf.timestamp.full = 0;
-      neighborRangingTable->Tr.timestamp.full = 0;
   }
+  if (neighborRangingTable->Rf.timestamp.full && neighborRangingTable->Tf.timestamp.full) {
+    rangingTableShift(neighborRangingTable);
+  }
+  
   DEBUG_PRINT("---end of current processing round---\n");
   printRangingTable(neighborRangingTable);
   /* update expiration time */
