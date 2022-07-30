@@ -20,15 +20,20 @@ void rangingTableBufferUpdateTimestamp(Ranging_Table_Tr_Rr_Buffer_t *rangingTabl
   rangingTableBuffer->candidates[rangingTableBuffer->index].Rr = Rr;
 }
 
-void rangingTableBufferUpdateTimestampPredecessor(Ranging_Table_Tr_Rr_Buffer_t *rangingTableBuffer, Timestamp_Tuple_t Tr, Timestamp_Tuple_t Rr) {
+void rangingTableBufferUpdateTimestampPredecessors(Ranging_Table_Tr_Rr_Buffer_t *rangingTableBuffer, Timestamp_Tuple_t Tr, Timestamp_Tuple_t Rr) {
   set_index_t index = rangingTableBuffer->index;
-  if (index == 0) {
-    index = Tr_Rr_BUFFER_SIZE - 1;
-  } else {
-    index--;
+  for (int count = 0; count < Tr_Rr_BUFFER_SIZE; count++) {
+    if (Tr.seqNumber == rangingTableBuffer->candidates[index].Tr.seqNumber + 1) {
+      rangingTableBuffer->candidates[index].Tr = Tr;
+      rangingTableBuffer->candidates[index].Rr = Rr;
+      DEBUG_PRINT("Predecessor Tf=%u updated\n", rangingTableBuffer->candidates[index].Tf_SeqNumber);
+    }
+    if (index == 0) {
+      index = Tr_Rr_BUFFER_SIZE - 1;
+    } else {
+      index--;
+    }
   }
-  rangingTableBuffer->candidates[index].Tr = Tr;
-  rangingTableBuffer->candidates[index].Rr = Rr;
 }
 
 void rangingTableBufferUpdateSeqNumber(Ranging_Table_Tr_Rr_Buffer_t *rangingTableBuffer, uint16_t Tf_SeqNumber) {

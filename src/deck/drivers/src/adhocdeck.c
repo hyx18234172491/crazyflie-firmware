@@ -139,10 +139,12 @@ int16_t computeDistance(Ranging_Table_t* rangingTable) {
 
   bool isErrorOccurred = false;
   if (tprop_ctn < -100 || tprop_ctn > 1000) {
+    DEBUG_PRINT("isErrorOccurred\n");
     isErrorOccurred = true;
   }
 
   if (tRound2 < 0 || tReply2 < 0) {
+    DEBUG_PRINT("tRound2 < 0 || tReply2 < 0\n");
     rangingTable->Rf.timestamp.full = 0;
     rangingTable->Tf.timestamp.full = 0;
     return -0;
@@ -189,11 +191,10 @@ void processRangingMessage(Ranging_Message_With_Timestamp_t* rangingMessageWithT
   }
   DEBUG_PRINT("---after updating Tr and Rr---\n");
   printRangingTable(neighborRangingTable);
-  /* try to determine candidate Tr and Rr */
+  /* try to update previous (Tr, Rr) pair */
   if (neighborRangingTable->state == TRANSMITTED) {
-    DEBUG_PRINT("Determine candidate Tr and Rr that cloest to latest TX\n");
-    rangingTableBufferUpdateSeqNumber(&neighborRangingTable->TrRrBuffer, getRangingSeqNumber());
-    rangingTableBufferShift(&neighborRangingTable->TrRrBuffer);
+    DEBUG_PRINT("try to update previous (Tr, Rr) pair\n");
+    rangingTableBufferUpdateTimestampPredecessors(&neighborRangingTable->TrRrBuffer, neighborRangingTable->Tr, neighborRangingTable->Rr);
   }
   /* check body unit */
   Timestamp_Tuple_t neighborRf = {.timestamp.full = 0};
@@ -274,7 +275,6 @@ static void generateRangingMessage(Ranging_Message_t* rangingMessage) {
     if (bodyUnitNumber >= MAX_BODY_UNIT_NUMBER) {
       break; //TODO test 1023 byte
     }
-    printRangingTable(&rangingTableSet.setData[0].data);
     if (table->state == RECEIVED) {
       rangingMessage->bodyUnits[bodyUnitNumber].address = table->neighborAddress;
       /* It is possible that Re is not the newest timestamp, because the newest may be in rxQueue
@@ -282,10 +282,10 @@ static void generateRangingMessage(Ranging_Message_t* rangingMessage) {
        */
       rangingMessage->bodyUnits[bodyUnitNumber].timestamp = table->Re;
       bodyUnitNumber++;
-      // table->Re.seqNumber = 0;
-      // table->Re.timestamp.full = 0;
       table->state = TRANSMITTED;
     }
+    rangingTableBufferUpdateSeqNumber(&table->TrRrBuffer, curSeqNumber);
+    rangingTableBufferShift(&table->TrRrBuffer);
   }
   /* generate message header */
   rangingMessage->header.srcAddress = MY_UWB_ADDRESS;
