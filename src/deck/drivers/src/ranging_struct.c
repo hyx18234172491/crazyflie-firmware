@@ -51,14 +51,16 @@ void rangingTableBufferShift(Ranging_Table_Tr_Rr_Buffer_t *rangingTableBuffer) {
   set_index_t next = rangingTableBuffer->index;
   rangingTableBuffer->candidates[next].Tr = rangingTableBuffer->candidates[pre].Tr;
   rangingTableBuffer->candidates[next].Rr = rangingTableBuffer->candidates[pre].Rr;
-  rangingTableBuffer->candidates->Tf_SeqNumber = 0;
+  rangingTableBuffer->candidates[next].Tf_SeqNumber = 0;
 }
 
-Ranging_Table_Tr_Rr_Candidate_t rangingTableBufferGetCandidate(Ranging_Table_Tr_Rr_Buffer_t *rangingTableBuffer, Timestamp_Tuple_t neighborRf) {
+Ranging_Table_Tr_Rr_Candidate_t rangingTableBufferGetCandidate(Ranging_Table_Tr_Rr_Buffer_t *rangingTableBuffer, Timestamp_Tuple_t Tf) {
   set_index_t index = rangingTableBuffer->index;
   Ranging_Table_Tr_Rr_Candidate_t candidate = {.Rr.timestamp.full = 0, .Tr.timestamp.full = 0, .Tf_SeqNumber = 0};
   for (int count = 0; count < Tr_Rr_BUFFER_SIZE; count++) {
-    if (rangingTableBuffer->candidates[index].Tf_SeqNumber != 0 && rangingTableBuffer->candidates[index].Tf_SeqNumber == neighborRf.seqNumber) {
+    DEBUG_PRINT("===\n");
+    DEBUG_PRINT("Buffer Tf_seq = %u, Rr.full = %llu, Tf.full = %llu\n", rangingTableBuffer->candidates[index].Tf_SeqNumber, rangingTableBuffer->candidates[index].Rr.timestamp.full % MAX_TIMESTAMP, Tf.timestamp.full % MAX_TIMESTAMP);
+    if (rangingTableBuffer->candidates[index].Rr.timestamp.full % MAX_TIMESTAMP < Tf.timestamp.full % MAX_TIMESTAMP) {
       candidate.Tr = rangingTableBuffer->candidates[index].Tr;
       candidate.Rr = rangingTableBuffer->candidates[index].Rr;
       candidate.Tf_SeqNumber = rangingTableBuffer->candidates[index].Tf_SeqNumber;

@@ -139,7 +139,7 @@ int16_t computeDistance(Ranging_Table_t* rangingTable) {
   int16_t distance = (int16_t) tprop_ctn * 0.4691763978616; 
 
   bool isErrorOccurred = false;
-  if (tprop_ctn < -100 || tprop_ctn > 1000) {
+  if (distance > 1000 || distance < 0) {
     DEBUG_PRINT("isErrorOccurred\n");
     isErrorOccurred = true;
   }
@@ -202,6 +202,7 @@ void processRangingMessage(Ranging_Message_With_Timestamp_t* rangingMessageWithT
 
   /* check body unit */
   Timestamp_Tuple_t neighborRf = {.timestamp.full = 0};
+  // TODO add bloom filter
   uint8_t bodyUnitCount = (rangingMessage->header.msgLength - sizeof(Ranging_Message_Header_t)) / sizeof(Body_Unit_t);
   for (int i = 0; i < bodyUnitCount; i++) {
     if (rangingMessage->bodyUnits[i].address == MY_UWB_ADDRESS) {
@@ -222,26 +223,26 @@ void processRangingMessage(Ranging_Message_With_Timestamp_t* rangingMessageWithT
     DEBUG_PRINT("---after updating (Rf, Tf) pair---\n");
     printRangingTable(neighborRangingTable);
 
-    Ranging_Table_Tr_Rr_Candidate_t candidate = rangingTableBufferGetCandidate(&neighborRangingTable->TrRrBuffer, neighborRangingTable->Rf);
+    Ranging_Table_Tr_Rr_Candidate_t candidate = rangingTableBufferGetCandidate(&neighborRangingTable->TrRrBuffer, neighborRangingTable->Tf);
     DEBUG_PRINT("candidate: seq = %u, Tr = %u, Rr = %u\n", candidate.Tf_SeqNumber, candidate.Tr.seqNumber, candidate.Rr.seqNumber);
 
-    if (candidate.Tf_SeqNumber != 0) {
+    if (candidate.Tr.timestamp.full && candidate.Rr.timestamp.full) {
       DEBUG_PRINT("Update Tr and Rr according to validated candidate Tr and Rr\n");
       neighborRangingTable->Tr = candidate.Tr;
       neighborRangingTable->Rr = candidate.Rr;
-    }
 
-    DEBUG_PRINT("---before trying to compute disance---\n");
-    printRangingTable(neighborRangingTable);
+      DEBUG_PRINT("---before trying to compute disance---\n");
+      printRangingTable(neighborRangingTable);
 
-    // TODO test if works in mismatch scenarios
-    if (neighborRangingTable->Rp.timestamp.full && neighborRangingTable->Tp.timestamp.full
-    && neighborRangingTable->Tr.timestamp.full && neighborRangingTable->Rr.timestamp.full
-    && neighborRangingTable->Rf.timestamp.full && neighborRangingTable->Tf.timestamp.full) {
-        DEBUG_PRINT("---compute disance---\n");
-        int16_t distance = computeDistance(neighborRangingTable);
-        neighborRangingTable->distance = distance;
-        distanceTowards[neighborRangingTable->neighborAddress] = distance; 
+      // TODO test if works in mismatch scenarios
+      if (neighborRangingTable->Rp.timestamp.full && neighborRangingTable->Tp.timestamp.full
+      && neighborRangingTable->Tr.timestamp.full && neighborRangingTable->Rr.timestamp.full
+      && neighborRangingTable->Rf.timestamp.full && neighborRangingTable->Tf.timestamp.full) {
+          DEBUG_PRINT("---compute disance---\n");
+          int16_t distance = computeDistance(neighborRangingTable);
+          neighborRangingTable->distance = distance;
+          distanceTowards[neighborRangingTable->neighborAddress] = distance; 
+      }
     }
     if (neighborRangingTable->Rf.timestamp.full && neighborRangingTable->Tf.timestamp.full) {
       rangingTableShift(neighborRangingTable);
@@ -249,10 +250,7 @@ void processRangingMessage(Ranging_Message_With_Timestamp_t* rangingMessageWithT
   } else {
     DEBUG_PRINT("neighbor Rf is null\n");
     neighborRangingTable->Rr = neighborRangingTable->Re;
-    // neighborRangingTable->Tr.timestamp.full = 0;
-    // neighborRangingTable->Tr.seqNumber = 0;
   }
-
   DEBUG_PRINT("---end of current processing round---\n");
   printRangingTable(neighborRangingTable);
   /* update expiration time */
@@ -304,15 +302,13 @@ static void generateRangingMessage(Ranging_Message_t* rangingMessage) {
 
 static void uwbRxTask(void* parameters) {
   systemWaitStart();
-
+  srand((unsigned) xTaskGetTickCount());
   Ranging_Message_With_Timestamp_t rxPacketCache;
-  int count = 0;
   while (true) {
     if (xQueueReceive(rxQueue, &rxPacketCache, portMAX_DELAY)) {
-      count++;
-      if (count % 5 == 0) {
-        continue;
-      }
+      // if (rand() % 100 < 30) {
+      //   continue;
+      // }
       processRangingMessage(&rxPacketCache);
     }
   }
