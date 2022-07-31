@@ -47,7 +47,7 @@ typedef struct {
   dwTime_t rxTime;
 } __attribute__((packed)) Ranging_Message_With_Timestamp_t;
 
-#define Tr_Rr_BUFFER_SIZE 3
+#define Tr_Rr_BUFFER_SIZE 5
 
 typedef struct {
   Timestamp_Tuple_t Tr;

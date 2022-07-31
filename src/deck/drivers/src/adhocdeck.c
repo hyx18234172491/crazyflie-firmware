@@ -25,6 +25,7 @@
 #include "libdw3000.h"
 #include "dw3000.h"
 #include "ranging_struct.h"
+#include <stdlib.h>
 
 #define CS_PIN DECK_GPIO_IO1
 
@@ -188,14 +189,17 @@ void processRangingMessage(Ranging_Message_With_Timestamp_t* rangingMessageWithT
   if (neighborRangingTable->Tr.timestamp.full && neighborRangingTable->Rr.timestamp.full && neighborRangingTable->Rr.seqNumber == neighborRangingTable->Tr.seqNumber) {
     DEBUG_PRINT("update validate Tr and Rr candidate\n");
     rangingTableBufferUpdateTimestamp(&neighborRangingTable->TrRrBuffer, neighborRangingTable->Tr, neighborRangingTable->Rr);
+    /* try to update previous (Tr, Rr) pair */
+    if (neighborRangingTable->state == TRANSMITTED) {
+      DEBUG_PRINT("update previous (Tr, Rr) pair since last transmission\n");
+      rangingTableBufferUpdateTimestampPredecessors(&neighborRangingTable->TrRrBuffer, neighborRangingTable->Tr, neighborRangingTable->Rr);
+    }
   }
+  neighborRangingTable->state = RECEIVED;
+
   DEBUG_PRINT("---after updating Tr and Rr---\n");
   printRangingTable(neighborRangingTable);
-  /* try to update previous (Tr, Rr) pair */
-  if (neighborRangingTable->state == TRANSMITTED) {
-    DEBUG_PRINT("try to update previous (Tr, Rr) pair\n");
-    rangingTableBufferUpdateTimestampPredecessors(&neighborRangingTable->TrRrBuffer, neighborRangingTable->Tr, neighborRangingTable->Rr);
-  }
+
   /* check body unit */
   Timestamp_Tuple_t neighborRf = {.timestamp.full = 0};
   uint8_t bodyUnitCount = (rangingMessage->header.msgLength - sizeof(Ranging_Message_Header_t)) / sizeof(Body_Unit_t);
@@ -207,6 +211,7 @@ void processRangingMessage(Ranging_Message_With_Timestamp_t* rangingMessageWithT
   }
   /* update Rf and Tf */
   if (neighborRf.timestamp.full) {
+    DEBUG_PRINT("neighbor Rf is not null\n");
     neighborRangingTable->Rf = neighborRf;
     /* find corresponding Tf in TfBuffer */
     for (int i = 0; i < Tf_BUFFER_POOL_SIZE; i++) {
@@ -214,43 +219,44 @@ void processRangingMessage(Ranging_Message_With_Timestamp_t* rangingMessageWithT
         neighborRangingTable->Tf = TfBuffer[i];
       }
     }
+    DEBUG_PRINT("---after updating (Rf, Tf) pair---\n");
+    printRangingTable(neighborRangingTable);
+
+    Ranging_Table_Tr_Rr_Candidate_t candidate = rangingTableBufferGetCandidate(&neighborRangingTable->TrRrBuffer, neighborRangingTable->Rf);
+    DEBUG_PRINT("candidate: seq = %u, Tr = %u, Rr = %u\n", candidate.Tf_SeqNumber, candidate.Tr.seqNumber, candidate.Rr.seqNumber);
+
+    if (candidate.Tf_SeqNumber != 0) {
+      DEBUG_PRINT("Update Tr and Rr according to validated candidate Tr and Rr\n");
+      neighborRangingTable->Tr = candidate.Tr;
+      neighborRangingTable->Rr = candidate.Rr;
+    }
+
+    DEBUG_PRINT("---before trying to compute disance---\n");
+    printRangingTable(neighborRangingTable);
+
+    // TODO test if works in mismatch scenarios
+    if (neighborRangingTable->Rp.timestamp.full && neighborRangingTable->Tp.timestamp.full
+    && neighborRangingTable->Tr.timestamp.full && neighborRangingTable->Rr.timestamp.full
+    && neighborRangingTable->Rf.timestamp.full && neighborRangingTable->Tf.timestamp.full) {
+        DEBUG_PRINT("---compute disance---\n");
+        int16_t distance = computeDistance(neighborRangingTable);
+        neighborRangingTable->distance = distance;
+        distanceTowards[neighborRangingTable->neighborAddress] = distance; 
+    }
+    if (neighborRangingTable->Rf.timestamp.full && neighborRangingTable->Tf.timestamp.full) {
+      rangingTableShift(neighborRangingTable);
+    }
   } else {
+    DEBUG_PRINT("neighbor Rf is null\n");
     neighborRangingTable->Rr = neighborRangingTable->Re;
-    neighborRangingTable->Tr.timestamp.full = 0;
-    neighborRangingTable->Tr.seqNumber = 0;
-  }
-  DEBUG_PRINT("---after updating (Rf, Tf) pair or Rr and Tr---\n");
-  printRangingTable(neighborRangingTable);
-
-  Ranging_Table_Tr_Rr_Candidate_t candidate = rangingTableBufferGetCandidate(&neighborRangingTable->TrRrBuffer, neighborRangingTable->Rf);
-  DEBUG_PRINT("candidate: seq = %u, Tr = %u, Rr = %u\n", candidate.Tf_SeqNumber, candidate.Tr.seqNumber, candidate.Rr.seqNumber);
-  if (candidate.Tf_SeqNumber != 0) {
-    DEBUG_PRINT("Update Tr and Rr according to validated candidate Tr and Rr\n");
-    neighborRangingTable->Tr = candidate.Tr;
-    neighborRangingTable->Rr = candidate.Rr;
+    // neighborRangingTable->Tr.timestamp.full = 0;
+    // neighborRangingTable->Tr.seqNumber = 0;
   }
 
-  DEBUG_PRINT("---before trying to compute disance---\n");
-  printRangingTable(neighborRangingTable);
-
-  // TODO test if works in mismatch scenarios
-  if (neighborRangingTable->Rp.timestamp.full && neighborRangingTable->Tp.timestamp.full
-  && neighborRangingTable->Tr.timestamp.full && neighborRangingTable->Rr.timestamp.full
-  && neighborRangingTable->Rf.timestamp.full && neighborRangingTable->Tf.timestamp.full) {
-      DEBUG_PRINT("---compute disance---\n");
-      int16_t distance = computeDistance(neighborRangingTable);
-      neighborRangingTable->distance = distance;
-      distanceTowards[neighborRangingTable->neighborAddress] = distance; 
-  }
-  if (neighborRangingTable->Rf.timestamp.full && neighborRangingTable->Tf.timestamp.full) {
-    rangingTableShift(neighborRangingTable);
-  }
-  
   DEBUG_PRINT("---end of current processing round---\n");
   printRangingTable(neighborRangingTable);
   /* update expiration time */
   neighborRangingTable->expirationTime = xTaskGetTickCount() + M2T(RANGING_TABLE_HOLD_TIME);
-  neighborRangingTable->state = RECEIVED;
 }
 
 int getAndIncreaseRangingSeqNumber() {
@@ -300,9 +306,13 @@ static void uwbRxTask(void* parameters) {
   systemWaitStart();
 
   Ranging_Message_With_Timestamp_t rxPacketCache;
-
+  int count = 0;
   while (true) {
     if (xQueueReceive(rxQueue, &rxPacketCache, portMAX_DELAY)) {
+      count++;
+      if (count % 5 == 0) {
+        continue;
+      }
       processRangingMessage(&rxPacketCache);
     }
   }
