@@ -89,6 +89,7 @@ static void rxCallback() {
   }
   dwTime_t rxTime;
   dwt_readrxtimestamp((uint8_t *) &rxTime.raw);
+  DEBUG_PRINT("rxLen: %u\n", dataLength);
   Ranging_Message_With_Timestamp_t rxMessageWithTimestamp;
   rxMessageWithTimestamp.rxTime = rxTime;
   Ranging_Message_t *rangingMessage = (Ranging_Message_t *) &rxBuffer;
@@ -113,16 +114,17 @@ static void uwbTxTask(void *parameters) {
   Ranging_Message_t packetCache;
 
   while (true) {
-    if (xQueueReceive(txQueue, &packetCache, portMAX_DELAY)) {
+//    if (xQueueReceive(txQueue, &packetCache, portMAX_DELAY)) {
       dwt_forcetrxoff();
-      dwt_writetxdata(packetCache.header.msgLength, (uint8_t *) &packetCache, 0);
-      dwt_writetxfctrl(packetCache.header.msgLength + FCS_LEN, 0, 1);
+      dwt_writetxdata(44, rxBuffer, 0);
+      dwt_writetxfctrl(44 + FCS_LEN, 0, 1);
       /* Start transmission. */
       if (dwt_starttx(DWT_START_TX_IMMEDIATE | DWT_RESPONSE_EXPECTED) ==
           DWT_ERROR) {
         DEBUG_PRINT("uwbTxTask:  TX ERROR\n");
       }
-    }
+      vTaskDelay(500);
+//    }
   }
 }
 
@@ -140,7 +142,7 @@ int16_t computeDistance(Ranging_Table_t *rangingTable) {
 
   bool isErrorOccurred = false;
   if (distance > 1000 || distance < 0) {
-    DEBUG_PRINT("isErrorOccurred\n");
+//    DEBUG_PRINT("isErrorOccurred\n");
     isErrorOccurred = true;
   }
 
@@ -310,7 +312,7 @@ static void uwbRangingTask(void *parameters) {
   Ranging_Message_t txPacketCache;
   while (true) {
     generateRangingMessage(&txPacketCache);
-    xQueueSend(txQueue, &txPacketCache, portMAX_DELAY);
+    //xQueueSend(txQueue, &txPacketCache, portMAX_DELAY);
     vTaskDelay(TX_PERIOD_IN_MS);
   }
 }
