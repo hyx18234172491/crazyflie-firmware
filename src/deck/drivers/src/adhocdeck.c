@@ -91,7 +91,7 @@ static void rxCallback() {
   }
   dwTime_t rxTime;
   dwt_readrxtimestamp((uint8_t *) &rxTime.raw);
-  DEBUG_PRINT("rxLen: %u\n", dataLength);
+  DEBUG_PRINT("rxLen: %u\t%u\n", dataLength, rxTestBuffer[dataLength-3]);
 /*
   Ranging_Message_With_Timestamp_t rxMessageWithTimestamp;
   rxMessageWithTimestamp.rxTime = rxTime;
@@ -114,12 +114,12 @@ static void rxErrorCallback() {
 
 static void uwbTxTask(void *parameters) {
   systemWaitStart();
-  uint32_t dataLength = 1021;
-
   Ranging_Message_t packetCache;
-
+  uint32_t dataLength = 1021;
+  txTestBuffer[dataLength-1] = 0;
   while (true) {
 //    if (xQueueReceive(txQueue, &packetCache, portMAX_DELAY)) {
+      txTestBuffer[dataLength-1]++;
       dwt_forcetrxoff();
       dwt_writetxdata(dataLength, txTestBuffer, 0);
       dwt_writetxfctrl(dataLength + FCS_LEN, 0, 1);
