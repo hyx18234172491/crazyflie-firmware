@@ -66,6 +66,9 @@ static float velocity;
 /* rx buffer used in rx_callback */
 static uint8_t rxTestBuffer[1024];
 static uint8_t txTestBuffer[1024];
+static uint32_t rxTestSeq;
+static uint32_t rxTestSeqLast;
+
 static uint8_t rxBuffer[RX_BUFFER_SIZE];
 Timestamp_Tuple_t TfBuffer[Tf_BUFFER_POOL_SIZE] = {0};
 static int TfBufferIndex = 0;
@@ -91,7 +94,11 @@ static void rxCallback() {
   }
   dwTime_t rxTime;
   dwt_readrxtimestamp((uint8_t *) &rxTime.raw);
-  DEBUG_PRINT("rxLen: %u\t%u\n", dataLength, rxTestBuffer[dataLength-3]);
+  rxTestSeq = rxTestBuffer[dataLength-3];
+  uint8_t numSeqIncreased = rxTestSeq - rxTestSeqLast;
+  if(numSeqIncreased != 1)
+    DEBUG_PRINT("RX: %u\t%u\t%u\n", rxTestSeq, rxTestSeqLast, numSeqIncreased);
+  rxTestSeqLast = rxTestSeq;
 /*
   Ranging_Message_With_Timestamp_t rxMessageWithTimestamp;
   rxMessageWithTimestamp.rxTime = rxTime;
@@ -128,7 +135,7 @@ static void uwbTxTask(void *parameters) {
           DWT_ERROR) {
         DEBUG_PRINT("uwbTxTask:  TX ERROR\n");
       }
-      vTaskDelay(500);
+      vTaskDelay(30);
 //    }
   }
 }
