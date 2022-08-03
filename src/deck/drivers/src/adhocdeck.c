@@ -87,7 +87,7 @@ static void rxCallback() {
   BaseType_t xHigherPriorityTaskWoken = pdFALSE;
   uint32_t dataLength = dwt_read32bitreg(RX_FINFO_ID) & RX_FINFO_RXFLEN_BIT_MASK;
   if (dataLength != 0 && dataLength <= FRAME_LEN_MAX) {
-    dwt_readrxdata(rxBuffer, dataLength - FCS_LEN, 0); /* No need to read the FCS/CRC. */
+    dwt_readrxdata(rxTestBuffer, dataLength - FCS_LEN, 0); /* No need to read the FCS/CRC. */
   }
   dwTime_t rxTime;
   dwt_readrxtimestamp((uint8_t *) &rxTime.raw);
@@ -120,7 +120,7 @@ static void uwbTxTask(void *parameters) {
   while (true) {
 //    if (xQueueReceive(txQueue, &packetCache, portMAX_DELAY)) {
       dwt_forcetrxoff();
-      dwt_writetxdata(44, rxBuffer, 0);
+      dwt_writetxdata(44, txTestBuffer, 0);
       dwt_writetxfctrl(44 + FCS_LEN, 0, 1);
       /* Start transmission. */
       if (dwt_starttx(DWT_START_TX_IMMEDIATE | DWT_RESPONSE_EXPECTED) ==
