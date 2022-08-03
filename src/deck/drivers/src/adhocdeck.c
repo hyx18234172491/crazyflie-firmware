@@ -312,7 +312,7 @@ static void uwbRangingTask(void *parameters) {
   Ranging_Message_t txPacketCache;
   while (true) {
     generateRangingMessage(&txPacketCache);
-    //xQueueSend(txQueue, &txPacketCache, portMAX_DELAY);
+    xQueueSend(txQueue, &txPacketCache, portMAX_DELAY);
     vTaskDelay(TX_PERIOD_IN_MS);
   }
 }
@@ -489,8 +489,8 @@ static void uwbStart() {
               ADHOC_DECK_TASK_PRI, &uwbTxTaskHandle);
   xTaskCreate(uwbRxTask, ADHOC_DECK_RX_TASK_NAME, 4 * configMINIMAL_STACK_SIZE, NULL,
               ADHOC_DECK_TASK_PRI, &uwbRxTaskHandle);
-  xTaskCreate(uwbRangingTask, ADHOC_DECK_RANGING_TX_TASK_NAME, 4 * configMINIMAL_STACK_SIZE, NULL,
-              ADHOC_DECK_TASK_PRI, &uwbRangingTaskHandle);
+//  xTaskCreate(uwbRangingTask, ADHOC_DECK_RANGING_TX_TASK_NAME, 4 * configMINIMAL_STACK_SIZE, NULL,
+//              ADHOC_DECK_TASK_PRI, &uwbRangingTaskHandle);
 }
 /*********** Deck driver initialization ***************/
 static void dwm3000Init(DeckInfo *info) {
