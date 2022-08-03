@@ -94,7 +94,7 @@ static void rxCallback() {
   rxMessageWithTimestamp.rxTime = rxTime;
   Ranging_Message_t *rangingMessage = (Ranging_Message_t *) &rxBuffer;
   rxMessageWithTimestamp.rangingMessage = *rangingMessage;
-  xQueueSendFromISR(rxQueue, &rxMessageWithTimestamp, &xHigherPriorityTaskWoken);
+//  xQueueSendFromISR(rxQueue, &rxMessageWithTimestamp, &xHigherPriorityTaskWoken);
   dwt_forcetrxoff();
   dwt_rxenable(DWT_START_RX_IMMEDIATE);
 }
@@ -487,8 +487,8 @@ static void uwbStart() {
               ADHOC_DECK_TASK_PRI, &uwbTaskHandle);
   xTaskCreate(uwbTxTask, ADHOC_DECK_TX_TASK_NAME, 4 * configMINIMAL_STACK_SIZE, NULL,
               ADHOC_DECK_TASK_PRI, &uwbTxTaskHandle);
-  xTaskCreate(uwbRxTask, ADHOC_DECK_RX_TASK_NAME, 4 * configMINIMAL_STACK_SIZE, NULL,
-              ADHOC_DECK_TASK_PRI, &uwbRxTaskHandle);
+//  xTaskCreate(uwbRxTask, ADHOC_DECK_RX_TASK_NAME, 4 * configMINIMAL_STACK_SIZE, NULL,
+//              ADHOC_DECK_TASK_PRI, &uwbRxTaskHandle);
 //  xTaskCreate(uwbRangingTask, ADHOC_DECK_RANGING_TX_TASK_NAME, 4 * configMINIMAL_STACK_SIZE, NULL,
 //              ADHOC_DECK_TASK_PRI, &uwbRangingTaskHandle);
 }
