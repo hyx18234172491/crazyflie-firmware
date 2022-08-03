@@ -64,6 +64,8 @@ static logVarId_t idVelocityX, idVelocityY, idVelocityZ;
 static float velocity;
 
 /* rx buffer used in rx_callback */
+static uint8_t rxTestBuffer[1024];
+static uint8_t txTestBuffer[1024];
 static uint8_t rxBuffer[RX_BUFFER_SIZE];
 Timestamp_Tuple_t TfBuffer[Tf_BUFFER_POOL_SIZE] = {0};
 static int TfBufferIndex = 0;
@@ -90,11 +92,13 @@ static void rxCallback() {
   dwTime_t rxTime;
   dwt_readrxtimestamp((uint8_t *) &rxTime.raw);
   DEBUG_PRINT("rxLen: %u\n", dataLength);
+/*
   Ranging_Message_With_Timestamp_t rxMessageWithTimestamp;
   rxMessageWithTimestamp.rxTime = rxTime;
   Ranging_Message_t *rangingMessage = (Ranging_Message_t *) &rxBuffer;
   rxMessageWithTimestamp.rangingMessage = *rangingMessage;
-//  xQueueSendFromISR(rxQueue, &rxMessageWithTimestamp, &xHigherPriorityTaskWoken);
+  xQueueSendFromISR(rxQueue, &rxMessageWithTimestamp, &xHigherPriorityTaskWoken);
+*/
   dwt_forcetrxoff();
   dwt_rxenable(DWT_START_RX_IMMEDIATE);
 }
