@@ -114,14 +114,15 @@ static void rxErrorCallback() {
 
 static void uwbTxTask(void *parameters) {
   systemWaitStart();
+  uint32_t dataLength = 1021;
 
   Ranging_Message_t packetCache;
 
   while (true) {
 //    if (xQueueReceive(txQueue, &packetCache, portMAX_DELAY)) {
       dwt_forcetrxoff();
-      dwt_writetxdata(44, txTestBuffer, 0);
-      dwt_writetxfctrl(44 + FCS_LEN, 0, 1);
+      dwt_writetxdata(dataLength, txTestBuffer, 0);
+      dwt_writetxfctrl(dataLength + FCS_LEN, 0, 1);
       /* Start transmission. */
       if (dwt_starttx(DWT_START_TX_IMMEDIATE | DWT_RESPONSE_EXPECTED) ==
           DWT_ERROR) {
