@@ -96,7 +96,7 @@ static void rxCallback() {
   dwt_readrxtimestamp((uint8_t *) &rxTime.raw);
   rxTestSeq = rxTestBuffer[dataLength-3];
   uint8_t numSeqIncreased = rxTestSeq - rxTestSeqLast;
-  if(numSeqIncreased != 1)
+  if(rxTestSeq==0 || numSeqIncreased != 1)
     DEBUG_PRINT("RX: %u\t%u\t%u\n", rxTestSeq, rxTestSeqLast, numSeqIncreased-1);
   rxTestSeqLast = rxTestSeq;
 /*
@@ -122,7 +122,7 @@ static void rxErrorCallback() {
 static void uwbTxTask(void *parameters) {
   systemWaitStart();
   Ranging_Message_t packetCache;
-  uint32_t dataLength = 1021;
+  uint32_t dataLength = 132;
   txTestBuffer[dataLength-1] = 0;
   while (true) {
 //    if (xQueueReceive(txQueue, &packetCache, portMAX_DELAY)) {
