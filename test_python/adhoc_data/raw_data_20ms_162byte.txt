@@ -1,0 +1,20 @@
+STAB: Ready to fly.
+DWM3k: RX: 0	255	0
+DWM3k: RX: 0	255	0
+ESTKALMAN: State out of bounds, resetting
+DWM3k: RX: 0	255	0
+DWM3k: RX: 0	255	0
+ESTKALMAN: State out of bounds, resetting
+DWM3k: RX: 0	255	0
+DWM3k: RX: 0	255	0
+ESTKALMAN: State out of bounds, resetting
+DWM3k: RX: 0	255	0
+DWM3k: RX: 0	255	0
+ESTKALMAN: State out of bounds, resetting
+DWM3k: RX: 0	255	0
+DWM3k: RX: 0	255	0
+ESTKALMAN: State out of bounds, resetting
+DWM3k: RX: 0	255	0
+DWM3k: RX: 0	255	0
+ESTKALMAN: State out of bounds, resetting
+DWM3k: RX: 0	255	0

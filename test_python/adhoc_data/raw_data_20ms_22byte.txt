@@ -1,0 +1,123 @@
+SYS: ----------------------------
+SYS: Crazyflie 2.1 is up and running!
+SYS: Build 1124:3aca3b9983d6 (2020.09 +1124) MODIFIED
+SYS: I am 0x20353447534D500C00290038 and I have 1024KB of flash!
+CFGBLK: v1, verification [OK]
+DECK_CORE: 1 deck(s) found
+DECK_CORE: Calling INIT on driver DWM3000 for deck 0
+IMU: BMI088: Using I2C interface.
+IMU: BMI088 Gyro connection [OK].
+IMU: BMI088 Accel connection [OK]
+IMU: BMP388 I2C connection [OK]
+ESTIMATOR: Using Kalman (2) estimator
+CONTROLLER: Using PID (1) controller
+MTR-DRV: Using brushed motor driver
+PLATFORM: Low interference mode. NRF51 TX power offset by -12db.
+SYS: About to run tests in system.c.
+EEPROM: I2C connection [OK].
+STORAGE: Storage check [OK].
+IMU: BMI088 gyro self-test [OK]
+DECK_CORE: Deck 0 test [OK].
+SYS: Self test passed!
+STAB: Wait for sensor calibration...
+SYS: Free heap: 28384 bytes
+DWM3k: RX: 23	0	22
+DWM3k: RX: 40	38	1
+DWM3k: RX: 42	40	1
+STAB: Ready to fly.
+DWM3k: RX: 59	57	1
+DWM3k: RX: 78	76	1
+DWM3k: RX: 80	78	1
+DWM3k: RX: 97	95	1
+DWM3k: RX: 0	97	158
+DWM3k: RX: 99	0	98
+DWM3k: RX: 116	114	1
+DWM3k: RX: 148	146	1
+DWM3k: RX: 167	165	1
+DWM3k: RX: 186	184	1
+DWM3k: RX: 205	203	1
+DWM3k: RX: 224	222	1
+DWM3k: RX: 0	254	1
+DWM3k: RX: 19	17	1
+ESTKALMAN: State out of bounds, resetting
+ESTKALMAN: State out of bounds, resetting
+DWM3k: RX: 1	23	233
+ESTKALMAN: State out of bounds, resetting
+DWM3k: RX: 235	224	10
+DWM3k: RX: 0	255	0
+DWM3k: RX: 0	255	0
+DWM3k: RX: 102	89	12
+DWM3k: RX: 0	255	0
+ESTKALMAN: State out of bounds, resetting
+DWM3k: RX: 204	191	12
+DWM3k: RX: 0	255	0
+DWM3k: RX: 0	255	0
+ESTKALMAN: State out of bounds, resetting
+DWM3k: RX: 69	57	11
+DWM3k: RX: 78	76	1
+DWM3k: RX: 0	255	0
+DWM3k: RX: 192	177	14
+DWM3k: RX: 207	205	1
+DWM3k: RX: 0	255	0
+ESTKALMAN: State out of bounds, resetting
+DWM3k: RX: 0	255	0
+DWM3k: RX: 57	42	14
+DWM3k: RX: 0	255	0
+DWM3k: RX: 159	146	12
+ESTKALMAN: State out of bounds, resetting
+DWM3k: RX: 0	255	0
+DWM3k: RX: 5	249	11
+DWM3k: RX: 14	12	1
+ESTKALMAN: State out of bounds, resetting
+DWM3k: RX: 0	255	0
+DWM3k: RX: 130	115	14
+DWM3k: RX: 137	135	1
+DWM3k: RX: 0	255	0
+DWM3k: RX: 250	236	13
+DWM3k: RX: 0	255	0
+ESTKALMAN: State out of bounds, resetting
+DWM3k: RX: 0	255	0
+DWM3k: RX: 115	103	11
+DWM3k: RX: 125	123	1
+DWM3k: RX: 0	255	0
+ESTKALMAN: State out of bounds, resetting
+DWM3k: RX: 238	226	11
+DWM3k: RX: 0	255	0
+DWM3k: RX: 0	255	0
+DWM3k: RX: 86	72	13
+ESTKALMAN: State out of bounds, resetting
+DWM3k: RX: 0	255	0
+DWM3k: RX: 206	195	10
+DWM3k: RX: 0	255	0
+ESTKALMAN: State out of bounds, resetting
+DWM3k: RX: 0	255	0
+DWM3k: RX: 56	41	14
+DWM3k: RX: 66	64	1
+DWM3k: RX: 0	255	0
+DWM3k: RX: 176	165	10
+ESTKALMAN: State out of bounds, resetting
+DWM3k: RX: 0	255	0
+DWM3k: RX: 0	255	0
+DWM3k: RX: 46	30	15
+DWM3k: RX: 0	255	0
+ESTKALMAN: State out of bounds, resetting
+DWM3k: RX: 165	154	10
+DWM3k: RX: 176	174	1
+DWM3k: RX: 0	255	0
+DWM3k: RX: 0	255	0
+DWM3k: RX: 34	19	14
+ESTKALMAN: State out of bounds, resetting
+DWM3k: RX: 0	255	0
+DWM3k: RX: 137	124	12
+DWM3k: RX: 145	143	1
+DWM3k: RX: 148	146	1
+DWM3k: RX: 0	255	0
+ESTKALMAN: State out of bounds, resetting
+DWM3k: RX: 3	247	11
+DWM3k: RX: 0	255	0
+DWM3k: RX: 127	113	13
+ESTKALMAN: State out of bounds, resetting
+DWM3k: RX: 0	255	0
+DWM3k: RX: 230	217	12
+DWM3k: RX: 238	236	1
+DWM3k: RX: 0	255	0

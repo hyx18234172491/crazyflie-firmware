@@ -122,7 +122,7 @@ static void rxErrorCallback() {
 static void uwbTxTask(void *parameters) {
   systemWaitStart();
   Ranging_Message_t packetCache;
-  uint32_t dataLength = 42;
+  uint32_t dataLength = 172;
   txTestBuffer[dataLength-1] = 0;
   while (true) {
 //    if (xQueueReceive(txQueue, &packetCache, portMAX_DELAY)) {

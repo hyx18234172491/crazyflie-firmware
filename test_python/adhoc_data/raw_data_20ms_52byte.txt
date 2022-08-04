@@ -1,0 +1,90 @@
+IMU: BMI088 Gyro connection [OK].
+IMU: BMI088 Accel connection [OK]
+IMU: BMP388 I2C connection [OK]
+ESTIMATOR: Using Kalman (2) estimator
+CONTROLLER: Using PID (1) controller
+MTR-DRV: Using brushed motor driver
+PLATFORM: Low interference mode. NRF51 TX power offset by -12db.
+SYS: About to run tests in system.c.
+EEPROM: I2C connection [OK].
+STORAGE: Storage check [OK].
+IMU: BMI088 gyro self-test [OK]
+DECK_CORE: Deck 0 test [OK].
+SYS: Self test passed!
+STAB: Wait for sensor calibration...
+SYS: Free heap: 28384 bytes
+DWM3k: RX: 127	0	126
+STAB: Ready to fly.
+DWM3k: RX: 0	255	0
+ESTKALMAN: State out of bounds, resetting
+ESTKALMAN: State out of bounds, resetting
+DWM3k: RX: 1	1	4294967295
+DWM3k: RX: 0	255	0
+ESTKALMAN: State out of bounds, resetting
+DWM3k: RX: 0	255	0
+DWM3k: RX: 0	255	0
+ESTKALMAN: State out of bounds, resetting
+DWM3k: RX: 0	255	0
+DWM3k: RX: 0	255	0
+ESTKALMAN: State out of bounds, resetting
+DWM3k: RX: 0	255	0
+DWM3k: RX: 0	255	0
+ESTKALMAN: State out of bounds, resetting
+DWM3k: RX: 0	255	0
+DWM3k: RX: 0	255	0
+ESTKALMAN: State out of bounds, resetting
+DWM3k: RX: 0	255	0
+DWM3k: RX: 0	255	0
+ESTKALMAN: State out of bounds, resetting
+DWM3k: RX: 0	255	0
+DWM3k: RX: 0	255	0
+ESTKALMAN: State out of bounds, resetting
+DWM3k: RX: 0	255	0
+DWM3k: RX: 0	255	0
+ESTKALMAN: State out of bounds, resetting
+DWM3k: RX: 0	255	0
+DWM3k: RX: 0	255	0
+ESTKALMAN: State out of bounds, resetting
+DWM3k: RX: 0	255	0
+DWM3k: RX: 0	255	0
+ESTKALMAN: State out of bounds, resetting
+DWM3k: RX: 0	255	0
+DWM3k: RX: 0	255	0
+ESTKALMAN: State out of bounds, resetting
+DWM3k: RX: 0	255	0
+DWM3k: RX: 0	255	0
+ESTKALMAN: State out of bounds, resetting
+DWM3k: RX: 0	255	0
+DWM3k: RX: 0	255	0
+ESTKALMAN: State out of bounds, resetting
+DWM3k: RX: 0	255	0
+DWM3k: RX: 0	255	0
+ESTKALMAN: State out of bounds, resetting
+DWM3k: RX: 0	255	0
+DWM3k: RX: 0	255	0
+ESTKALMAN: State out of bounds, resetting
+DWM3k: RX: 0	255	0
+DWM3k: RX: 0	255	0
+ESTKALMAN: State out of bounds, resetting
+DWM3k: RX: 0	255	0
+DWM3k: RX: 0	255	0
+DWM3k: RX: 0	255	0
+ESTKALMAN: State out of bounds, resetting
+DWM3k: RX: 0	255	0
+DWM3k: RX: 0	255	0
+ESTKALMAN: State out of bounds, resetting
+DWM3k: RX: 0	255	0
+DWM3k: RX: 0	255	0
+ESTKALMAN: State out of bounds, resetting
+DWM3k: RX: 0	255	0
+DWM3k: RX: 0	255	0
+ESTKALMAN: State out of bounds, resetting
+DWM3k: RX: 0	255	0
+DWM3k: RX: 0	255	0
+ESTKALMAN: State out of bounds, resetting
+DWM3k: RX: 0	255	0
+DWM3k: RX: 0	255	0
+ESTKALMAN: State out of bounds, resetting
+DWM3k: RX: 0	255	0
+DWM3k: RX: 0	255	0
+ESTKALMAN: State out of bounds, resetting

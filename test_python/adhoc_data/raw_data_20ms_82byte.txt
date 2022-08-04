@@ -1,0 +1,32 @@
+DWM3k: RX: 1	120	136
+DWM3k: RX: 0	255	0
+ESTKALMAN: State out of bounds, resetting
+DWM3k: RX: 0	255	0
+DWM3k: RX: 0	255	0
+ESTKALMAN: State out of bounds, resetting
+DWM3k: RX: 0	255	0
+DWM3k: RX: 0	255	0
+ESTKALMAN: State out of bounds, resetting
+DWM3k: RX: 0	255	0
+DWM3k: RX: 0	255	0
+ESTKALMAN: State out of bounds, resetting
+DWM3k: RX: 0	255	0
+DWM3k: RX: 0	255	0
+ESTKALMAN: State out of bounds, resetting
+DWM3k: RX: 0	255	0
+DWM3k: RX: 0	255	0
+ESTKALMAN: State out of bounds, resetting
+DWM3k: RX: 0	255	0
+DWM3k: RX: 0	255	0
+ESTKALMAN: State out of bounds, resetting
+DWM3k: RX: 0	255	0
+DWM3k: RX: 0	255	0
+ESTKALMAN: State out of bounds, resetting
+DWM3k: RX: 0	255	0
+DWM3k: RX: 0	255	0
+ESTKALMAN: State out of bounds, resetting
+DWM3k: RX: 0	255	0
+DWM3k: RX: 0	255	0
+ESTKALMAN: State out of bounds, resetting
+DWM3k: RX: 0	255	0
+
