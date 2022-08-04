@@ -97,7 +97,7 @@ static void rxCallback() {
   rxTestSeq = rxTestBuffer[dataLength-3];
   uint8_t numSeqIncreased = rxTestSeq - rxTestSeqLast;
   if(numSeqIncreased != 1)
-    DEBUG_PRINT("RX: %u\t%u\t%u\n", rxTestSeq, rxTestSeqLast, numSeqIncreased);
+    DEBUG_PRINT("RX: %u\t%u\t%u\n", rxTestSeq, rxTestSeqLast, numSeqIncreased-1);
   rxTestSeqLast = rxTestSeq;
 /*
   Ranging_Message_With_Timestamp_t rxMessageWithTimestamp;
@@ -135,7 +135,7 @@ static void uwbTxTask(void *parameters) {
           DWT_ERROR) {
         DEBUG_PRINT("uwbTxTask:  TX ERROR\n");
       }
-      vTaskDelay(30);
+      vTaskDelay(20);
 //    }
   }
 }
