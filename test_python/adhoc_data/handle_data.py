@@ -26,8 +26,8 @@ for item in array:
 	y_sub=[0, 0, 1, 1];
 	y = np.append(y, y_sub);
 	lastEnd=item[0]+item[1];
-#	print(x_sub, y_sub)
+	print(x_sub, y_sub)
 
-plt.plot(x, y)
+plt.plot(x, y);
 plt.show()
 
