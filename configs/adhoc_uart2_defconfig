@@ -7,7 +7,8 @@
 # Build and debug options
 #
 CONFIG_CROSS_COMPILE="arm-none-eabi-"
-# CONFIG_DEBUG is not set
+CONFIG_DEBUG=y
+# CONFIG_DEBUG_QUEUE_MONITOR is not set
 # CONFIG_DEBUG_ENABLE_LED_MORSE is not set
 # CONFIG_DEBUG_PRINT_ON_UART1 is not set
 # CONFIG_DEBUG_DECK_IGNORE_OW is not set

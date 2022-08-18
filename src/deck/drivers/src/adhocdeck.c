@@ -216,12 +216,12 @@ int16_t computeDistance(Timestamp_Tuple_t Tp, Timestamp_Tuple_t Rp,
 
   bool isErrorOccurred = false;
   if (distance > 1000 || distance < 0) {
-    DEBUG_PRINT("isErrorOccurred\n");
+//    DEBUG_PRINT("isErrorOccurred\n");
     isErrorOccurred = true;
   }
 
   if (tRound2 < 0 || tReply2 < 0) {
-    DEBUG_PRINT("tRound2 < 0 || tReply2 < 0\n");
+//    DEBUG_PRINT("tRound2 < 0 || tReply2 < 0\n");
     isErrorOccurred = true;
   }
 
@@ -300,7 +300,7 @@ void processRangingMessage(Ranging_Message_With_Timestamp_t *rangingMessageWithT
         neighborRangingTable->distance = distance;
         distanceTowards[neighborRangingTable->neighborAddress] = distance;
       } else {
-        DEBUG_PRINT("distance is not updated since some error occurs");
+//        DEBUG_PRINT("distance is not updated since some error occurs");
       }
     }
   }
@@ -572,12 +572,12 @@ static const DeckDriver dwm3000_deck = {
 #endif
     .usedPeriph = DECK_USING_SPI,
     .requiredEstimator = kalmanEstimator,
-#ifdef ADHOCDECK_NO_LOW_INTERFERENCE
+//#ifdef ADHOCDECK_NO_LOW_INTERFERENCE
+//    .requiredLowInterferenceRadioMode = false,
+//#else
+//    .requiredLowInterferenceRadioMode = true,
+//#endif
     .requiredLowInterferenceRadioMode = false,
-#else
-    .requiredLowInterferenceRadioMode = true,
-#endif
-
     .init = dwm3000Init,
     .test = dwm3000Test,
 };
