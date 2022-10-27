@@ -80,6 +80,8 @@ static int rangingSeqNumber = 1;
 
 /* log block */
 int16_t distanceTowards[RANGING_TABLE_SIZE + 1] = {0};
+uint32_t LOG_RANGING_COUNT = 0;
+
 
 static void txCallback() {
   dwTime_t txTime;
@@ -228,6 +230,7 @@ int16_t computeDistance(Timestamp_Tuple_t Tp, Timestamp_Tuple_t Rp,
   if (isErrorOccurred) {
     return 0;
   }
+  LOG_RANGING_COUNT++;
 
   return distance;
 }
@@ -598,6 +601,7 @@ LOG_GROUP_START(Ranging)
   LOG_ADD(LOG_INT16, distTo7, distanceTowards + 7)
   LOG_ADD(LOG_INT16, distTo8, distanceTowards + 8)
   LOG_ADD(LOG_FLOAT, velocity, &velocity)
+  LOG_ADD(LOG_UINT32, LOG_RANGING_COUNT, &LOG_RANGING_COUNT)
 LOG_GROUP_STOP(Ranging)
 
 PARAM_GROUP_START(ADHOC)
