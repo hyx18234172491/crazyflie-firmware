@@ -4,7 +4,7 @@
 #include "libdw3000.h"
 
 /* Function Switch */
-#define ENABLE_BUS_BOARDING_SCHEME
+//#define ENABLE_BUS_BOARDING_SCHEME
 #define ENABLE_PHR_EXT_MODE
 
 #define SPEED_OF_LIGHT 299702547
@@ -21,7 +21,7 @@
 #endif
 
 /* Queue Constants */
-#define TX_QUEUE_SIZE 10 // TODO 5
+#define TX_QUEUE_SIZE 25 // TODO 5
 #define RX_QUEUE_SIZE 20
 #define TX_QUEUE_ITEM_SIZE sizeof(Ranging_Message_t)
 #define RX_QUEUE_ITEM_SIZE sizeof(Ranging_Message_With_Timestamp_t)

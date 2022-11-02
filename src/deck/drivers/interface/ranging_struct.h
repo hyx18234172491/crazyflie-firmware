@@ -6,9 +6,9 @@
 #include "FreeRTOS.h"
 #include "dwTypes.h"
 
-#define MAX_BODY_UNIT_NUMBER 30
+#define MAX_BODY_UNIT_NUMBER 25
 // #define MAX_BODY_UNIT_NUMBER (FRAME_LEN_MAX - sizeof(Ranging_Message_Header_t)) / sizeof(Body_Unit_t)
-#define RANGING_TABLE_SIZE 60
+#define RANGING_TABLE_SIZE 30
 #define RANGING_TABLE_HOLD_TIME 10000
 
 typedef uint16_t address_t;
@@ -110,7 +110,7 @@ typedef struct {
   Ranging_Table_t data;
 } __attribute__((packed)) Ranging_Table_Set_Item_t;
 
-/* Ranging Table Set*/
+/* Ranging Table Set */
 typedef struct {
   Ranging_Table_Set_Item_t setData[RANGING_TABLE_SIZE];
   set_index_t freeQueueEntry;

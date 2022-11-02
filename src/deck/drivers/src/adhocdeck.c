@@ -29,29 +29,29 @@
 
 // LOCO deck alternative IRQ and RESET pins(IO_2, IO_4) instead of default (RX1, TX1), leaving UART1 free for use
 #ifdef CONFIG_DECK_ADHOCDECK_USE_ALT_PINS
-  #define GPIO_PIN_IRQ 	  DECK_GPIO_IO2
+#define GPIO_PIN_IRQ      DECK_GPIO_IO2
 
-  #ifndef ADHOCDECK_ALT_PIN_RESET
-  #define GPIO_PIN_RESET 	DECK_GPIO_IO4
-  #else
-  #define GPIO_PIN_RESET 	ADHOCDECK_ALT_PIN_RESET
-  #endif
-
-  #define EXTI_PortSource EXTI_PortSourceGPIOB
-  #define EXTI_PinSource 	EXTI_PinSource5
-  #define EXTI_LineN 		  EXTI_Line5
-#elif defined(CONFIG_DECK_ADHOCDECK_USE_UART2_PINS)
-  #define GPIO_PIN_IRQ 	  DECK_GPIO_TX2
-  #define GPIO_PIN_RESET 	DECK_GPIO_RX2
-  #define EXTI_PortSource EXTI_PortSourceGPIOA
-  #define EXTI_PinSource 	EXTI_PinSource2
-  #define EXTI_LineN 		  EXTI_Line2
+#ifndef ADHOCDECK_ALT_PIN_RESET
+#define GPIO_PIN_RESET    DECK_GPIO_IO4
 #else
-  #define GPIO_PIN_IRQ 	  DECK_GPIO_RX1
-  #define GPIO_PIN_RESET 	DECK_GPIO_TX1
-  #define EXTI_PortSource EXTI_PortSourceGPIOC
-  #define EXTI_PinSource 	EXTI_PinSource11
-  #define EXTI_LineN 		  EXTI_Line11
+#define GPIO_PIN_RESET 	ADHOCDECK_ALT_PIN_RESET
+#endif
+
+#define EXTI_PortSource EXTI_PortSourceGPIOB
+#define EXTI_PinSource    EXTI_PinSource5
+#define EXTI_LineN          EXTI_Line5
+#elif defined(CONFIG_DECK_ADHOCDECK_USE_UART2_PINS)
+#define GPIO_PIN_IRQ 	  DECK_GPIO_TX2
+#define GPIO_PIN_RESET 	DECK_GPIO_RX2
+#define EXTI_PortSource EXTI_PortSourceGPIOA
+#define EXTI_PinSource 	EXTI_PinSource2
+#define EXTI_LineN 		  EXTI_Line2
+#else
+#define GPIO_PIN_IRQ 	  DECK_GPIO_RX1
+#define GPIO_PIN_RESET 	DECK_GPIO_TX1
+#define EXTI_PortSource EXTI_PortSourceGPIOC
+#define EXTI_PinSource 	EXTI_PinSource11
+#define EXTI_LineN 		  EXTI_Line11
 #endif
 
 #define DEFAULT_RX_TIMEOUT 0xFFFFF
@@ -81,7 +81,6 @@ static int rangingSeqNumber = 1;
 /* log block */
 int16_t distanceTowards[RANGING_TABLE_SIZE + 1] = {0};
 uint32_t LOG_RANGING_COUNT = 0;
-
 
 static void txCallback() {
   dwTime_t txTime;
@@ -115,7 +114,8 @@ static void rxTimeoutCallback() {
 }
 
 static void rxErrorCallback() {
-
+  dwt_forcetrxoff();
+  dwt_rxenable(DWT_START_RX_IMMEDIATE);
 }
 
 static int uwbInit() {
@@ -205,7 +205,7 @@ static void uwbTxTask(void *parameters) {
 int16_t computeDistance(Timestamp_Tuple_t Tp, Timestamp_Tuple_t Rp,
                         Timestamp_Tuple_t Tr, Timestamp_Tuple_t Rr,
                         Timestamp_Tuple_t Tf, Timestamp_Tuple_t Rf) {
-
+  LOG_RANGING_COUNT++;
   int64_t tRound1, tReply1, tRound2, tReply2, diff1, diff2, tprop_ctn;
   tRound1 = (Rr.timestamp.full - Tp.timestamp.full + MAX_TIMESTAMP) % MAX_TIMESTAMP;
   tReply1 = (Tr.timestamp.full - Rp.timestamp.full + MAX_TIMESTAMP) % MAX_TIMESTAMP;
@@ -218,19 +218,18 @@ int16_t computeDistance(Timestamp_Tuple_t Tp, Timestamp_Tuple_t Rp,
 
   bool isErrorOccurred = false;
   if (distance > 1000 || distance < 0) {
-    DEBUG_PRINT("isErrorOccurred\n");
+//    DEBUG_PRINT("isErrorOccurred\n");
     isErrorOccurred = true;
   }
 
   if (tRound2 < 0 || tReply2 < 0) {
-    DEBUG_PRINT("tRound2 < 0 || tReply2 < 0\n");
+//    DEBUG_PRINT("tRound2 < 0 || tReply2 < 0\n");
     isErrorOccurred = true;
   }
 
   if (isErrorOccurred) {
     return 0;
   }
-  LOG_RANGING_COUNT++;
 
   return distance;
 }
@@ -295,7 +294,9 @@ void processRangingMessage(Ranging_Message_With_Timestamp_t *rangingMessageWithT
     /* try to compute distance */
     if (Tr_Rr_Candidate.Tr.timestamp.full && Tr_Rr_Candidate.Rr.timestamp.full &&
         neighborRangingTable->Tp.timestamp.full && neighborRangingTable->Rp.timestamp.full &&
-        neighborRangingTable->Tf.timestamp.full && neighborRangingTable->Rf.timestamp.full) {
+        neighborRangingTable->Tf.timestamp.full && neighborRangingTable->Rf.timestamp.full &&
+        neighborRangingTable->Tp.seqNumber == neighborRangingTable->Rp.seqNumber &&
+        neighborRangingTable->Tf.seqNumber == neighborRangingTable->Rf.seqNumber) {
       int16_t distance = computeDistance(neighborRangingTable->Tp, neighborRangingTable->Rp,
                                          Tr_Rr_Candidate.Tr, Tr_Rr_Candidate.Rr,
                                          neighborRangingTable->Tf, neighborRangingTable->Rf);
@@ -303,7 +304,7 @@ void processRangingMessage(Ranging_Message_With_Timestamp_t *rangingMessageWithT
         neighborRangingTable->distance = distance;
         distanceTowards[neighborRangingTable->neighborAddress] = distance;
       } else {
-        DEBUG_PRINT("distance is not updated since some error occurs");
+//        DEBUG_PRINT("distance is not updated since some error occurs");
       }
     }
   }
@@ -588,22 +589,22 @@ static const DeckDriver dwm3000_deck = {
 DECK_DRIVER(dwm3000_deck);
 
 PARAM_GROUP_START(deck)
-  PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, DWM3000, &isInit)
+        PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, DWM3000, &isInit)
 PARAM_GROUP_STOP(deck)
 
 LOG_GROUP_START(Ranging)
-  LOG_ADD(LOG_INT16, distTo1, distanceTowards + 1)
-  LOG_ADD(LOG_INT16, distTo2, distanceTowards + 2)
-  LOG_ADD(LOG_INT16, distTo3, distanceTowards + 3)
-  LOG_ADD(LOG_INT16, distTo4, distanceTowards + 4)
-  LOG_ADD(LOG_INT16, distTo5, distanceTowards + 5)
-  LOG_ADD(LOG_INT16, distTo6, distanceTowards + 6)
-  LOG_ADD(LOG_INT16, distTo7, distanceTowards + 7)
-  LOG_ADD(LOG_INT16, distTo8, distanceTowards + 8)
-  LOG_ADD(LOG_FLOAT, velocity, &velocity)
-  LOG_ADD(LOG_UINT32, LOG_RANGING_COUNT, &LOG_RANGING_COUNT)
+        LOG_ADD(LOG_INT16, distTo1, distanceTowards + 1)
+        LOG_ADD(LOG_INT16, distTo2, distanceTowards + 2)
+        LOG_ADD(LOG_INT16, distTo3, distanceTowards + 3)
+        LOG_ADD(LOG_INT16, distTo4, distanceTowards + 4)
+        LOG_ADD(LOG_INT16, distTo5, distanceTowards + 5)
+        LOG_ADD(LOG_INT16, distTo6, distanceTowards + 6)
+        LOG_ADD(LOG_INT16, distTo7, distanceTowards + 7)
+        LOG_ADD(LOG_INT16, distTo8, distanceTowards + 8)
+        LOG_ADD(LOG_FLOAT, velocity, &velocity)
+        LOG_ADD(LOG_UINT32, LOG_RANGING_COUNT, &LOG_RANGING_COUNT)
 LOG_GROUP_STOP(Ranging)
 
 PARAM_GROUP_START(ADHOC)
-  PARAM_ADD_CORE(PARAM_UINT16 | PARAM_PERSISTENT, MY_UWB_ADDRESS, &MY_UWB_ADDRESS)
+        PARAM_ADD_CORE(PARAM_UINT16 | PARAM_PERSISTENT, MY_UWB_ADDRESS, &MY_UWB_ADDRESS)
 PARAM_GROUP_STOP(ADHOC)
