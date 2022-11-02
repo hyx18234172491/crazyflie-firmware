@@ -11,8 +11,6 @@
 #define RANGING_TABLE_SIZE 60
 #define RANGING_TABLE_HOLD_TIME 10000
 
-#define MESSAGE_LEN 200     // 假设每个Message 里面是200字节大小的Payload
-#define PACKET_LEN 1023 - sizeof(mac_frame_)
 
 typedef uint16_t address_t;
 typedef portTickType Time_t;
@@ -121,17 +119,6 @@ typedef struct {
   int size;
 } Ranging_Table_Set_t;
 
-/* TxQueue */
-typedef struct {
-    union {
-        uint16_t header;
-        struct {
-            uint16_t type:6;
-            uint16_t length:10;
-        };
-    };
-    uint8_t payload[MESSAGE_LEN];
-} __attribute__((packed)) Message_t;
 
 Ranging_Table_Set_t rangingTableSet;
 

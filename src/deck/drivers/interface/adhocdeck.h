@@ -2,6 +2,7 @@
 #define __ADHOCDECK_H__
 
 #include "libdw3000.h"
+#include "mac_802_15_4.h"
 
 /* Function Switch */
 #define ENABLE_BUS_BOARDING_SCHEME
@@ -32,6 +33,10 @@
 #define RANGING_INTERVAL_MAX 500 // default 500
 #define Tf_BUFFER_POOL_SIZE (4 * RANGING_INTERVAL_MAX / RANGING_INTERVAL_MIN)
 #define TX_PERIOD_IN_MS 100
+
+/* LEN */
+#define MESSAGE_LEN 200     // 假设每个Message 里面是200字节大小的Payload
+#define PACKET_LEN 1023 - sizeof(mac_frame_802_15_4_format_t)
 
 /* TX options */
 static dwt_txconfig_t txconfig_options = {
@@ -64,4 +69,25 @@ static dwt_config_t config = {
     DWT_PDOA_M0     /* PDOA mode off */
 };
 
+/* TxQueue */
+typedef struct {
+    union {
+        uint16_t header;
+        struct {
+            uint16_t type:6;
+            uint16_t length:10;
+        };
+    };
+    uint8_t payload[MESSAGE_LEN];
+} __attribute__((packed)) Message_t;
+
+typedef struct {
+    mac_frame_802_15_4_format_t;    // MAC_HEADER
+    uint8_t payload[PACKET_LEN];
+} __attribute__((packed)) Packet_t;
+
+typedef struct {
+    Packet_t packet;
+    dwTime_t rxTime;
+} __attribute__((packed)) PacketWithTimestamp_t;
 #endif
