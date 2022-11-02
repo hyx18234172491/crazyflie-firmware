@@ -2,6 +2,9 @@
 #define __ADHOCDECK_H__
 
 #include "libdw3000.h"
+#include "mac_802_15_4.h"
+#include "dwTypes.h"
+#include "queue.h"
 
 /* Function Switch */
 #define ENABLE_BUS_BOARDING_SCHEME
@@ -15,16 +18,16 @@
 #define FRAME_LEN_STD 127
 #define FRAME_LEN_EXT 1023
 #ifdef ENABLE_PHR_EXT_MODE
-  #define FRAME_LEN_MAX FRAME_LEN_EXT
+#define FRAME_LEN_MAX FRAME_LEN_EXT
 #else
-  #define FRAME_LEN_MAX FRAME_LEN_STD
+#define FRAME_LEN_MAX FRAME_LEN_STD
 #endif
 
 /* Queue Constants */
 #define TX_QUEUE_SIZE 10 // TODO 5
 #define RX_QUEUE_SIZE 20
-#define TX_QUEUE_ITEM_SIZE sizeof(Ranging_Message_t)
-#define RX_QUEUE_ITEM_SIZE sizeof(Ranging_Message_With_Timestamp_t)
+#define TX_QUEUE_ITEM_SIZE sizeof(uwbPacket_t)
+#define RX_QUEUE_ITEM_SIZE sizeof(uwbPacketWithTimestamp_t)
 #define RX_BUFFER_SIZE RX_QUEUE_ITEM_SIZE  // RX_BUFFER_SIZE ≤ FRAME_LEN_MAX
 
 /* Ranging Constants */
@@ -32,6 +35,10 @@
 #define RANGING_INTERVAL_MAX 500 // default 500
 #define Tf_BUFFER_POOL_SIZE (4 * RANGING_INTERVAL_MAX / RANGING_INTERVAL_MIN)
 #define TX_PERIOD_IN_MS 100
+
+/* Packet */
+#define PACKET_SIZE FRAME_LEN_MAX
+#define PAYLOAD_SIZE (PACKET_SIZE - sizeof(Packet_Header_t))
 
 /* TX options */
 static dwt_txconfig_t txconfig_options = {
@@ -64,4 +71,43 @@ static dwt_config_t config = {
     DWT_PDOA_M0     /* PDOA mode off */
 };
 
+/* UWB packet definition */
+typedef enum {
+  RANGING = 0,
+  DATA = 1,
+} MESSAGE_TYPE;
+
+typedef struct {
+  mhr_802_15_4_t mac;    // mac header
+  union {
+    uint16_t header;
+    struct {
+      MESSAGE_TYPE type: 6;
+      uint16_t length: 10;
+    };
+  };
+} __attribute__((packed)) Packet_Header_t;
+
+typedef struct {
+  Packet_Header_t header; // Packet header
+  uint8_t payload[PAYLOAD_SIZE]
+} __attribute__((packed)) uwbPacket_t;
+
+typedef struct {
+  uwbPacket_t packet;
+  dwTime_t rxTime;
+} __attribute__((packed)) uwbPacketWithTimestamp_t;
+
+typedef void (*UWBCallback)(void *);
+
+typedef struct {
+  MESSAGE_TYPE type;
+  QueueHandle_t queue;
+  UWBCallback preprocess;
+} uwbPacketHandler;
+
+/* UWB operations */
+int uwbSendPacket(uwbPacket_t *packet);
+int uwbReceivePacket(MESSAGE_TYPE type, uwbPacket_t *packet);
+void uwbRegisterHandler(uwbPacketHandler *handler);
 #endif

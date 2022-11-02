@@ -12,6 +12,7 @@
 #define RANGING_TABLE_SIZE 60
 #define RANGING_TABLE_HOLD_TIME 10000
 
+
 typedef uint16_t address_t;
 typedef portTickType Time_t;
 typedef short set_index_t;
@@ -118,6 +119,7 @@ typedef struct {
   set_index_t fullQueueEntry;
   int size;
 } Ranging_Table_Set_t;
+
 
 Ranging_Table_Set_t rangingTableSet;
 
