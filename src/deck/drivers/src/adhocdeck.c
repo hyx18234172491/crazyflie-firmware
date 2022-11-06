@@ -93,6 +93,7 @@ static void txCallback() {
 static void rxCallback() {
   BaseType_t xHigherPriorityTaskWoken = pdFALSE;
   uint32_t dataLength = dwt_read32bitreg(RX_FINFO_ID) & RX_FINFO_RXFLEN_BIT_MASK;
+  DEBUG_PRINT("rx data length = %lu \n", dataLength);
   if (dataLength != 0 && dataLength <= FRAME_LEN_MAX) {
     dwt_readrxdata(rxBuffer, dataLength - FCS_LEN, 0); /* No need to read the FCS/CRC. */
   }
@@ -196,6 +197,7 @@ static void uwbTxTask(void *parameters) {
           DWT_ERROR) {
         DEBUG_PRINT("uwbTxTask:  TX ERROR\n");
       }
+      DEBUG_PRINT("neighbor count = %d \n", rangingTableSet.size);
     }
   }
 }
@@ -334,7 +336,7 @@ static void generateRangingMessage(Ranging_Message_t *rangingMessage) {
     if (bodyUnitNumber >= MAX_BODY_UNIT_NUMBER) {
       break; //TODO test 1023 byte
     }
-    if (table->state == RECEIVED) {
+    if (true) {
       rangingMessage->bodyUnits[bodyUnitNumber].address = table->neighborAddress;
       /* It is possible that Re is not the newest timestamp, because the newest may be in rxQueue
        * waiting to be handled.
@@ -346,6 +348,7 @@ static void generateRangingMessage(Ranging_Message_t *rangingMessage) {
     }
   }
   /* generate message header */
+  MY_UWB_ADDRESS = (MY_UWB_ADDRESS + 1) % (RANGING_TABLE_SIZE - 1);
   rangingMessage->header.srcAddress = MY_UWB_ADDRESS;
   rangingMessage->header.msgLength = sizeof(Ranging_Message_Header_t) + sizeof(Body_Unit_t) * bodyUnitNumber;
   rangingMessage->header.msgSequence = curSeqNumber;
@@ -423,8 +426,8 @@ static void uwbTask(void *parameters) {
     }
   }
 }
-static uint8_t spiTxBuffer[196];
-static uint8_t spiRxBuffer[196];
+static uint8_t spiTxBuffer[1023];
+static uint8_t spiRxBuffer[1023];
 static uint16_t spiSpeed = SPI_BAUDRATE_2MHZ;
 
 /************ Low level ops for libdw **********/
