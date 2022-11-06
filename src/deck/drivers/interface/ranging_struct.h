@@ -5,10 +5,11 @@
 
 #include "FreeRTOS.h"
 #include "dwTypes.h"
+#include "adhocdeck.h"
 
-#define MAX_BODY_UNIT_NUMBER 60
-// #define MAX_BODY_UNIT_NUMBER (FRAME_LEN_MAX - sizeof(Ranging_Message_Header_t)) / sizeof(Body_Unit_t)
-#define RANGING_TABLE_SIZE 60
+//#define MAX_BODY_UNIT_NUMBER 80
+#define MAX_BODY_UNIT_NUMBER (FRAME_LEN_MAX - sizeof(Ranging_Message_Header_t)) / sizeof(Body_Unit_t)
+#define RANGING_TABLE_SIZE MAX_BODY_UNIT_NUMBER
 #define RANGING_TABLE_HOLD_TIME 10000
 
 typedef uint16_t address_t;
@@ -35,7 +36,7 @@ typedef struct {
   short velocity; // 2 byte cm/s
   uint16_t msgLength; // 2 byte
   uint16_t filter; // 16 bits bloom filter
-} __attribute__((packed)) Ranging_Message_Header_t; // 20 byte
+} __attribute__((packed)) Ranging_Message_Header_t; // 22 byte
 
 /* Ranging Message */
 typedef struct {

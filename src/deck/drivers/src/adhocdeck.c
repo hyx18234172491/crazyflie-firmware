@@ -333,8 +333,8 @@ static void generateRangingMessage(Ranging_Message_t *rangingMessage) {
   for (set_index_t index = rangingTableSet.fullQueueEntry; index != -1;
        index = rangingTableSet.setData[index].next) {
     Ranging_Table_t *table = &rangingTableSet.setData[index].data;
-    if (bodyUnitNumber >= MAX_BODY_UNIT_NUMBER) {
-      break; //TODO test 1023 byte
+    if (bodyUnitNumber > MAX_BODY_UNIT_NUMBER) {
+      break;
     }
     if (true) {
       rangingMessage->bodyUnits[bodyUnitNumber].address = table->neighborAddress;
@@ -348,7 +348,7 @@ static void generateRangingMessage(Ranging_Message_t *rangingMessage) {
     }
   }
   /* generate message header */
-  MY_UWB_ADDRESS = (MY_UWB_ADDRESS + 1) % (RANGING_TABLE_SIZE - 1);
+  MY_UWB_ADDRESS = (MY_UWB_ADDRESS + 1) % (RANGING_TABLE_SIZE);
   rangingMessage->header.srcAddress = MY_UWB_ADDRESS;
   rangingMessage->header.msgLength = sizeof(Ranging_Message_Header_t) + sizeof(Body_Unit_t) * bodyUnitNumber;
   rangingMessage->header.msgSequence = curSeqNumber;
