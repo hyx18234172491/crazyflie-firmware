@@ -72,11 +72,14 @@ static QueueHandle_t rxQueue;
 static logVarId_t idVelocityX, idVelocityY, idVelocityZ;
 static float velocity;
 
+/* sequences numbers */
+static int packetSeqNumber = 1;
+static int rangingSeqNumber = 1;
+
 /* rx buffer used in rx_callback */
 static uint8_t rxBuffer[RX_BUFFER_SIZE];
 Timestamp_Tuple_t TfBuffer[Tf_BUFFER_POOL_SIZE] = {0};
 static int TfBufferIndex = 0;
-static int rangingSeqNumber = 1;
 
 /* log block */
 int16_t distanceTowards[RANGING_TABLE_SIZE + 1] = {0};
@@ -96,13 +99,25 @@ static void rxCallback() {
   if (dataLength != 0 && dataLength <= FRAME_LEN_MAX) {
     dwt_readrxdata(rxBuffer, dataLength - FCS_LEN, 0); /* No need to read the FCS/CRC. */
   }
-  dwTime_t rxTime;
-  dwt_readrxtimestamp((uint8_t *) &rxTime.raw);
-  Ranging_Message_With_Timestamp_t rxMessageWithTimestamp;
-  rxMessageWithTimestamp.rxTime = rxTime;
-  Ranging_Message_t *rangingMessage = (Ranging_Message_t *) &rxBuffer;
-  rxMessageWithTimestamp.rangingMessage = *rangingMessage;
-  xQueueSendFromISR(rxQueue, &rxMessageWithTimestamp, &xHigherPriorityTaskWoken);
+  DEBUG_PRINT("rxCallback: data length = %lu \n", dataLength);
+  uwbPacket_t *packet = (uwbPacket_t *) &rxBuffer;
+
+  if (packet->header.type == RANGING) {
+    DEBUG_PRINT("rxCallback: received RANGING message \n");
+    // TODO handler->callback->send to queue.
+    dwTime_t rxTime;
+    dwt_readrxtimestamp((uint8_t *) &rxTime.raw);
+
+    uwbPacketWithTimestamp_t rxPacketWithTimestamp;
+    rxPacketWithTimestamp.rxTime = rxTime;
+
+    rxPacketWithTimestamp.packet = *packet;
+    xQueueSendFromISR(rxQueue, &rxPacketWithTimestamp, &xHigherPriorityTaskWoken);
+  }
+  if (packet->header.type == DATA) {
+    // TODO handler->callback->send to queue.
+  }
+
   dwt_forcetrxoff();
   dwt_rxenable(DWT_START_RX_IMMEDIATE);
 }
@@ -184,13 +199,12 @@ static void uwbTxTask(void *parameters) {
     vTaskDelay(M2T(1000));
   }
 
-  Ranging_Message_t packetCache;
-
+  uwbPacket_t packetCache;
   while (true) {
     if (xQueueReceive(txQueue, &packetCache, portMAX_DELAY)) {
       dwt_forcetrxoff();
-      dwt_writetxdata(packetCache.header.msgLength, (uint8_t *) &packetCache, 0);
-      dwt_writetxfctrl(packetCache.header.msgLength + FCS_LEN, 0, 1);
+      dwt_writetxdata(packetCache.header.length, (uint8_t *) &packetCache, 0);
+      dwt_writetxfctrl(packetCache.header.length + FCS_LEN, 0, 1);
       /* Start transmission. */
       if (dwt_starttx(DWT_START_TX_IMMEDIATE | DWT_RESPONSE_EXPECTED) ==
           DWT_ERROR) {
@@ -232,8 +246,8 @@ int16_t computeDistance(Timestamp_Tuple_t Tp, Timestamp_Tuple_t Rp,
   return distance;
 }
 
-void processRangingMessage(Ranging_Message_With_Timestamp_t *rangingMessageWithTimestamp) {
-  Ranging_Message_t *rangingMessage = &rangingMessageWithTimestamp->rangingMessage;
+void processRangingMessage(uwbPacketWithTimestamp_t *rangingMessageWithTimestamp) {
+  Ranging_Message_t *rangingMessage = &rangingMessageWithTimestamp->packet.payload;
   address_t neighborAddress = rangingMessage->header.srcAddress;
   set_index_t neighborIndex = findInRangingTableSet(&rangingTableSet, neighborAddress);
 
@@ -369,8 +383,8 @@ static void uwbRxTask(void *parameters) {
     DEBUG_PRINT("rxQueue is not init\n");
     vTaskDelay(M2T(1000));
   }
-  Ranging_Message_With_Timestamp_t rxPacketCache;
 
+  uwbPacketWithTimestamp_t rxPacketCache;
   while (true) {
     if (xQueueReceive(rxQueue, &rxPacketCache, portMAX_DELAY)) {
       processRangingMessage(&rxPacketCache);
@@ -394,9 +408,13 @@ static void uwbRangingTask(void *parameters) {
   idVelocityY = logGetVarId("stateEstimate", "vy");
   idVelocityZ = logGetVarId("stateEstimate", "vz");
 
-  Ranging_Message_t txPacketCache;
-  while (true) {
-    generateRangingMessage(&txPacketCache);
+  uwbPacket_t txPacketCache;
+  txPacketCache.header.type = RANGING;
+
+  while (true){
+    Ranging_Message_t *ranging_message = (Ranging_Message_t *) &txPacketCache.payload;
+    generateRangingMessage((Ranging_Message_t *) ranging_message);
+    txPacketCache.header.length = sizeof(Packet_Header_t) + ranging_message->header.msgLength;
     xQueueSend(txQueue, &txPacketCache, portMAX_DELAY);
     vTaskDelay(TX_PERIOD_IN_MS);
   }

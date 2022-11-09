@@ -4,6 +4,7 @@
 #include "libdw3000.h"
 #include "mac_802_15_4.h"
 #include "dwTypes.h"
+#include "queue.h"
 
 /* Function Switch */
 #define ENABLE_BUS_BOARDING_SCHEME
@@ -25,8 +26,8 @@
 /* Queue Constants */
 #define TX_QUEUE_SIZE 10 // TODO 5
 #define RX_QUEUE_SIZE 20
-#define TX_QUEUE_ITEM_SIZE sizeof(Message_t)
-#define RX_QUEUE_ITEM_SIZE sizeof(PacketWithTimestamp_t)
+#define TX_QUEUE_ITEM_SIZE sizeof(uwbPacket_t)
+#define RX_QUEUE_ITEM_SIZE sizeof(uwbPacketWithTimestamp_t)
 #define RX_BUFFER_SIZE RX_QUEUE_ITEM_SIZE  // RX_BUFFER_SIZE ≤ FRAME_LEN_MAX
 
 /* Ranging Constants */
@@ -35,9 +36,9 @@
 #define Tf_BUFFER_POOL_SIZE (4 * RANGING_INTERVAL_MAX / RANGING_INTERVAL_MIN)
 #define TX_PERIOD_IN_MS 100
 
-/* LEN */
-#define MESSAGE_LEN 200     // 假设每个Message 里面是200字节大小的Payload
-#define PACKET_LEN FRAME_LEN_MAX - sizeof(mhr_802_15_4_t)
+/* Packet */
+#define PACKET_SIZE FRAME_LEN_MAX
+#define PAYLOAD_SIZE (PACKET_SIZE - sizeof(Packet_Header_t))
 
 /* TX options */
 static dwt_txconfig_t txconfig_options = {
@@ -70,25 +71,43 @@ static dwt_config_t config = {
     DWT_PDOA_M0     /* PDOA mode off */
 };
 
-/* TxQueue */
+/* UWB packet definition */
+typedef enum {
+  RANGING = 0,
+  DATA = 1,
+} MESSAGE_TYPE;
+
 typedef struct {
+  mhr_802_15_4_t mac;    // mac header
   union {
     uint16_t header;
     struct {
-      uint16_t type: 6;
+      MESSAGE_TYPE type: 6;
       uint16_t length: 10;
     };
   };
-  uint8_t payload[MESSAGE_LEN];
-} __attribute__((packed)) Message_t;
+} __attribute__((packed)) Packet_Header_t;
 
 typedef struct {
-  mhr_802_15_4_t;    // MAC_HEADER
-  uint8_t payload[PACKET_LEN];
-} __attribute__((packed)) Packet_t;
+  Packet_Header_t header; // Packet header
+  uint8_t payload[PAYLOAD_SIZE]
+} __attribute__((packed)) uwbPacket_t;
 
 typedef struct {
-  Packet_t packet;
+  uwbPacket_t packet;
   dwTime_t rxTime;
-} __attribute__((packed)) PacketWithTimestamp_t;
+} __attribute__((packed)) uwbPacketWithTimestamp_t;
+
+typedef void (*UWBCallback)(void *);
+
+typedef struct {
+  MESSAGE_TYPE type;
+  QueueHandle_t queue;
+  UWBCallback preprocess;
+} uwbPacketHandler;
+
+/* UWB operations */
+int uwbSendPacket(uwbPacket_t *packet);
+int uwbReceivePacket(MESSAGE_TYPE type, uwbPacket_t *packet);
+void uwbRegisterHandler(uwbPacketHandler *handler);
 #endif
