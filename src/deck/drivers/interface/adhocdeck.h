@@ -47,7 +47,7 @@ static dwt_config_t config = {
     DWT_PAC8,     /* Preamble acquisition chunk size. Used in RX only. */
     9,            /* TX preamble code. Used in TX only. */
     9,            /* RX preamble code. Used in RX only. */
-    1, /* 0 to use standard 8 symbol SFD, 1 to use non-standard 8 symbol, 2 for
+    0, /* 0 to use standard 8 symbol SFD, 1 to use non-standard 8 symbol, 2 for
           non-standard 16 symbol SFD and 3 for 4z 8 symbol SDF type */
     DWT_BR_6M8,      /* Data rate. */
 #ifdef ENABLE_PHR_EXT_MODE
@@ -55,7 +55,7 @@ static dwt_config_t config = {
 #else
     DWT_PHRMODE_STD, /* Standard PHY header mode. */
 #endif
-    DWT_PHRRATE_STD, /* PHY header rate. */
+    DWT_PHRRATE_DTA, /* PHY header rate. */
     (129 + 8 - 8), /* SFD timeout (preamble length + 1 + SFD length - PAC size).
                       Used in RX only. */
     DWT_STS_MODE_OFF,
