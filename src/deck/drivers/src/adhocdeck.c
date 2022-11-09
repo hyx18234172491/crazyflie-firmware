@@ -24,6 +24,7 @@
 #include "libdw3000.h"
 #include "dw3000.h"
 #include "ranging_struct.h"
+#include "stdlib.h"
 
 #define CS_PIN DECK_GPIO_IO1
 
@@ -336,7 +337,7 @@ static void generateRangingMessage(Ranging_Message_t *rangingMessage) {
        index = rangingTableSet.setData[index].next) {
     Ranging_Table_t *table = &rangingTableSet.setData[index].data;
     if (bodyUnitNumber >= MAX_BODY_UNIT_NUMBER) {
-      break; //TODO test 1023 byte
+      break;
     }
     if (table->state == RECEIVED) {
       rangingMessage->bodyUnits[bodyUnitNumber].address = table->neighborAddress;
@@ -402,7 +403,7 @@ static void uwbRangingTask(void *parameters) {
   while (true) {
     generateRangingMessage(&txPacketCache);
     xQueueSend(txQueue, &txPacketCache, portMAX_DELAY);
-    vTaskDelay(TX_PERIOD_IN_MS);
+    vTaskDelay(TX_PERIOD_IN_MS + rand() % 15);
   }
 }
 
@@ -427,8 +428,8 @@ static void uwbTask(void *parameters) {
     }
   }
 }
-static uint8_t spiTxBuffer[196];
-static uint8_t spiRxBuffer[196];
+static uint8_t spiTxBuffer[FRAME_LEN_MAX];
+static uint8_t spiRxBuffer[FRAME_LEN_MAX];
 static uint16_t spiSpeed = SPI_BAUDRATE_2MHZ;
 
 /************ Low level ops for libdw **********/
