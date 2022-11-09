@@ -24,6 +24,7 @@
 #include "libdw3000.h"
 #include "dw3000.h"
 #include "ranging_struct.h"
+#include "stdlib.h"
 
 #define CS_PIN DECK_GPIO_IO1
 
@@ -398,7 +399,7 @@ static void uwbRangingTask(void *parameters) {
   while (true) {
     generateRangingMessage(&txPacketCache);
     xQueueSend(txQueue, &txPacketCache, portMAX_DELAY);
-    vTaskDelay(TX_PERIOD_IN_MS);
+    vTaskDelay(TX_PERIOD_IN_MS + rand() % 15);
   }
 }
 
