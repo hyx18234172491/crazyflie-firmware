@@ -3,6 +3,7 @@
 
 #include "libdw3000.h"
 #include "mac_802_15_4.h"
+#include "dwTypes.h"
 
 /* Function Switch */
 #define ENABLE_BUS_BOARDING_SCHEME
@@ -16,16 +17,16 @@
 #define FRAME_LEN_STD 127
 #define FRAME_LEN_EXT 1023
 #ifdef ENABLE_PHR_EXT_MODE
-  #define FRAME_LEN_MAX FRAME_LEN_EXT
+#define FRAME_LEN_MAX FRAME_LEN_EXT
 #else
-  #define FRAME_LEN_MAX FRAME_LEN_STD
+#define FRAME_LEN_MAX FRAME_LEN_STD
 #endif
 
 /* Queue Constants */
 #define TX_QUEUE_SIZE 10 // TODO 5
 #define RX_QUEUE_SIZE 20
-#define TX_QUEUE_ITEM_SIZE sizeof(Ranging_Message_t)
-#define RX_QUEUE_ITEM_SIZE sizeof(Ranging_Message_With_Timestamp_t)
+#define TX_QUEUE_ITEM_SIZE sizeof(Message_t)
+#define RX_QUEUE_ITEM_SIZE sizeof(PacketWithTimestamp_t)
 #define RX_BUFFER_SIZE RX_QUEUE_ITEM_SIZE  // RX_BUFFER_SIZE ≤ FRAME_LEN_MAX
 
 /* Ranging Constants */
@@ -36,7 +37,7 @@
 
 /* LEN */
 #define MESSAGE_LEN 200     // 假设每个Message 里面是200字节大小的Payload
-#define PACKET_LEN 1023 - sizeof(mac_frame_802_15_4_format_t)
+#define PACKET_LEN FRAME_LEN_MAX - sizeof(mhr_802_15_4_t)
 
 /* TX options */
 static dwt_txconfig_t txconfig_options = {
@@ -71,23 +72,23 @@ static dwt_config_t config = {
 
 /* TxQueue */
 typedef struct {
-    union {
-        uint16_t header;
-        struct {
-            uint16_t type:6;
-            uint16_t length:10;
-        };
+  union {
+    uint16_t header;
+    struct {
+      uint16_t type: 6;
+      uint16_t length: 10;
     };
-    uint8_t payload[MESSAGE_LEN];
+  };
+  uint8_t payload[MESSAGE_LEN];
 } __attribute__((packed)) Message_t;
 
 typedef struct {
-    mac_frame_802_15_4_format_t;    // MAC_HEADER
-    uint8_t payload[PACKET_LEN];
+  mhr_802_15_4_t;    // MAC_HEADER
+  uint8_t payload[PACKET_LEN];
 } __attribute__((packed)) Packet_t;
 
 typedef struct {
-    Packet_t packet;
-    dwTime_t rxTime;
+  Packet_t packet;
+  dwTime_t rxTime;
 } __attribute__((packed)) PacketWithTimestamp_t;
 #endif
