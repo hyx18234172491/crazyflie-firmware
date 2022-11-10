@@ -5,6 +5,7 @@
 #include "mac_802_15_4.h"
 #include "dwTypes.h"
 #include "queue.h"
+#include "ranging_struct.h"
 
 /* Function Switch */
 #define ENABLE_BUS_BOARDING_SCHEME
@@ -24,17 +25,11 @@
 #endif
 
 /* Queue Constants */
-#define TX_QUEUE_SIZE 10 // TODO 5
-#define RX_QUEUE_SIZE 20
-#define TX_QUEUE_ITEM_SIZE sizeof(uwbPacket_t)
-#define RX_QUEUE_ITEM_SIZE sizeof(uwbPacketWithTimestamp_t)
-#define RX_BUFFER_SIZE RX_QUEUE_ITEM_SIZE  // RX_BUFFER_SIZE ≤ FRAME_LEN_MAX
+#define NUMBER_OF_MESSAGE_TYPE 2
+#define TX_QUEUE_SIZE 10
+#define TX_QUEUE_ITEM_SIZE sizeof(UWB_Packet_t)
 
-/* Ranging Constants */
-#define RANGING_INTERVAL_MIN 20 // default 20
-#define RANGING_INTERVAL_MAX 500 // default 500
-#define Tf_BUFFER_POOL_SIZE (4 * RANGING_INTERVAL_MAX / RANGING_INTERVAL_MIN)
-#define TX_PERIOD_IN_MS 100
+typedef uint16_t address_t;
 
 /* Packet */
 #define PACKET_SIZE FRAME_LEN_MAX
@@ -91,23 +86,26 @@ typedef struct {
 typedef struct {
   Packet_Header_t header; // Packet header
   uint8_t payload[PAYLOAD_SIZE]
-} __attribute__((packed)) uwbPacket_t;
-
-typedef struct {
-  uwbPacket_t packet;
-  dwTime_t rxTime;
-} __attribute__((packed)) uwbPacketWithTimestamp_t;
+} __attribute__((packed)) UWB_Packet_t;
 
 typedef void (*UWBCallback)(void *);
 
 typedef struct {
   MESSAGE_TYPE type;
-  QueueHandle_t queue;
-  UWBCallback preprocess;
-} uwbPacketHandler;
+  QueueHandle_t rxQueue;
+  UWBCallback rxCb;
+  UWBCallback txCb;
+} UWB_Message_Listener_t;
 
 /* UWB operations */
-int uwbSendPacket(uwbPacket_t *packet);
-int uwbReceivePacket(MESSAGE_TYPE type, uwbPacket_t *packet);
-void uwbRegisterHandler(uwbPacketHandler *handler);
+uint16_t getUWBAddress();
+int uwbSendPacket(UWB_Packet_t *packet);
+int uwbSendPacketBlock(UWB_Packet_t *packet);
+int uwbReceivePacket(UWB_Packet_t *packet);
+int uwbReceivePacketBlock(UWB_Packet_t *packet);
+int uwbReceivePacketWait(UWB_Packet_t *packet, int wait);
+void uwbRegisterListener(UWB_Message_Listener_t *listener);
+dwTime_t getPacketSendTime();
+dwTime_t getPacketReceivedTime();
+
 #endif
