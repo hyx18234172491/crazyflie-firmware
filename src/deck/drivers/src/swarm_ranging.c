@@ -1,15 +1,25 @@
-#include "adhocdeck.h"
-#include "swarm_ranging.h"
-#include "ranging_struct.h"
-#include "log.h"
-#include "stdint.h"
-#include "math.h"
-#include "debug.h"
+#include <stdint.h>
+#include <math.h>
+#include "FreeRTOS.h"
+#include "queue.h"
 #include "task.h"
+#include "system.h"
+
+#include "autoconf.h"
+#include "debug.h"
+#include "log.h"
+#include "assert.h"
+#include "adhocdeck.h"
+#include "ranging_struct.h"
+#include "swarm_ranging.h"
 
 static uint16_t MY_UWB_ADDRESS;
 
+static QueueHandle_t rxQueue;
 static Ranging_Table_Set_t rangingTableSet;
+static UWB_Message_Listener_t listener;
+static TaskHandle_t uwbRangingTxTaskHandle = 0;
+static TaskHandle_t uwbRangingRxTaskHandle = 0;
 
 static Timestamp_Tuple_t TfBuffer[Tf_BUFFER_POOL_SIZE] = {0};
 static int TfBufferIndex = 0;
@@ -18,12 +28,93 @@ static int rangingSeqNumber = 1;
 static logVarId_t idVelocityX, idVelocityY, idVelocityZ;
 static float velocity;
 
-/* log block */
 int16_t distanceTowards[RANGING_TABLE_SIZE + 1] = {0};
 
-void rangingInit(){
+// TODO currently not used due to hard coded code in uwb rxCallback
+void rangingRxCallback(void *parameters) {
+
+}
+
+void rangingTxCallback(void *parameters) {
+  dwTime_t txTime;
+  dwt_readtxtimestamp((uint8_t *) &txTime.raw);
+  TfBufferIndex++;
+  TfBufferIndex %= Tf_BUFFER_POOL_SIZE;
+  TfBuffer[TfBufferIndex].seqNumber = rangingSeqNumber;
+  TfBuffer[TfBufferIndex].timestamp = txTime;
+}
+
+int16_t getDistance(uint16_t neighborAddress) {
+  assert(neighborAddress < RANGING_TABLE_SIZE);
+  return distanceTowards[neighborAddress];
+}
+
+static void uwbRangingTxTask(void *parameters) {
+  systemWaitStart();
+  // TODO check below UART2 related code
+//#ifdef CONFIG_DECK_ADHOCDECK_USE_UART2_PINS
+//  while (!isUWBStart) {
+//    vTaskDelay(500);
+//  }
+//#endif
+  /* velocity log variable id */
+  idVelocityX = logGetVarId("stateEstimate", "vx");
+  idVelocityY = logGetVarId("stateEstimate", "vy");
+  idVelocityZ = logGetVarId("stateEstimate", "vz");
+
+  UWB_Packet_t txPacketCache;
+  txPacketCache.header.type = RANGING;
+//  txPacketCache.header.mac = ? TODO init mac header
+  while (true) {
+    int msgLen = generateRangingMessage((Ranging_Message_t *) &txPacketCache.payload);
+    txPacketCache.header.length = sizeof (Packet_Header_t) + msgLen;
+    uwbSendPacketBlock(&txPacketCache);
+    vTaskDelay(TX_PERIOD_IN_MS);
+  }
+}
+
+static void uwbRangingRxTask(void *parameters) {
+  systemWaitStart();
+  // TODO check below UART2 related code
+//#ifdef CONFIG_DECK_ADHOCDECK_USE_UART2_PINS
+//  while (!isUWBStart) {
+//    vTaskDelay(500);
+//  }
+//#endif
+  while (rxQueue == 0) {
+    DEBUG_PRINT("rxQueue for RangingRxTask is not init\n");
+    vTaskDelay(M2T(1000));
+  }
+  Ranging_Message_With_Timestamp_t rxPacketCache;
+
+  while (true) {
+    if (xQueueReceive(rxQueue, &rxPacketCache, portMAX_DELAY)) {
+      DEBUG_PRINT("uwbRangingRxTask: received ranging message \n");
+      processRangingMessage(&rxPacketCache);
+    }
+  }
+}
+
+void rangingInit() {
   MY_UWB_ADDRESS = getUWBAddress();
+  DEBUG_PRINT("MY_UWB_ADDRESS = %d \n", MY_UWB_ADDRESS);
+  rxQueue = xQueueCreate(RANGING_RX_QUEUE_SIZE, RANGING_RX_QUEUE_ITEM_SIZE);
   rangingTableSetInit(&rangingTableSet);
+
+  listener.type = RANGING;
+  listener.rxQueue = rxQueue;
+  listener.rxCb = rangingRxCallback;
+  listener.txCb = rangingTxCallback;
+  uwbRegisterListener(&listener);
+
+  idVelocityX = logGetVarId("stateEstimate", "vx");
+  idVelocityY = logGetVarId("stateEstimate", "vy");
+  idVelocityZ = logGetVarId("stateEstimate", "vz");
+
+  xTaskCreate(uwbRangingTxTask, ADHOC_DECK_RANGING_TX_TASK_NAME, 4 * configMINIMAL_STACK_SIZE, NULL,
+              ADHOC_DECK_TASK_PRI, &uwbRangingTxTaskHandle);
+  xTaskCreate(uwbRangingRxTask, ADHOC_DECK_RANGING_RX_TASK_NAME, 4 * configMINIMAL_STACK_SIZE, NULL,
+              ADHOC_DECK_TASK_PRI, &uwbRangingRxTaskHandle);
 }
 
 int16_t computeDistance(Timestamp_Tuple_t Tp, Timestamp_Tuple_t Rp,
@@ -57,7 +148,6 @@ int16_t computeDistance(Timestamp_Tuple_t Tp, Timestamp_Tuple_t Rp,
 
   return distance;
 }
-
 
 void processRangingMessage(Ranging_Message_With_Timestamp_t *rangingMessageWithTimestamp) {
   Ranging_Message_t *rangingMessage = &rangingMessageWithTimestamp->rangingMessage;
@@ -146,7 +236,7 @@ void processRangingMessage(Ranging_Message_With_Timestamp_t *rangingMessageWithT
   neighborRangingTable->state = RECEIVED;
 }
 
-void generateRangingMessage(Ranging_Message_t *rangingMessage) {
+int generateRangingMessage(Ranging_Message_t *rangingMessage) {
 #ifdef ENABLE_BUS_BOARDING_SCHEME
   sortRangingTableSet(&rangingTableSet);
 #endif
@@ -183,15 +273,16 @@ void generateRangingMessage(Ranging_Message_t *rangingMessage) {
   velocity = sqrt(pow(velocityX, 2) + pow(velocityY, 2) + pow(velocityZ, 2));
   /* velocity in cm/s */
   rangingMessage->header.velocity = (short) (velocity * 100);
+  return rangingMessage->header.msgLength;
 }
 
-//LOG_GROUP_START(Ranging)
-//  LOG_ADD(LOG_INT16, distTo1, distanceTowards + 1)
-//  LOG_ADD(LOG_INT16, distTo2, distanceTowards + 2)
-//  LOG_ADD(LOG_INT16, distTo3, distanceTowards + 3)
-//  LOG_ADD(LOG_INT16, distTo4, distanceTowards + 4)
-//  LOG_ADD(LOG_INT16, distTo5, distanceTowards + 5)
-//  LOG_ADD(LOG_INT16, distTo6, distanceTowards + 6)
-//  LOG_ADD(LOG_INT16, distTo7, distanceTowards + 7)
-//  LOG_ADD(LOG_INT16, distTo8, distanceTowards + 8)
-//LOG_GROUP_STOP(Ranging)
+LOG_GROUP_START(Ranging)
+        LOG_ADD(LOG_INT16, distTo1, distanceTowards + 1)
+        LOG_ADD(LOG_INT16, distTo2, distanceTowards + 2)
+        LOG_ADD(LOG_INT16, distTo3, distanceTowards + 3)
+        LOG_ADD(LOG_INT16, distTo4, distanceTowards + 4)
+        LOG_ADD(LOG_INT16, distTo5, distanceTowards + 5)
+        LOG_ADD(LOG_INT16, distTo6, distanceTowards + 6)
+        LOG_ADD(LOG_INT16, distTo7, distanceTowards + 7)
+        LOG_ADD(LOG_INT16, distTo8, distanceTowards + 8)
+LOG_GROUP_STOP(Ranging)

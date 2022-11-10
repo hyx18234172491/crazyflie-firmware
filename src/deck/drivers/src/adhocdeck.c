@@ -79,7 +79,7 @@ static uint8_t rxBuffer[FRAME_LEN_MAX];
 static void txCallback() {
   packetSeqNumber++;
   if (TX_MESSAGE_TYPE < NUMBER_OF_MESSAGE_TYPE && listeners[TX_MESSAGE_TYPE].txCb) {
-    listeners[TX_MESSAGE_TYPE].txCb(NULL);
+    listeners[TX_MESSAGE_TYPE].txCb(NULL); // TODO no parameter passed into txCb now
   }
 }
 
@@ -105,6 +105,7 @@ static void rxCallback() {
   } else {
     if (msgType < NUMBER_OF_MESSAGE_TYPE && listeners[msgType].rxCb) {
       listeners[msgType].rxCb(packet);
+      xQueueSendFromISR(listeners[msgType].rxQueue, packet, &xHigherPriorityTaskWoken);
     }
   }
 
@@ -221,7 +222,6 @@ static void uwbTxTask(void *parameters) {
       dwt_writetxdata(packetCache.header.length, (uint8_t *) &packetCache, 0);
       dwt_writetxfctrl(packetCache.header.length + FCS_LEN, 0, 1);
       /* Start transmission. */
-      TX_MESSAGE_TYPE = packetCache.header.type;
       if (dwt_starttx(DWT_START_TX_IMMEDIATE | DWT_RESPONSE_EXPECTED) ==
           DWT_ERROR) {
         DEBUG_PRINT("uwbTxTask:  TX ERROR\n");
@@ -356,6 +356,7 @@ static void uwbTaskInit() {
               ADHOC_DECK_TASK_PRI, &uwbTaskHandle);
   xTaskCreate(uwbTxTask, ADHOC_DECK_TX_TASK_NAME, 4 * configMINIMAL_STACK_SIZE, NULL,
               ADHOC_DECK_TASK_PRI, &uwbTxTaskHandle);
+  rangingInit(); // TODO check calling position
 }
 /*********** Deck driver initialization ***************/
 static void dwm3000Init(DeckInfo *info) {
