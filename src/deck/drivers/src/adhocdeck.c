@@ -23,6 +23,7 @@
 #include "libdw3000.h"
 #include "dw3000.h"
 #include "swarm_ranging.h"
+#include "routing.h"
 
 #define CS_PIN DECK_GPIO_IO1
 
@@ -353,7 +354,8 @@ static void uwbTaskInit() {
               ADHOC_DECK_TASK_PRI, &uwbTaskHandle);
   xTaskCreate(uwbTxTask, ADHOC_DECK_TX_TASK_NAME, 4 * configMINIMAL_STACK_SIZE, NULL,
               ADHOC_DECK_TASK_PRI, &uwbTxTaskHandle);
-  rangingInit(); // TODO check calling position
+//  rangingInit(); // TODO check calling position
+  routingInit();
 }
 /*********** Deck driver initialization ***************/
 static void dwm3000Init(DeckInfo *info) {

@@ -30,7 +30,6 @@ static float velocity;
 
 int16_t distanceTowards[RANGING_TABLE_SIZE + 1] = {0};
 
-// TODO currently not used due to hard coded code in uwb rxCallback
 void rangingRxCallback(void *parameters) {
   DEBUG_PRINT("rangingRxCallback \n");
 
