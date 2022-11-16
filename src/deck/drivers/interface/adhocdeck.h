@@ -68,7 +68,7 @@ static dwt_config_t config = {
 /* UWB packet definition */
 typedef enum {
   RANGING = 0,
-  DATA = 1,
+  DATA = 1
 } MESSAGE_TYPE;
 
 typedef struct {
@@ -97,9 +97,9 @@ typedef struct {
 uint16_t getUWBAddress();
 int uwbSendPacket(UWB_Packet_t *packet);
 int uwbSendPacketBlock(UWB_Packet_t *packet);
-int uwbReceivePacket(UWB_Packet_t *packet);
-int uwbReceivePacketBlock(UWB_Packet_t *packet);
-int uwbReceivePacketWait(UWB_Packet_t *packet, int wait);
+int uwbReceivePacket(MESSAGE_TYPE type,UWB_Packet_t *packet);
+int uwbReceivePacketBlock(MESSAGE_TYPE type,UWB_Packet_t *packet);
+int uwbReceivePacketWait(MESSAGE_TYPE type,UWB_Packet_t *packet, int wait);
 void uwbRegisterListener(UWB_Message_Listener_t *listener);
 dwTime_t getPacketSendTime();
 dwTime_t getPacketReceivedTime();

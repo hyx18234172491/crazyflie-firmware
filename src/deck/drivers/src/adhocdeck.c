@@ -28,29 +28,29 @@
 
 // LOCO deck alternative IRQ and RESET pins(IO_2, IO_4) instead of default (RX1, TX1), leaving UART1 free for use
 #ifdef CONFIG_DECK_ADHOCDECK_USE_ALT_PINS
-  #define GPIO_PIN_IRQ 	  DECK_GPIO_IO2
+#define GPIO_PIN_IRQ 	  DECK_GPIO_IO2
 
-  #ifndef ADHOCDECK_ALT_PIN_RESET
-  #define GPIO_PIN_RESET 	DECK_GPIO_IO4
-  #else
-  #define GPIO_PIN_RESET 	ADHOCDECK_ALT_PIN_RESET
-  #endif
-
-  #define EXTI_PortSource EXTI_PortSourceGPIOB
-  #define EXTI_PinSource 	EXTI_PinSource5
-  #define EXTI_LineN 		  EXTI_Line5
-#elif defined(CONFIG_DECK_ADHOCDECK_USE_UART2_PINS)
-  #define GPIO_PIN_IRQ 	  DECK_GPIO_TX2
-  #define GPIO_PIN_RESET 	DECK_GPIO_RX2
-  #define EXTI_PortSource EXTI_PortSourceGPIOA
-  #define EXTI_PinSource 	EXTI_PinSource2
-  #define EXTI_LineN 		  EXTI_Line2
+#ifndef ADHOCDECK_ALT_PIN_RESET
+#define GPIO_PIN_RESET 	DECK_GPIO_IO4
 #else
-  #define GPIO_PIN_IRQ 	  DECK_GPIO_RX1
-  #define GPIO_PIN_RESET 	DECK_GPIO_TX1
-  #define EXTI_PortSource EXTI_PortSourceGPIOC
-  #define EXTI_PinSource 	EXTI_PinSource11
-  #define EXTI_LineN 		  EXTI_Line11
+#define GPIO_PIN_RESET 	ADHOCDECK_ALT_PIN_RESET
+#endif
+
+#define EXTI_PortSource EXTI_PortSourceGPIOB
+#define EXTI_PinSource 	EXTI_PinSource5
+#define EXTI_LineN 		  EXTI_Line5
+#elif defined(CONFIG_DECK_ADHOCDECK_USE_UART2_PINS)
+#define GPIO_PIN_IRQ 	  DECK_GPIO_TX2
+#define GPIO_PIN_RESET 	DECK_GPIO_RX2
+#define EXTI_PortSource EXTI_PortSourceGPIOA
+#define EXTI_PinSource 	EXTI_PinSource2
+#define EXTI_LineN 		  EXTI_Line2
+#else
+#define GPIO_PIN_IRQ      DECK_GPIO_RX1
+#define GPIO_PIN_RESET    DECK_GPIO_TX1
+#define EXTI_PortSource EXTI_PortSourceGPIOC
+#define EXTI_PinSource    EXTI_PinSource11
+#define EXTI_LineN          EXTI_Line11
 #endif
 
 #define DEFAULT_RX_TIMEOUT 0xFFFFF
@@ -128,16 +128,19 @@ int uwbSendPacketBlock(UWB_Packet_t *packet) {
   xQueueSend(txQueue, packet, portMAX_DELAY);
 }
 
-int uwbReceivePacket(UWB_Packet_t *packet) {
-  return xQueueReceive(queues[packet->header.type], packet, 0);
+int uwbReceivePacket(MESSAGE_TYPE type, UWB_Packet_t *packet) {
+  ASSERT(type < NUMBER_OF_MESSAGE_TYPE);
+  return xQueueReceive(queues[type], packet, 0);
 }
 
-int uwbReceivePacketBlock(UWB_Packet_t *packet) {
-  return xQueueReceive(queues[packet->header.type], packet, portMAX_DELAY);
+int uwbReceivePacketBlock(MESSAGE_TYPE type, UWB_Packet_t *packet) {
+  ASSERT(type < NUMBER_OF_MESSAGE_TYPE);
+  return xQueueReceive(queues[type], packet, portMAX_DELAY);
 }
 
-int uwbReceivePacketWait(UWB_Packet_t *packet, int wait) {
-  return xQueueReceive(queues[packet->header.type], packet, M2T(wait));
+int uwbReceivePacketWait(MESSAGE_TYPE type, UWB_Packet_t *packet, int wait) {
+  ASSERT(type < NUMBER_OF_MESSAGE_TYPE);
+  return xQueueReceive(queues[type], packet, M2T(wait));
 }
 
 void uwbRegisterListener(UWB_Message_Listener_t *listener) {
@@ -404,9 +407,9 @@ static const DeckDriver dwm3000_deck = {
 DECK_DRIVER(dwm3000_deck);
 
 PARAM_GROUP_START(deck)
-  PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, DWM3000, &isInit)
+        PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, DWM3000, &isInit)
 PARAM_GROUP_STOP(deck)
 
 PARAM_GROUP_START(ADHOC)
-  PARAM_ADD_CORE(PARAM_UINT16 | PARAM_PERSISTENT, MY_UWB_ADDRESS, &MY_UWB_ADDRESS)
+        PARAM_ADD_CORE(PARAM_UINT16 | PARAM_PERSISTENT, MY_UWB_ADDRESS, &MY_UWB_ADDRESS)
 PARAM_GROUP_STOP(ADHOC)
