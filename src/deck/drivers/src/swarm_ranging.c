@@ -32,7 +32,20 @@ int16_t distanceTowards[RANGING_TABLE_SIZE + 1] = {0};
 
 // TODO currently not used due to hard coded code in uwb rxCallback
 void rangingRxCallback(void *parameters) {
+  DEBUG_PRINT("rangingRxCallback \n");
 
+  BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+
+  UWB_Packet_t *packet = (UWB_Packet_t *) parameters;
+
+  dwTime_t rxTime;
+  dwt_readrxtimestamp((uint8_t *) &rxTime.raw);
+  Ranging_Message_With_Timestamp_t rxMessageWithTimestamp;
+  rxMessageWithTimestamp.rxTime = rxTime;
+  Ranging_Message_t *rangingMessage = (Ranging_Message_t *) packet->payload;
+  rxMessageWithTimestamp.rangingMessage = *rangingMessage;
+
+  xQueueSendFromISR(rxQueue, &rxMessageWithTimestamp, &xHigherPriorityTaskWoken);
 }
 
 void rangingTxCallback(void *parameters) {
@@ -81,10 +94,10 @@ static void uwbRangingRxTask(void *parameters) {
 //    vTaskDelay(500);
 //  }
 //#endif
-  while (rxQueue == 0) {
-    DEBUG_PRINT("rxQueue for RangingRxTask is not init\n");
-    vTaskDelay(M2T(1000));
-  }
+//  while (rxQueue == 0) {
+//    DEBUG_PRINT("rxQueue for RangingRxTask is not init\n");
+//    vTaskDelay(M2T(1000));
+//  }
   Ranging_Message_With_Timestamp_t rxPacketCache;
 
   while (true) {
@@ -102,7 +115,7 @@ void rangingInit() {
   rangingTableSetInit(&rangingTableSet);
 
   listener.type = RANGING;
-  listener.rxQueue = rxQueue;
+  listener.rxQueue = NULL; // handle rxQueue in swarm_ranging.c instead of adhocdeck.c
   listener.rxCb = rangingRxCallback;
   listener.txCb = rangingTxCallback;
   uwbRegisterListener(&listener);

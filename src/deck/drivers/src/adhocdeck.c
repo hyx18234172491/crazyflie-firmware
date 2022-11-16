@@ -2,7 +2,6 @@
 
 #include <stdint.h>
 #include <string.h>
-#include <math.h>
 
 #include "stm32fxxx.h"
 
@@ -23,7 +22,6 @@
 #include "dwTypes.h"
 #include "libdw3000.h"
 #include "dw3000.h"
-#include "ranging_struct.h"
 #include "swarm_ranging.h"
 
 #define CS_PIN DECK_GPIO_IO1
@@ -85,28 +83,24 @@ static void txCallback() {
 
 static void rxCallback() {
   BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+
   uint32_t dataLength = dwt_read32bitreg(RX_FINFO_ID) & RX_FINFO_RXFLEN_BIT_MASK;
   if (dataLength != 0 && dataLength <= FRAME_LEN_MAX) {
     dwt_readrxdata(rxBuffer, dataLength - FCS_LEN, 0); /* No need to read the FCS/CRC. */
   }
   DEBUG_PRINT("rxCallback: data length = %lu \n", dataLength);
+
   UWB_Packet_t *packet = (UWB_Packet_t *) &rxBuffer;
   MESSAGE_TYPE msgType = packet->header.type;
 
-  // TODO ugly hard coded
-  if (msgType == RANGING) {
-    dwTime_t rxTime;
-    dwt_readrxtimestamp((uint8_t *) &rxTime.raw);
-    Ranging_Message_With_Timestamp_t rxMessageWithTimestamp;
-    rxMessageWithTimestamp.rxTime = rxTime;
-    Ranging_Message_t *rangingMessage = (Ranging_Message_t *) packet->payload;
-    rxMessageWithTimestamp.rangingMessage = *rangingMessage;
-    xQueueSendFromISR(listeners[RANGING].rxQueue, &rxMessageWithTimestamp, &xHigherPriorityTaskWoken);
-  } else {
-    if (msgType < NUMBER_OF_MESSAGE_TYPE && listeners[msgType].rxCb) {
-      listeners[msgType].rxCb(packet);
-      xQueueSendFromISR(listeners[msgType].rxQueue, packet, &xHigherPriorityTaskWoken);
-    }
+  ASSERT(msgType < NUMBER_OF_MESSAGE_TYPE);
+
+  if (listeners[msgType].rxCb) {
+    listeners[msgType].rxCb(packet);
+  }
+
+  if (listeners[msgType].rxQueue) {
+    xQueueSendFromISR(listeners[msgType].rxQueue, packet, &xHigherPriorityTaskWoken);
   }
 
   dwt_forcetrxoff();
