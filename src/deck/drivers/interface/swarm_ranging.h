@@ -3,6 +3,9 @@
 #include "adhocdeck.h"
 #include "ranging_struct.h"
 
+/* Function Switch */
+#define ENABLE_BUS_BOARDING_SCHEME
+
 /* Queue Constants */
 #define RANGING_RX_QUEUE_SIZE 10
 #define RANGING_RX_QUEUE_ITEM_SIZE sizeof(Ranging_Message_With_Timestamp_t)
@@ -12,9 +15,6 @@
 #define RANGING_INTERVAL_MAX 500 // default 500
 #define Tf_BUFFER_POOL_SIZE (4 * RANGING_INTERVAL_MAX / RANGING_INTERVAL_MIN)
 #define TX_PERIOD_IN_MS 100
-
-/* Function Switch */
-#define ENABLE_BUS_BOARDING_SCHEME
 
 /* Ranging Operations */
 void rangingInit();

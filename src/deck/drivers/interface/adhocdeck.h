@@ -7,6 +7,9 @@
 #include "queue.h"
 #include "ranging_struct.h"
 
+/* Function Switch */
+#define ENABLE_PHR_EXT_MODE
+
 #define SPEED_OF_LIGHT 299702547
 #define MAX_TIMESTAMP 1099511627776  // 2**40
 #define TX_ANT_DLY 16385
@@ -24,9 +27,6 @@
 #define NUMBER_OF_MESSAGE_TYPE 2
 #define TX_QUEUE_SIZE 10
 #define TX_QUEUE_ITEM_SIZE sizeof(UWB_Packet_t)
-
-/* Function Switch */
-#define ENABLE_PHR_EXT_MODE
 
 typedef uint16_t address_t;
 
@@ -74,8 +74,8 @@ typedef enum {
 typedef struct {
   mhr_802_15_4_t mac;    // mac header
   struct {
-      MESSAGE_TYPE type: 6;
-      uint16_t length: 10;
+    MESSAGE_TYPE type: 6;
+    uint16_t length: 10;
   };
 } __attribute__((packed)) Packet_Header_t;
 
@@ -97,9 +97,9 @@ typedef struct {
 uint16_t getUWBAddress();
 int uwbSendPacket(UWB_Packet_t *packet);
 int uwbSendPacketBlock(UWB_Packet_t *packet);
-int uwbReceivePacket(MESSAGE_TYPE type,UWB_Packet_t *packet);
-int uwbReceivePacketBlock(MESSAGE_TYPE type,UWB_Packet_t *packet);
-int uwbReceivePacketWait(MESSAGE_TYPE type,UWB_Packet_t *packet, int wait);
+int uwbReceivePacket(MESSAGE_TYPE type, UWB_Packet_t *packet);
+int uwbReceivePacketBlock(MESSAGE_TYPE type, UWB_Packet_t *packet);
+int uwbReceivePacketWait(MESSAGE_TYPE type, UWB_Packet_t *packet, int wait);
 void uwbRegisterListener(UWB_Message_Listener_t *listener);
 dwTime_t getPacketSendTime();
 dwTime_t getPacketReceivedTime();
