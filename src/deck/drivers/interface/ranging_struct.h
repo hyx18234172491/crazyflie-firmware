@@ -11,6 +11,7 @@
 //#define MAX_BODY_UNIT_NUMBER (FRAME_LEN_MAX - sizeof(Ranging_Message_Header_t)) / sizeof(Body_Unit_t) // 1 ~ 83
 #define RANGING_TABLE_SIZE 60
 #define RANGING_TABLE_HOLD_TIME 10000
+#define Max_Nei_Number 8
 
 typedef portTickType Time_t;
 typedef short set_index_t;
@@ -25,6 +26,7 @@ typedef struct {
 typedef struct {
   uint16_t address; // 2 byte
   Timestamp_Tuple_t timestamp; // 10 byte
+  uint16_t distance;
 } __attribute__((packed)) Body_Unit_t; // 12 byte
 
 /* Ranging Message Header*/
@@ -43,6 +45,24 @@ typedef struct {
   Body_Unit_t bodyUnits[MAX_BODY_UNIT_NUMBER]; // 12 byte * MAX_NEIGHBOR_SIZE
 } __attribute__((packed)) Ranging_Message_t; // 20 + 12 byte * MAX_NEIGHBOR_SIZE
 
+typedef struct
+{
+  uint16_t address;
+  dwTime_t mtime;
+  uint8_t emptyOrNot;
+  uint16_t two_nei_address[Max_Nei_Number];
+  uint16_t two_nei_distance[Max_Nei_Number];
+  uint8_t two_nei_number;
+  /* data */
+}Nei_Table_unit_t;
+
+typedef struct
+{
+  uint8_t one_nei_number;
+  Nei_Table_unit_t one_nei_address[Max_Nei_Number];
+  /* data */
+}Nei_Table_t;
+Nei_Table_t m_Nei_Table;
 /* Ranging Message With RX Timestamp, used in RX Queue */
 typedef struct {
   Ranging_Message_t rangingMessage;
