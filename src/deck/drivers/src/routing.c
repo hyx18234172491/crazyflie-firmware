@@ -45,11 +45,11 @@ static void processRoutingDataMessage(UWB_Packet_t *packet) {
   DEBUG_PRINT("received routing data, seq number = %d \n", mockData->seqNumber);
 }
 
-static void uwbRoutingTxTask(void *parameters) {
+static void uwbHelloTxTask(void *parameters) {
   systemWaitStart();
 
   UWB_Packet_t txPacketCache;
-  txPacketCache.header.type = DATA;
+  txPacketCache.header.type = HELLO;
 //  txPacketCache.header.mac = ? TODO init mac header
   while (true) {
     int msgLen = generateRoutingDataMessage((MockData_t * ) & txPacketCache.payload);
@@ -59,13 +59,13 @@ static void uwbRoutingTxTask(void *parameters) {
   }
 }
 
-static void uwbRoutingRxTask(void *parameters) {
+static void uwbHelloRxTask(void *parameters) {
   systemWaitStart();
 
   UWB_Packet_t rxPacketCache;
 
   while (true) {
-    if (uwbReceivePacketBlock(DATA, &rxPacketCache)) {
+    if (uwbReceivePacketBlock(HELLO, &rxPacketCache)) {
       processRoutingDataMessage(&rxPacketCache);
     }
   }

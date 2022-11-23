@@ -45,24 +45,6 @@ typedef struct {
   Body_Unit_t bodyUnits[MAX_BODY_UNIT_NUMBER]; // 12 byte * MAX_NEIGHBOR_SIZE
 } __attribute__((packed)) Ranging_Message_t; // 20 + 12 byte * MAX_NEIGHBOR_SIZE
 
-typedef struct
-{
-  uint16_t address;
-  dwTime_t mtime;
-  uint8_t emptyOrNot;
-  uint16_t two_nei_address[Max_Nei_Number];
-  uint16_t two_nei_distance[Max_Nei_Number];
-  uint8_t two_nei_number;
-  /* data */
-}Nei_Table_unit_t;
-
-typedef struct
-{
-  uint8_t one_nei_number;
-  Nei_Table_unit_t one_nei_address[Max_Nei_Number];
-  /* data */
-}Nei_Table_t;
-Nei_Table_t m_Nei_Table;
 /* Ranging Message With RX Timestamp, used in RX Queue */
 typedef struct {
   Ranging_Message_t rangingMessage;

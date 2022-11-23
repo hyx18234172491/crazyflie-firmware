@@ -24,7 +24,7 @@
 #endif
 
 /* Queue Constants */
-#define NUMBER_OF_MESSAGE_TYPE 2
+#define NUMBER_OF_MESSAGE_TYPE 3
 #define TX_QUEUE_SIZE 10
 #define TX_QUEUE_ITEM_SIZE sizeof(UWB_Packet_t)
 
@@ -68,7 +68,8 @@ static dwt_config_t config = {
 /* UWB packet definition */
 typedef enum {
   RANGING = 0,
-  DATA = 1
+  DATA = 1,
+  HELLO = 2,
 } MESSAGE_TYPE;
 
 typedef struct {
