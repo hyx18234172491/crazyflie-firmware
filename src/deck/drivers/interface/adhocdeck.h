@@ -22,7 +22,7 @@
 
 /* Queue Constants */
 #define TX_QUEUE_SIZE 25 // TODO 5
-#define RX_QUEUE_SIZE 20
+#define RX_QUEUE_SIZE 40
 #define TX_QUEUE_ITEM_SIZE sizeof(Ranging_Message_t)
 #define RX_QUEUE_ITEM_SIZE sizeof(Ranging_Message_With_Timestamp_t)
 #define RX_BUFFER_SIZE RX_QUEUE_ITEM_SIZE  // RX_BUFFER_SIZE ≤ FRAME_LEN_MAX

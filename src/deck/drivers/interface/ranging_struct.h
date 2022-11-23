@@ -101,6 +101,7 @@ typedef struct {
   int16_t distance;
 
   RANGING_TABLE_STATE state;
+  uint16_t rxCount;
 } __attribute__((packed)) Ranging_Table_t;
 
 void rangingTableInit(Ranging_Table_t *rangingTable, address_t address);

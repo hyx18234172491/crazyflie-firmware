@@ -121,6 +121,7 @@ void rangingTableSetInit(Ranging_Table_Set_t *rangingTableSet) {
     rangingTableSet->setData[i].next = i + 1;
   }
   rangingTableSet->setData[i].next = -1;
+  rangingTableSet->setData[i].data.rxCount = 0;
   rangingTableSet->freeQueueEntry = 0;
   rangingTableSet->fullQueueEntry = -1;
   rangingTableSet->size = 0;
@@ -156,16 +157,17 @@ bool deleteRangingTableByIndex(Ranging_Table_Set_t *rangingTableSet,
 }
 
 void printRangingTable(Ranging_Table_t *table) {
-  DEBUG_PRINT("Rp = %u, Tr = %u, Rf = %u, \n",
-              table->Rp.seqNumber,
-              table->TrRrBuffer.candidates[table->TrRrBuffer.latest].Tr.seqNumber,
-              table->Rf.seqNumber);
-  DEBUG_PRINT("Tp = %u, Rr = %u, Tf = %u, Re = %u, \n",
-              table->Tp.seqNumber,
-              table->TrRrBuffer.candidates[table->TrRrBuffer.latest].Rr.seqNumber,
-              table->Tf.seqNumber,
-              table->Re.seqNumber);
-  DEBUG_PRINT("====\n");
+  DEBUG_PRINT("NeighborId = %d, rxCount = %d \n", table->neighborAddress, table->rxCount);
+//  DEBUG_PRINT("Rp = %u, Tr = %u, Rf = %u, \n",
+//              table->Rp.seqNumber,
+//              table->TrRrBuffer.candidates[table->TrRrBuffer.latest].Tr.seqNumber,
+//              table->Rf.seqNumber);
+//  DEBUG_PRINT("Tp = %u, Rr = %u, Tf = %u, Re = %u, \n",
+//              table->Tp.seqNumber,
+//              table->TrRrBuffer.candidates[table->TrRrBuffer.latest].Rr.seqNumber,
+//              table->Tf.seqNumber,
+//              table->Re.seqNumber);
+//  DEBUG_PRINT("====\n");
 //  DEBUG_PRINT("Rp = %2x%8lx, Tr = %2x%8lx, Rf = %2x%8lx, \n",
 //              table->Rp.timestamp.high8,
 //              table->Rp.timestamp.low32,
@@ -196,10 +198,13 @@ void printRangingTable(Ranging_Table_t *table) {
 }
 
 void printRangingTableSet(Ranging_Table_Set_t *rangingTableSet) {
+  DEBUG_PRINT("============\n");
+  DEBUG_PRINT("ranging table size = %d \n", rangingTableSet->size);
   for (set_index_t index = rangingTableSet->fullQueueEntry; index != -1;
        index = rangingTableSet->setData[index].next) {
     printRangingTable(&rangingTableSet->setData[index].data);
   }
+  DEBUG_PRINT("============\n");
 }
 
 bool rangingTableSetClearExpire(Ranging_Table_Set_t *rangingTableSet) {
