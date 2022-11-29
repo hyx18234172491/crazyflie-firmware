@@ -108,36 +108,36 @@ static void rxCallback() {
   dwt_forcetrxoff();
   dwt_rxenable(DWT_START_RX_IMMEDIATE);
 }
-static void helloProcess(Ranging_Message_t* message, dwTime_t mtime)
-{
-  for(int i=0;i<m_Nei_Table.one_nei_number;i++)
-  {
-    if(message->header.srcAddress == m_Nei_Table.one_nei_address[i].address)
-    {
-      m_Nei_Table.one_nei_address[i].mtime = mtime;
-      uint8_t two_nei_number = (message->header.msgLength-20)/sizeof(Body_Unit_t);
-      m_Nei_Table.one_nei_address[i].two_nei_number = two_nei_number;
-      for(int j=0;j<two_nei_number;j++)
-      {
-        m_Nei_Table.one_nei_address[i].two_nei_address[j]=message->bodyUnits[j].address;
-        m_Nei_Table.one_nei_address[i].two_nei_distance[j]=message->bodyUnits[j].distance;
-      }
-    }
-    //else{}
-  }
-}
+// static void helloProcess(Ranging_Message_t* message, dwTime_t mtime)
+// {
+//   for(int i=0;i<m_Nei_Table.one_nei_number;i++)
+//   {
+//     if(message->header.srcAddress == m_Nei_Table.one_nei_address[i].address)
+//     {
+//       m_Nei_Table.one_nei_address[i].mtime = mtime;
+//       uint8_t two_nei_number = (message->header.msgLength-20)/sizeof(Body_Unit_t);
+//       m_Nei_Table.one_nei_address[i].two_nei_number = two_nei_number;
+//       for(int j=0;j<two_nei_number;j++)
+//       {
+//         m_Nei_Table.one_nei_address[i].two_nei_address[j]=message->bodyUnits[j].address;
+//         m_Nei_Table.one_nei_address[i].two_nei_distance[j]=message->bodyUnits[j].distance;
+//       }
+//     }
+//     //else{}
+//   }
+// }
 
-void updateTask(){
-  for(int i = 0;i < m_Nei_Table.one_nei_number;i++){
-    if(xTaskGetTickCount() - m_Nei_Table.one_nei_address[i].mtime.full > M2T(MAX_SURVIVE_TIME)){
-      for(int j = i;j < m_Nei_Table.one_nei_number;j++){
-        m_Nei_Table.one_nei_address[j] = m_Nei_Table.one_nei_address[j+1];
-        m_Nei_Table.one_nei_number--;
-      }
-      i--;
-    }
-  }
-}
+// void updateTask(){
+//   for(int i = 0;i < m_Nei_Table.one_nei_number;i++){
+//     if(xTaskGetTickCount() - m_Nei_Table.one_nei_address[i].mtime.full > M2T(MAX_SURVIVE_TIME)){
+//       for(int j = i;j < m_Nei_Table.one_nei_number;j++){
+//         m_Nei_Table.one_nei_address[j] = m_Nei_Table.one_nei_address[j+1];
+//         m_Nei_Table.one_nei_number--;
+//       }
+//       i--;
+//     }
+//   }
+// }
 static void rxTimeoutCallback() {
   dwt_forcetrxoff();
   dwt_rxenable(DWT_START_RX_IMMEDIATE);
