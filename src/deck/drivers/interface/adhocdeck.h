@@ -4,7 +4,7 @@
 #include "libdw3000.h"
 
 /* Function Switch */
-//#define ENABLE_BUS_BOARDING_SCHEME
+#define ENABLE_BUS_BOARDING_SCHEME
 #define ENABLE_PHR_EXT_MODE
 
 #define SPEED_OF_LIGHT 299702547
@@ -37,14 +37,14 @@
 static dwt_txconfig_t txconfig_options = {
     .PGcount = 0x0,
     .PGdly = 0x34,
-    .power = 0xfdfdfdfd
+    .power = 0xffffffff
 };
 
 /* PHR configuration */
 static dwt_config_t config = {
     5,            /* Channel number. */
-    DWT_PLEN_128, /* Preamble length. Used in TX only. */
-    DWT_PAC8,     /* Preamble acquisition chunk size. Used in RX only. */
+    DWT_PLEN_512, /* Preamble length. Used in TX only. */
+    DWT_PAC32,     /* Preamble acquisition chunk size. Used in RX only. */
     9,            /* TX preamble code. Used in TX only. */
     9,            /* RX preamble code. Used in RX only. */
     0, /* 0 to use standard 8 symbol SFD, 1 to use non-standard 8 symbol, 2 for
@@ -56,7 +56,7 @@ static dwt_config_t config = {
     DWT_PHRMODE_STD, /* Standard PHY header mode. */
 #endif
     DWT_PHRRATE_DTA, /* PHY header rate. */
-    (129 + 8 - 8), /* SFD timeout (preamble length + 1 + SFD length - PAC size).
+    (512 + 1 + 8 - 32), /* SFD timeout (preamble length + 1 + SFD length - PAC size).
                       Used in RX only. */
     DWT_STS_MODE_OFF,
     DWT_STS_LEN_64, /* STS length, see allowed values in Enum dwt_sts_lengths_e

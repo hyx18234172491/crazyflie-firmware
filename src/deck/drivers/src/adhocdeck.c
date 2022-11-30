@@ -410,7 +410,7 @@ static void uwbRangingTask(void *parameters) {
   Ranging_Message_t txPacketCache;
   while (true) {
     generateRangingMessage(&txPacketCache);
-    printRangingTableSet(&rangingTableSet);
+//    printRangingTableSet(&rangingTableSet);
     xQueueSend(txQueue, &txPacketCache, portMAX_DELAY);
     vTaskDelay(TX_PERIOD_IN_MS);
 //    vTaskDelay(TX_PERIOD_IN_MS + rand() % 20);
