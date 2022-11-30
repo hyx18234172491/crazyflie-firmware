@@ -17,6 +17,11 @@
         "tuple": "c",
         "type_traits": "c",
         "utility": "c",
-        "queue.h": "c"
+        "queue.h": "c",
+        "setstruct.h": "c",
+        "mprmessage.h": "c",
+        "swarm_ranging.h": "c",
+        "adhocdeck.h": "c",
+        "dwtypes.h": "c"
     }
 }

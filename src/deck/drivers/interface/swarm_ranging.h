@@ -16,6 +16,11 @@
 #define Tf_BUFFER_POOL_SIZE (4 * RANGING_INTERVAL_MAX / RANGING_INTERVAL_MIN)
 #define TX_PERIOD_IN_MS 100
 
+/*Process Ranging Message as Hello Meassage in interval*/
+#define HELLO_INTERVAL 500
+
+TickType_t lastHelloTime = 0;
+
 /* Ranging Operations */
 void rangingInit();
 int16_t computeDistance(Timestamp_Tuple_t Tp, Timestamp_Tuple_t Rp,

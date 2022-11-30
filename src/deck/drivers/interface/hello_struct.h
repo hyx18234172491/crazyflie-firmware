@@ -4,12 +4,11 @@
 #include "dwTypes.h"
 #include "adhocdeck.h"
 #include "stdint.h"
-#include "adhocdeck.h"
 #include "semphr.h"
 #include <queue.h>
-#include "adhocdeck.h"
 #include <string.h>
 #include "setStruct.h"
+#include "mprMessage.h"
 
 #define HELLO_RX_QUEUE_SIZE 10
 #define HELLO_RX_QUEUE_ITEM_SIZE sizeof (UWB_Packet_t)
@@ -34,3 +33,15 @@ typedef struct
   /* data */
 }Nei_Table_t;
 Nei_Table_t m_Nei_Table;
+
+
+
+static void processHelloMessage(olsrMessage_t *helloMsg);
+static void uwbHelloTxTask(void *parameters);
+static void uwbHelloRxTask(void *parameters);
+void linkSensing(const olsrMessage_t *helloMsg);
+void populateNeighborSet(const olsrMessage_t *helloMsg);
+void populateTwoHopNeighborSet(const olsrMessage_t *helloMsg);
+void populateMprSelectorSet(const olsrMessage_t *helloMsg);
+void mprCompute();
+void olsrPrintAll();

@@ -27,6 +27,7 @@ typedef struct {
   uint16_t address; // 2 byte
   Timestamp_Tuple_t timestamp; // 10 byte
   uint16_t distance;
+  uint8_t type;
 } __attribute__((packed)) Body_Unit_t; // 12 byte
 
 /* Ranging Message Header*/
@@ -37,6 +38,7 @@ typedef struct {
   short velocity; // 2 byte cm/s
   uint16_t msgLength; // 2 byte
   uint16_t filter; // 16 bits bloom filter
+  //uint8_t type //type ==1 Hello
 } __attribute__((packed)) Ranging_Message_Header_t; // 20 byte
 
 /* Ranging Message */

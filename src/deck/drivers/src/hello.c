@@ -22,6 +22,7 @@
 #include "routing.h"
 #include "hello_struct.h"
 #include "mprMessage.h"
+#include "swarm_ranging.h"
 
 static TaskHandle_t uwbRoutingTxTaskHandle = 0;
 static TaskHandle_t uwbRoutingRxTaskHandle = 0;
@@ -72,112 +73,111 @@ static uint16_t getMessageSeqNumber()
 //     }
 //}
 
-int generateHelloMessage(olsrMessage_t *message)
-{
-    int msgLen = sizeof(olsrMessage_t);
-    // message->seqNumber = seqNumber++;
-    message->m_messageHeader.m_messageType = HELLO_MESSAGE;
-    message->m_messageHeader.m_vTime = OLSR_NEIGHB_HOLD_TIME;
-    message->m_messageHeader.m_messageSize = sizeof(olsrMessageHeader_t);
-    message->m_messageHeader.m_originatorAddress = myAddress;
-    message->m_messageHeader.m_destinationAddress = 0;
-    message->m_messageHeader.m_relayAddress = myAddress;
-    message->m_messageHeader.m_timeToLive = 0xff;
-    message->m_messageHeader.m_hopCount = 0;
-    message->m_messageHeader.m_messageSeq = getMessageSeqNumber();
+// int generateHelloMessage(olsrMessage_t *message)
+// {
+//     int msgLen = sizeof(olsrMessage_t);
+//     // message->seqNumber = seqNumber++;
+//     message->m_messageHeader.m_messageType = HELLO_MESSAGE;
+//     message->m_messageHeader.m_vTime = OLSR_NEIGHB_HOLD_TIME;
+//     message->m_messageHeader.m_messageSize = sizeof(olsrMessageHeader_t);
+//     message->m_messageHeader.m_originatorAddress = myAddress;
+//     message->m_messageHeader.m_destinationAddress = 0;
+//     message->m_messageHeader.m_relayAddress = myAddress;
+//     message->m_messageHeader.m_timeToLive = 0xff;
+//     message->m_messageHeader.m_hopCount = 0;
+//     message->m_messageHeader.m_messageSeq = getMessageSeqNumber();
 
-    // hello message
-    olsrHelloMessage_t helloMessage;                          // 84
-    helloMessage.m_helloHeader.m_hTime = OLSR_HELLO_INTERVAL; // hello's header on packet
-    helloMessage.m_helloHeader.m_willingness = WILL_ALWAYS;
-    helloMessage.m_helloHeader.m_linkMessageNumber = 0;
+//     // hello message
+//     olsrHelloMessage_t helloMessage;                          // 84
+//     helloMessage.m_helloHeader.m_hTime = OLSR_HELLO_INTERVAL; // hello's header on packet
+//     helloMessage.m_helloHeader.m_willingness = WILL_ALWAYS;
+//     helloMessage.m_helloHeader.m_linkMessageNumber = 0;
 
-    // loop
-    setIndex_t linkTupleIndex = olsrLinkSet.fullQueueEntry; // 2
-    olsrTime_t now = xTaskGetTickCount();                   // 4
-    while (linkTupleIndex != -1)
-    {
-        if (!(olsrLinkSet.setData[linkTupleIndex].data.m_localAddr == myAddress &&
-              olsrLinkSet.setData[linkTupleIndex].data.m_expirationTime >= now))
-        {
-            linkTupleIndex = olsrLinkSet.setData[linkTupleIndex].next;
-            continue;
-        }
-        uint8_t linkType, nbType = 0xff;
+//     // loop
+//     setIndex_t linkTupleIndex = olsrLinkSet.fullQueueEntry; // 2
+//     olsrTime_t now = xTaskGetTickCount();                   // 4
+//     while (linkTupleIndex != -1)
+//     {
+//         if (!(olsrLinkSet.setData[linkTupleIndex].data.m_localAddr == myAddress &&
+//               olsrLinkSet.setData[linkTupleIndex].data.m_expirationTime >= now))
+//         {
+//             linkTupleIndex = olsrLinkSet.setData[linkTupleIndex].next;
+//             continue;
+//         }
+//         uint8_t linkType, nbType = 0xff;
 
-        if (olsrLinkSet.setData[linkTupleIndex].data.m_symTime >= now)
-        {
-            linkType = OLSR_SYM_LINK; // 2
-        }
-        else if (olsrLinkSet.setData[linkTupleIndex].data.m_asymTime >= now)
-        {
-            linkType = OLSR_ASYM_LINK; // 1
-        }
-        else
-        {
-            linkType = OLSR_LOST_LINK; // 3
-        }
-        if (olsrFindMprByAddr(&olsrMprSet, olsrLinkSet.setData[linkTupleIndex].data.m_neighborAddr)) // reg+3.4
-        {
-            nbType = OLSR_MPR_NEIGH; // 2
-        }
-        else
-        {
-            bool ok = false;
-            setIndex_t neighborTupleIndex = olsrNeighborSet.fullQueueEntry;
-            while (neighborTupleIndex != -1)
-            {
-                if (olsrNeighborSet.setData[neighborTupleIndex].data.m_neighborAddr ==
-                    olsrLinkSet.setData[linkTupleIndex].data.m_neighborAddr) // this linkTuple Addr is in NighborSet
-                {
-                    if (olsrNeighborSet.setData[neighborTupleIndex].data.m_status == STATUS_SYM)
-                    {
-                        nbType = OLSR_SYM_NEIGH; // is a sym neighbor 1
-                    }
-                    else if (olsrNeighborSet.setData[neighborTupleIndex].data.m_status == STATUS_NOT_SYM)
-                    {
-                        nbType = OLSR_NOT_NEIGH; // is not a sym neghbor 0
-                    }
-                    else
-                    {
-                        DEBUG_PRINT_OLSR_HELLO("There is a neighbor tuple with an unknown status!\n");
-                    }
-                    ok = true;
-                    break;
-                }
-                neighborTupleIndex = olsrNeighborSet.setData[neighborTupleIndex].next;
-            }
-            if (!ok)
-            {
-                linkTupleIndex = olsrLinkSet.setData[linkTupleIndex].next;
-                continue;
-            }
-        }                              // TODO -1 in queue will be not dropped
-        olsrLinkMessage_t linkMessage; // 6
-        linkMessage.m_linkCode = (linkType & 0x03) | ((nbType << 2) & 0x0f);
-        linkMessage.m_addressUsedSize = 1;
-        linkMessage.m_addresses = olsrLinkSet.setData[linkTupleIndex].data.m_neighborAddr;
-#ifdef USER_ROUTING
-        // int16_t distTmp = getDistanceFromAddr(linkMessage.m_addresses);
-        //  float lostrate=distanceToPacketLoss(distTmp);
-        //  linkMessage.m_weight=1-lostrate;
-        linkMessage.m_weight = distanceToWeight(getDistanceFromAddr(olsrLinkSet.setData[linkTupleIndex].data.m_neighborAddr));
-        // DEBUG_PRINT_OLSR_ROUTING("to %d's distance is %d,weight is:%f\n",linkMessage.m_addresses,distTmp,linkMessage.m_weight);
-#endif
-        if (helloMessage.m_helloHeader.m_linkMessageNumber == LINK_MESSAGE_MAX_NUM)
-            break;
-        helloMessage.m_linkMessage[helloMessage.m_helloHeader.m_linkMessageNumber++] = linkMessage;
-        linkTupleIndex = olsrLinkSet.setData[linkTupleIndex].next;
-    }
-    uint16_t writeSize = sizeof(olsrHelloMessageHeader_t) + helloMessage.m_helloHeader.m_linkMessageNumber *
-                                                                sizeof(olsrLinkMessage_t);
-    message->m_messageHeader.m_messageSize += writeSize;
-    memcpy(message->m_messagePayload, &helloMessage, writeSize);
+//         if (olsrLinkSet.setData[linkTupleIndex].data.m_symTime >= now)
+//         {
+//             linkType = OLSR_SYM_LINK; // 2
+//         }
+//         else if (olsrLinkSet.setData[linkTupleIndex].data.m_asymTime >= now)
+//         {
+//             linkType = OLSR_ASYM_LINK; // 1
+//         }
+//         else
+//         {
+//             linkType = OLSR_LOST_LINK; // 3
+//         }
+//         if (olsrFindMprByAddr(&olsrMprSet, olsrLinkSet.setData[linkTupleIndex].data.m_neighborAddr)) // reg+3.4
+//         {
+//             nbType = OLSR_MPR_NEIGH; // 2
+//         }
+//         else
+//         {
+//             bool ok = false;
+//             setIndex_t neighborTupleIndex = olsrNeighborSet.fullQueueEntry;
+//             while (neighborTupleIndex != -1)
+//             {
+//                 if (olsrNeighborSet.setData[neighborTupleIndex].data.m_neighborAddr ==
+//                     olsrLinkSet.setData[linkTupleIndex].data.m_neighborAddr) // this linkTuple Addr is in NighborSet
+//                 {
+//                     if (olsrNeighborSet.setData[neighborTupleIndex].data.m_status == STATUS_SYM)
+//                     {
+//                         nbType = OLSR_SYM_NEIGH; // is a sym neighbor 1
+//                     }
+//                     else if (olsrNeighborSet.setData[neighborTupleIndex].data.m_status == STATUS_NOT_SYM)
+//                     {
+//                         nbType = OLSR_NOT_NEIGH; // is not a sym neghbor 0
+//                     }
+//                     else
+//                     {
+//                         DEBUG_PRINT_OLSR_HELLO("There is a neighbor tuple with an unknown status!\n");
+//                     }
+//                     ok = true;
+//                     break;
+//                 }
+//                 neighborTupleIndex = olsrNeighborSet.setData[neighborTupleIndex].next;
+//             }
+//             if (!ok)
+//             {
+//                 linkTupleIndex = olsrLinkSet.setData[linkTupleIndex].next;
+//                 continue;
+//             }
+//         }                              // TODO -1 in queue will be not dropped
+//         olsrLinkMessage_t linkMessage; // 6
+//         linkMessage.m_linkCode = (linkType & 0x03) | ((nbType << 2) & 0x0f);
+//         linkMessage.m_addressUsedSize = 1;
+//         linkMessage.m_addresses = olsrLinkSet.setData[linkTupleIndex].data.m_neighborAddr;
+// #ifdef USER_ROUTING
+//         // int16_t distTmp = getDistanceFromAddr(linkMessage.m_addresses);
+//         //  float lostrate=distanceToPacketLoss(distTmp);
+//         //  linkMessage.m_weight=1-lostrate;
+//         linkMessage.m_weight = distanceToWeight(getDistanceFromAddr(olsrLinkSet.setData[linkTupleIndex].data.m_neighborAddr));
+//         // DEBUG_PRINT_OLSR_ROUTING("to %d's distance is %d,weight is:%f\n",linkMessage.m_addresses,distTmp,linkMessage.m_weight);
+// #endif
+//         if (helloMessage.m_helloHeader.m_linkMessageNumber == LINK_MESSAGE_MAX_NUM)
+//             break;
+//         helloMessage.m_linkMessage[helloMessage.m_helloHeader.m_linkMessageNumber++] = linkMessage;
+//         linkTupleIndex = olsrLinkSet.setData[linkTupleIndex].next;
+//     }
+//     uint16_t writeSize = sizeof(olsrHelloMessageHeader_t) + helloMessage.m_helloHeader.m_linkMessageNumber *
+//                                                                 sizeof(olsrLinkMessage_t);
+//     message->m_messageHeader.m_messageSize += writeSize;
+//     memcpy(message->m_messagePayload, &helloMessage, writeSize);
+//     return msgLen;
+// }
 
-    return msgLen;
-}
-
-static void processHelloMessage(const olsrMessage_t *helloMsg)
+static void processHelloMessage(olsrMessage_t *helloMsg)
 {
     linkSensing(helloMsg);
     populateNeighborSet(helloMsg);
@@ -218,22 +218,22 @@ static void uwbHelloRxTask(void *parameters)
     }
 }
 
-void helloInit()
-{
-    rxQueue = xQueueCreate(HELLO_RX_QUEUE_SIZE, HELLO_RX_QUEUE_ITEM_SIZE);
+// void helloInit()
+// {
+//     rxQueue = xQueueCreate(HELLO_RX_QUEUE_SIZE, HELLO_RX_QUEUE_ITEM_SIZE);
 
-    UWB_Message_Listener_t listener;
-    listener.type = HELLO;
-    listener.rxQueue = rxQueue;
-    listener.rxCb = helloRxCallback;
-    listener.txCb = helloTxCallback;
-    uwbRegisterListener(&listener);
+//     UWB_Message_Listener_t listener;
+//     listener.type = HELLO;
+//     listener.rxQueue = rxQueue;
+//     listener.rxCb = helloRxCallback;
+//     listener.txCb = helloTxCallback;
+//     uwbRegisterListener(&listener);
 
-    xTaskCreate(uwbHelloTxTask, ADHOC_DECK_ROUTING_TX_TASK_NAME, 4 * configMINIMAL_STACK_SIZE, NULL,
-                ADHOC_DECK_TASK_PRI, &uwbHelloTxTaskHandle);
-    xTaskCreate(uwbHelloRxTask, ADHOC_DECK_ROUTING_RX_TASK_NAME, 4 * configMINIMAL_STACK_SIZE, NULL,
-                ADHOC_DECK_TASK_PRI, &uwbHelloRxTaskHandle);
-}
+//     xTaskCreate(uwbHelloTxTask, ADHOC_DECK_ROUTING_TX_TASK_NAME, 4 * configMINIMAL_STACK_SIZE, NULL,
+//                 ADHOC_DECK_TASK_PRI, &uwbHelloTxTaskHandle);
+//     xTaskCreate(uwbHelloRxTask, ADHOC_DECK_ROUTING_RX_TASK_NAME, 4 * configMINIMAL_STACK_SIZE, NULL,
+//                 ADHOC_DECK_TASK_PRI, &uwbHelloRxTaskHandle);
+// }
 
 void linkSensing(const olsrMessage_t *helloMsg)
 {
