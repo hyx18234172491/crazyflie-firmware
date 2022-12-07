@@ -5,7 +5,7 @@
 
 /* Function Switch */
 #define ENABLE_BUS_BOARDING_SCHEME
-#define ENABLE_PHR_EXT_MODE
+//#define ENABLE_PHR_EXT_MODE
 
 #define SPEED_OF_LIGHT 299702547
 #define MAX_TIMESTAMP 1099511627776  // 2**40
@@ -21,7 +21,7 @@
 #endif
 
 /* Queue Constants */
-#define TX_QUEUE_SIZE 25 // TODO 5
+#define TX_QUEUE_SIZE 10 // TODO 5
 #define RX_QUEUE_SIZE 40
 #define TX_QUEUE_ITEM_SIZE sizeof(Ranging_Message_t)
 #define RX_QUEUE_ITEM_SIZE sizeof(Ranging_Message_With_Timestamp_t)
@@ -31,7 +31,7 @@
 #define RANGING_INTERVAL_MIN 20 // default 20
 #define RANGING_INTERVAL_MAX 500 // default 500
 #define Tf_BUFFER_POOL_SIZE (4 * RANGING_INTERVAL_MAX / RANGING_INTERVAL_MIN)
-#define TX_PERIOD_IN_MS 100
+#define TX_PERIOD_IN_MS 200
 
 /* TX options */
 static dwt_txconfig_t txconfig_options = {
@@ -43,11 +43,11 @@ static dwt_txconfig_t txconfig_options = {
 /* PHR configuration */
 static dwt_config_t config = {
     5,            /* Channel number. */
-    DWT_PLEN_512, /* Preamble length. Used in TX only. */
-    DWT_PAC32,     /* Preamble acquisition chunk size. Used in RX only. */
+    DWT_PLEN_128, /* Preamble length. Used in TX only. */
+    DWT_PAC8,     /* Preamble acquisition chunk size. Used in RX only. */
     9,            /* TX preamble code. Used in TX only. */
     9,            /* RX preamble code. Used in RX only. */
-    0, /* 0 to use standard 8 symbol SFD, 1 to use non-standard 8 symbol, 2 for
+    1, /* 0 to use standard 8 symbol SFD, 1 to use non-standard 8 symbol, 2 for
           non-standard 16 symbol SFD and 3 for 4z 8 symbol SDF type */
     DWT_BR_6M8,      /* Data rate. */
 #ifdef ENABLE_PHR_EXT_MODE
@@ -55,8 +55,8 @@ static dwt_config_t config = {
 #else
     DWT_PHRMODE_STD, /* Standard PHY header mode. */
 #endif
-    DWT_PHRRATE_DTA, /* PHY header rate. */
-    (512 + 1 + 8 - 32), /* SFD timeout (preamble length + 1 + SFD length - PAC size).
+    DWT_PHRRATE_STD, /* PHY header rate. */
+    (129 + 8 - 8), /* SFD timeout (preamble length + 1 + SFD length - PAC size).
                       Used in RX only. */
     DWT_STS_MODE_OFF,
     DWT_STS_LEN_64, /* STS length, see allowed values in Enum dwt_sts_lengths_e

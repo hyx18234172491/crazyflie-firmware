@@ -82,9 +82,9 @@ static int rangingSeqNumber = 1;
 /* log block */
 int16_t distanceTowards[RANGING_TABLE_SIZE + 1] = {0};
 uint32_t LOG_RANGING_COUNT = 0;
-uint16_t TOTAL_SEND = 0;
-uint16_t TOTAL_RECEIVED = 0;
-uint16_t TOTAL_RECEIVED_CB = 0;
+uint32_t TOTAL_SEND = 0;
+uint32_t TOTAL_RECEIVED = 0;
+uint32_t TOTAL_RECEIVED_CB = 0;
 
 static void txCallback() {
   dwTime_t txTime;
@@ -99,6 +99,7 @@ static void rxCallback() {
   TOTAL_RECEIVED_CB++;
   BaseType_t xHigherPriorityTaskWoken = pdFALSE;
   uint32_t dataLength = dwt_read32bitreg(RX_FINFO_ID) & RX_FINFO_RXFLEN_BIT_MASK;
+//  DEBUG_PRINT("rxCallback : dataLength = %lu \n", dataLength);
   if (dataLength != 0 && dataLength <= FRAME_LEN_MAX) {
     dwt_readrxdata(rxBuffer, dataLength - FCS_LEN, 0); /* No need to read the FCS/CRC. */
   }
@@ -614,9 +615,9 @@ LOG_GROUP_START(Ranging)
 //        LOG_ADD(LOG_INT16, distTo8, distanceTowards + 8)
 //        LOG_ADD(LOG_FLOAT, velocity, &velocity)
         LOG_ADD(LOG_UINT32, LOG_RANGING_COUNT, &LOG_RANGING_COUNT)
-        LOG_ADD(LOG_UINT16, TOTAL_SEND, &TOTAL_SEND)
-        LOG_ADD(LOG_UINT16, TOTAL_RECEIVED, &TOTAL_RECEIVED)
-        LOG_ADD(LOG_UINT16, TOTAL_RECEIVED_CB, &TOTAL_RECEIVED_CB)
+        LOG_ADD(LOG_UINT32, TOTAL_SEND, &TOTAL_SEND)
+        LOG_ADD(LOG_UINT32, TOTAL_RECEIVED, &TOTAL_RECEIVED)
+        LOG_ADD(LOG_UINT32, TOTAL_RECEIVED_CB, &TOTAL_RECEIVED_CB)
 LOG_GROUP_STOP(Ranging)
 
 PARAM_GROUP_START(ADHOC)
