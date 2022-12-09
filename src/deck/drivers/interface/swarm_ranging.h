@@ -19,7 +19,7 @@
 /*Process Ranging Message as Hello Meassage in interval*/
 #define HELLO_INTERVAL 500
 
-TickType_t lastHelloTime = 0;
+static TickType_t lastHelloTime = 0;
 
 /* Ranging Operations */
 void rangingInit();

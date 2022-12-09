@@ -1,3 +1,5 @@
+#ifndef HELLO_STRUCT
+#define HELLO_STRUCT
 #include <stdbool.h>
 
 #include "FreeRTOS.h"
@@ -45,3 +47,4 @@ void populateTwoHopNeighborSet(const olsrMessage_t *helloMsg);
 void populateMprSelectorSet(const olsrMessage_t *helloMsg);
 void mprCompute();
 void olsrPrintAll();
+#endif 

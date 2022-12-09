@@ -1,3 +1,5 @@
+#ifndef  MPR_MESSAGE
+#define MPR_MESSAGE
 #include"setStruct.h"
 
 #define PACKET_MAX_LENGTH 125 //got this value by testing
@@ -104,3 +106,4 @@ typedef struct{
 } __attribute__((packed)) olsrHelloMessage_t;
 
 static uint16_t g_staticMessageSeq = 0;
+#endif 

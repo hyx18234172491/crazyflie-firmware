@@ -24,7 +24,7 @@ typedef struct {
 
 /* Body Unit */
 typedef struct {
-  uint16_t address; // 2 byte
+  uint16_t address; // 2 Fbyte
   Timestamp_Tuple_t timestamp; // 10 byte
   uint16_t distance;
   uint8_t type;

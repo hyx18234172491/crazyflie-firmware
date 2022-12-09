@@ -5,9 +5,68 @@
 #include <queue.h>
 #include"adhocdeck.h"
 #include <string.h>
-#include "mac.h"`
 #define USER_ROUTING
 #define EFF_BROADCASTING
+#define SYS_CTRL 0x0D
+#define LEN_SYS_CTRL 4
+#define SFCST_BIT 0
+#define TXSTRT_BIT 1
+#define TXDLYS_BIT 2
+#define TRXOFF_BIT 6
+#define WAIT4RESP_BIT 7
+#define RXENAB_BIT 8
+#define RXDLYS_BIT 9
+#define LEN_PANADR 4
+#define LEN_SYS_CFG 4
+#define LEN_SYS_MASK 4
+#define LEN_CHAN_CTRL 4
+#define LEN_SYS_STATUS 5
+#define LEN_TX_FCTRL 5
+
+typedef void (*dwHandler_t)(struct dwDevice_s *dev);
+
+/**
+ * DW device type. Contains the context of a dw1000 device and should be passed
+ * as first argument of most of the driver functions.
+ */
+typedef struct dwDevice_s {
+  struct dwOps_s *ops;
+  void *userdata;
+
+  /* State */
+  uint8_t sysctrl[LEN_SYS_CTRL];
+  uint8_t deviceMode;
+  uint8_t networkAndAddress[LEN_PANADR];
+  uint8_t syscfg[LEN_SYS_CFG];
+  uint8_t sysmask[LEN_SYS_MASK];
+  uint8_t chanctrl[LEN_CHAN_CTRL];
+  uint8_t sysstatus[LEN_SYS_STATUS];
+  uint8_t txfctrl[LEN_TX_FCTRL];
+
+  uint8_t extendedFrameLength;
+  uint8_t pacSize;
+  uint8_t pulseFrequency;
+  uint8_t dataRate;
+  uint8_t preambleLength;
+  uint8_t preambleCode;
+  uint8_t channel;
+  bool smartPower;
+  bool frameCheck;
+  bool permanentReceive;
+  bool wait4resp;
+
+  dwTime_t antennaDelay;
+
+  // Callback handles
+  dwHandler_t handleSent;
+  dwHandler_t handleReceived;
+  dwHandler_t handleReceiveTimeout;
+  dwHandler_t handleReceiveFailed;
+
+  // settings
+  uint32_t txPower;
+  bool forceTxPower;
+} dwDevice_t;
 /*
 *********************Recv&SendQueue*************************
 */
@@ -226,7 +285,7 @@ typedef struct
 } olsrRangingTableItem_t;
 
 typedef struct {
-  packet_t pkt;
+  UWB_Packet_t pkt;
   olsrTimestampTuple_t ots;
 }packetWithTimestamp_t;
 

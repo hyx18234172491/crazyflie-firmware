@@ -30,7 +30,10 @@ static TaskHandle_t uwbHelloTxTaskHandle = 0;
 static TaskHandle_t uwbHelloRxTaskHandle = 0;
 static QueueHandle_t rxQueue;
 static int seqNumber = 1;
-
+typedef struct{
+  uint32_t val;
+  olsrAddr_t addr;
+}contriNode;
 
 void linkSensing(const olsrMessage_t *helloMsg);
 void populateNeighborSet(const olsrMessage_t *helloMsg);
