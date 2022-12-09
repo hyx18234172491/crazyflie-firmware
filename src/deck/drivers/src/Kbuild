@@ -24,3 +24,4 @@ obj-$(CONFIG_DECK_ADHOC)         += swarm_ranging.o
 obj-$(CONFIG_DECK_ADHOC)         += routing.o
 obj-$(CONFIG_DECK_ADHOC)         += flooding.o
 obj-$(CONFIG_DECK_ADHOC)         += hello.o
+obj-$(CONFIG_DECK_ADHOC)         += setOperation.o
