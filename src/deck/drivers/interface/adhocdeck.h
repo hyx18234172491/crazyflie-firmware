@@ -6,6 +6,7 @@
 #include "dwTypes.h"
 #include "queue.h"
 #include "ranging_struct.h"
+#include "flooding_struct.h"
 
 /* Function Switch */
 #define ENABLE_PHR_EXT_MODE
@@ -24,7 +25,7 @@
 #endif
 
 /* Queue Constants */
-#define NUMBER_OF_MESSAGE_TYPE 2
+#define NUMBER_OF_MESSAGE_TYPE 3
 #define TX_QUEUE_SIZE 10
 #define TX_QUEUE_ITEM_SIZE sizeof(UWB_Packet_t)
 
@@ -68,7 +69,8 @@ static dwt_config_t config = {
 /* UWB packet definition */
 typedef enum {
   RANGING = 0,
-  DATA = 1
+  FLOODING = 1,
+  DATA = 2
 } MESSAGE_TYPE;
 
 typedef struct {
@@ -81,7 +83,7 @@ typedef struct {
 
 typedef struct {
   Packet_Header_t header; // Packet header
-  uint8_t payload[PAYLOAD_SIZE]
+  uint8_t payload[PAYLOAD_SIZE];
 } __attribute__((packed)) UWB_Packet_t;
 
 typedef void (*UWBCallback)(void *);

@@ -31,7 +31,7 @@ static float velocity;
 int16_t distanceTowards[RANGING_TABLE_SIZE + 1] = {0};
 
 void rangingRxCallback(void *parameters) {
-  DEBUG_PRINT("rangingRxCallback \n");
+  // DEBUG_PRINT("rangingRxCallback \n");
 
   BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 
@@ -101,7 +101,7 @@ static void uwbRangingRxTask(void *parameters) {
 
   while (true) {
     if (xQueueReceive(rxQueue, &rxPacketCache, portMAX_DELAY)) {
-      DEBUG_PRINT("uwbRangingRxTask: received ranging message \n");
+      // DEBUG_PRINT("uwbRangingRxTask: received ranging message \n");
       processRangingMessage(&rxPacketCache);
     }
   }
@@ -145,12 +145,12 @@ int16_t computeDistance(Timestamp_Tuple_t Tp, Timestamp_Tuple_t Rp,
 
   bool isErrorOccurred = false;
   if (distance > 1000 || distance < 0) {
-    DEBUG_PRINT("isErrorOccurred\n");
+    // DEBUG_PRINT("isErrorOccurred\n");
     isErrorOccurred = true;
   }
 
   if (tRound2 < 0 || tReply2 < 0) {
-    DEBUG_PRINT("tRound2 < 0 || tReply2 < 0\n");
+    // DEBUG_PRINT("tRound2 < 0 || tReply2 < 0\n");
     isErrorOccurred = true;
   }
 
@@ -229,7 +229,7 @@ void processRangingMessage(Ranging_Message_With_Timestamp_t *rangingMessageWithT
         neighborRangingTable->distance = distance;
         distanceTowards[neighborRangingTable->neighborAddress] = distance;
       } else {
-        DEBUG_PRINT("distance is not updated since some error occurs");
+        // DEBUG_PRINT("distance is not updated since some error occurs\n");
       }
     }
   }
@@ -252,6 +252,7 @@ int generateRangingMessage(Ranging_Message_t *rangingMessage) {
 #ifdef ENABLE_BUS_BOARDING_SCHEME
   sortRangingTableSet(&rangingTableSet);
 #endif
+  // rangingTableSetClearExpire(&rangingTableSet);
   int8_t bodyUnitNumber = 0;
   rangingSeqNumber++;
   int curSeqNumber = rangingSeqNumber;

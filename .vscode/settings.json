@@ -17,6 +17,9 @@
         "tuple": "c",
         "type_traits": "c",
         "utility": "c",
-        "queue.h": "c"
+        "queue.h": "c",
+        "swarm_ranging.h": "c",
+        "ranging_struct.h": "c",
+        "adhocdeck.h": "c"
     }
 }

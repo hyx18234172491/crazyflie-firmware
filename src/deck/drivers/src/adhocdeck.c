@@ -23,6 +23,7 @@
 #include "libdw3000.h"
 #include "dw3000.h"
 #include "swarm_ranging.h"
+#include "flooding.h"
 #include "routing.h"
 
 #define CS_PIN DECK_GPIO_IO1
@@ -89,8 +90,8 @@ static void rxCallback() {
   if (dataLength != 0 && dataLength <= FRAME_LEN_MAX) {
     dwt_readrxdata(rxBuffer, dataLength - FCS_LEN, 0); /* No need to read the FCS/CRC. */
   }
-  DEBUG_PRINT("rxCallback: data length = %lu \n", dataLength);
-
+  // DEBUG_PRINT("rxCallback: data length = %lu \n", dataLength);
+  
   UWB_Packet_t *packet = (UWB_Packet_t *) &rxBuffer;
   MESSAGE_TYPE msgType = packet->header.type;
 
@@ -354,8 +355,9 @@ static void uwbTaskInit() {
               ADHOC_DECK_TASK_PRI, &uwbTaskHandle);
   xTaskCreate(uwbTxTask, ADHOC_DECK_TX_TASK_NAME, 4 * configMINIMAL_STACK_SIZE, NULL,
               ADHOC_DECK_TASK_PRI, &uwbTxTaskHandle);
-//  rangingInit(); // TODO check calling position
-  routingInit();
+  rangingInit(); // TODO check calling position
+  floodingInit();
+  // routingInit();
 }
 /*********** Deck driver initialization ***************/
 static void dwm3000Init(DeckInfo *info) {
