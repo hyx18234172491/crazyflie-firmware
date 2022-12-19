@@ -149,41 +149,13 @@ void processFloodingMessage(Flooding_Message_t *floodingMessage) {
 }
 
 bool checkFloodingMessage(Flooding_Message_t *floodingMessage) {
-    if (floodingMessage->header.srcAddress == MY_UWB_ADDRESS) {
-        // DEBUG_PRINT("Message: Myself\n");
+    if (floodingMessage == NULL ||
+        floodingMessage->header.srcAddress == MY_UWB_ADDRESS ||
+        floodingMessage->header.timeToLive == 0 ||
+        floodingMessage->header.msgSequence <= floodingCheckTable[floodingMessage->header.srcAddress]) {
         return false;
     }
-    
-    if (floodingMessage->header.timeToLive == 0) {
-        // DEBUG_PRINT("Message: Dead\n");
-        return false;
-    }
-    else floodingMessage->header.timeToLive--;
-
-    if (floodingMessage->header.msgSequence <= floodingCheckTable[floodingMessage->header.srcAddress]) {
-        // DEBUG_PRINT("Message: Expire\n");
-        return false;
-    } else {
-        // DEBUG_PRINT("Message: Update\n");
-        floodingCheckTable[floodingMessage->header.srcAddress] = floodingMessage->header.msgSequence;
-        return true;
-    }
-
-    // set_index_t index = findInFloodingCheckTableSet(&floodingCheckTableSet, floodingMessage->header.srcAddress);
-    // if (index == -1) {
-    //     Flooding_Check_Table_t checkTable;
-    //     floodingCheckTableInit(&checkTable, floodingMessage->header.srcAddress, floodingMessage->header.msgSequence);
-    //     floodingCheckTableSetInsert(&floodingCheckTableSet, &checkTable);
-    //     return true;
-    // } else {
-    //     if (floodingMessage->header.msgSequence <= floodingCheckTableSet.setData[index].data.msgSequence) {
-    //         // DEBUG_PRINT("Have received this message.\n");
-    //         return false;
-    //     }
-    //     else {
-    //         floodingCheckTableSet.setData[index].data.msgSequence = floodingMessage->header.msgSequence;
-    //         sortFloodingCheckTableSet(&floodingCheckTableSet, index);
-    //         return true;
-    //     }
-    // }
+    floodingMessage->header.timeToLive--;
+    floodingCheckTable[floodingMessage->header.srcAddress] = floodingMessage->header.msgSequence;
+    return true;
 }
