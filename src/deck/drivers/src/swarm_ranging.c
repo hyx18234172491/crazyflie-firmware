@@ -28,7 +28,7 @@ static int rangingSeqNumber = 1;
 static logVarId_t idVelocityX, idVelocityY, idVelocityZ;
 static float velocity;
 
-int16_t distanceTowards[RANGING_TABLE_SIZE + 1] = {0};
+int16_t distanceTowards[RANGING_TABLE_SIZE + 1] = {[0 ... RANGING_TABLE_SIZE] = -1};
 
 void rangingRxCallback(void *parameters) {
   // DEBUG_PRINT("rangingRxCallback \n");
@@ -57,12 +57,12 @@ void rangingTxCallback(void *parameters) {
 }
 
 int16_t getDistance(uint16_t neighborAddress) {
-  assert(neighborAddress < RANGING_TABLE_SIZE);
+  assert(neighborAddress <= RANGING_TABLE_SIZE);
   return distanceTowards[neighborAddress];
 }
 
 void setDistance(uint16_t neighborAddress, int16_t distance) {
-  assert(neighborAddress < RANGING_TABLE_SIZE);
+  assert(neighborAddress <= RANGING_TABLE_SIZE);
   distanceTowards[neighborAddress] = distance;
 }
 
@@ -117,7 +117,6 @@ void rangingInit() {
   DEBUG_PRINT("MY_UWB_ADDRESS = %d \n", MY_UWB_ADDRESS);
   rxQueue = xQueueCreate(RANGING_RX_QUEUE_SIZE, RANGING_RX_QUEUE_ITEM_SIZE);
   rangingTableSetInit(&rangingTableSet);
-
   listener.type = RANGING;
   listener.rxQueue = NULL; // handle rxQueue in swarm_ranging.c instead of adhocdeck.c
   listener.rxCb = rangingRxCallback;
