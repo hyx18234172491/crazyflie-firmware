@@ -61,6 +61,11 @@ int16_t getDistance(uint16_t neighborAddress) {
   return distanceTowards[neighborAddress];
 }
 
+void setDistance(uint16_t neighborAddress, int16_t distance) {
+  assert(neighborAddress < RANGING_TABLE_SIZE);
+  distanceTowards[neighborAddress] = distance;
+}
+
 static void uwbRangingTxTask(void *parameters) {
   systemWaitStart();
   // TODO check below UART2 related code
@@ -227,7 +232,7 @@ void processRangingMessage(Ranging_Message_With_Timestamp_t *rangingMessageWithT
                                          neighborRangingTable->Tf, neighborRangingTable->Rf);
       if (distance > 0) {
         neighborRangingTable->distance = distance;
-        distanceTowards[neighborRangingTable->neighborAddress] = distance;
+        setDistance(neighborRangingTable->neighborAddress, distance);
       } else {
         // DEBUG_PRINT("distance is not updated since some error occurs\n");
       }
@@ -252,7 +257,7 @@ int generateRangingMessage(Ranging_Message_t *rangingMessage) {
 #ifdef ENABLE_BUS_BOARDING_SCHEME
   sortRangingTableSet(&rangingTableSet);
 #endif
-  // rangingTableSetClearExpire(&rangingTableSet);
+  rangingTableSetClearExpire(&rangingTableSet);
   int8_t bodyUnitNumber = 0;
   rangingSeqNumber++;
   int curSeqNumber = rangingSeqNumber;
