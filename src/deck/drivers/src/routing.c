@@ -80,11 +80,11 @@ static void processRoutingDataMessage(UWB_Packet_t *packet) {
 }
 
 static void printDebugInfo() {
+  DEBUG_PRINT("------------------------\n");
   for (int i = 0; i <= MAX_NEIGHBOR_ADDRESS; i++) {
     if (RECEIVE_COUNT[i] == 0) {
       continue;
     }
-    DEBUG_PRINT("------------------------\n");
     DEBUG_PRINT("neighbor: %d, loss count: %lu, receive count: %lu, packet loss rate: %.2f \n",
                 i, LOSS_COUNT[i], RECEIVE_COUNT[i], PACKET_LOSS_RATE[i] * 100);
   }
