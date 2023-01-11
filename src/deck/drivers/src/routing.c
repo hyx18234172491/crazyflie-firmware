@@ -26,12 +26,21 @@ static TaskHandle_t uwbRoutingRxTaskHandle = 0;
 static QueueHandle_t rxQueue;
 static int seqNumber = 1;
 
+/* log block */
+#define MAX_NEIGHBOR_ADDRESS 20
+#define DEBUG_PRINT_INTERVAL 1000
+
+double PACKET_LOSS_RATE[MAX_NEIGHBOR_ADDRESS + 1] = {0};
+uint32_t RECEIVE_COUNT[MAX_NEIGHBOR_ADDRESS + 1] = {0};
+uint32_t LOSS_COUNT[MAX_NEIGHBOR_ADDRESS + 1] = {0};
+uint32_t LAST_RECEIVED_SEQ[MAX_NEIGHBOR_ADDRESS + 1] = {0};
+
 void routingRxCallback(void *parameters) {
-  DEBUG_PRINT("routingRxCallback \n");
+//  DEBUG_PRINT("routingRxCallback \n");
 }
 
 void routingTxCallback(void *parameters) {
-  DEBUG_PRINT("routingTxCallback \n");
+//  DEBUG_PRINT("routingTxCallback \n");
 }
 
 int generateRoutingDataMessage(MockData_t *message) {
@@ -43,11 +52,48 @@ int generateRoutingDataMessage(MockData_t *message) {
 
 static void processRoutingDataMessage(UWB_Packet_t *packet) {
   MockData_t *mockData = (MockData_t *) packet->payload;
-  DEBUG_PRINT("received routing data from %d, seq number = %d \n", mockData->srcAddress, mockData->seqNumber);
+  ASSERT(mockData->srcAddress <= MAX_NEIGHBOR_ADDRESS);
+
+  uint16_t neighborAddress = mockData->srcAddress;
+  uint32_t curSeqNumber = mockData->seqNumber;
+  uint32_t lastSeqNumber = LAST_RECEIVED_SEQ[neighborAddress];
+
+  // if neighbor has rebooted, reset corresponding log data
+  if (curSeqNumber < lastSeqNumber) {
+    // reset log data
+    PACKET_LOSS_RATE[neighborAddress] = 0.0;
+    RECEIVE_COUNT[neighborAddress] = 0;
+    LOSS_COUNT[neighborAddress] = 0;
+    LAST_RECEIVED_SEQ[neighborAddress] = 0;
+    lastSeqNumber = 0;
+  }
+
+  if (lastSeqNumber != 0) {
+      LOSS_COUNT[neighborAddress] += curSeqNumber - lastSeqNumber - 1;
+  }
+
+  RECEIVE_COUNT[neighborAddress]++;
+  LAST_RECEIVED_SEQ[neighborAddress] = curSeqNumber;
+  PACKET_LOSS_RATE[neighborAddress] = (double) LOSS_COUNT[neighborAddress] / RECEIVE_COUNT[neighborAddress];
+
+//  DEBUG_PRINT("received routing data from %d, seq number = %d \n", mockData->srcAddress, mockData->seqNumber);
+}
+
+static void printDebugInfo() {
+  for (int i = 0; i <= MAX_NEIGHBOR_ADDRESS; i++) {
+    if (RECEIVE_COUNT[i] == 0) {
+      continue;
+    }
+    DEBUG_PRINT("------------------------\n");
+    DEBUG_PRINT("neighbor: %d, loss count: %lu, receive count: %lu, packet loss rate: %.2f \n",
+                i, LOSS_COUNT[i], RECEIVE_COUNT[i], PACKET_LOSS_RATE[i] * 100);
+  }
 }
 
 static void uwbRoutingTxTask(void *parameters) {
   systemWaitStart();
+
+  TickType_t LAST_PRINT_TIME = xTaskGetTickCount();
 
   UWB_Packet_t txPacketCache;
   txPacketCache.header.type = DATA;
@@ -56,7 +102,13 @@ static void uwbRoutingTxTask(void *parameters) {
     int msgLen = generateRoutingDataMessage((MockData_t *) &txPacketCache.payload);
     txPacketCache.header.length = sizeof(Packet_Header_t) + msgLen;
     uwbSendPacketBlock(&txPacketCache);
-    vTaskDelay(M2T(2000));
+
+    if (LAST_PRINT_TIME + M2T(DEBUG_PRINT_INTERVAL) < xTaskGetTickCount()) {
+      printDebugInfo();
+      LAST_PRINT_TIME = xTaskGetTickCount();
+    }
+
+    vTaskDelay(M2T(ROUTING_TX_INTERVAL));
   }
 }
 
