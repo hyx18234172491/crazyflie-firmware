@@ -8,6 +8,7 @@
 
 typedef struct {
   uint16_t seqNumber;
+  uint16_t srcAddress;
 } __attribute__((packed)) MockData_t;
 
 void routingInit();

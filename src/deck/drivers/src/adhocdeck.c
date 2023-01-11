@@ -362,8 +362,8 @@ static void uwbTaskInit() {
               ADHOC_DECK_TASK_PRI, &uwbTaskHandle); // TODO optimize STACK SIZE
   xTaskCreate(uwbTxTask, ADHOC_DECK_TX_TASK_NAME, 4 * configMINIMAL_STACK_SIZE, NULL,
               ADHOC_DECK_TASK_PRI, &uwbTxTaskHandle); // TODO optimize STACK SIZE
-  rangingInit();
-//  routingInit();
+//  rangingInit();
+  routingInit();
 //  floodingInit();
 }
 /*********** Deck driver initialization ***************/

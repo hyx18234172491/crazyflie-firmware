@@ -37,12 +37,13 @@ void routingTxCallback(void *parameters) {
 int generateRoutingDataMessage(MockData_t *message) {
   int msgLen = sizeof(MockData_t);
   message->seqNumber = seqNumber++;
+  message->srcAddress = getUWBAddress();
   return msgLen;
 }
 
 static void processRoutingDataMessage(UWB_Packet_t *packet) {
   MockData_t *mockData = (MockData_t *) packet->payload;
-  DEBUG_PRINT("received routing data, seq number = %d \n", mockData->seqNumber);
+  DEBUG_PRINT("received routing data from %d, seq number = %d \n", mockData->srcAddress, mockData->seqNumber);
 }
 
 static void uwbRoutingTxTask(void *parameters) {
