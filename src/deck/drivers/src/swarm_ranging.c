@@ -28,7 +28,9 @@ static int rangingSeqNumber = 1;
 static logVarId_t idVelocityX, idVelocityY, idVelocityZ;
 static float velocity;
 
+/* log block */
 int16_t distanceTowards[RANGING_TABLE_SIZE + 1] = {[0 ... RANGING_TABLE_SIZE] = -1};
+uint32_t LOG_RANGING_COUNT = 0;
 
 void rangingRxCallback(void *parameters) {
   // DEBUG_PRINT("rangingRxCallback \n");
@@ -123,7 +125,7 @@ void rangingInit() {
 int16_t computeDistance(Timestamp_Tuple_t Tp, Timestamp_Tuple_t Rp,
                         Timestamp_Tuple_t Tr, Timestamp_Tuple_t Rr,
                         Timestamp_Tuple_t Tf, Timestamp_Tuple_t Rf) {
-
+  LOG_RANGING_COUNT++;
   int64_t tRound1, tReply1, tRound2, tReply2, diff1, diff2, tprop_ctn;
   tRound1 = (Rr.timestamp.full - Tp.timestamp.full + MAX_TIMESTAMP) % MAX_TIMESTAMP;
   tReply1 = (Tr.timestamp.full - Rp.timestamp.full + MAX_TIMESTAMP) % MAX_TIMESTAMP;
@@ -290,4 +292,5 @@ LOG_GROUP_START(Ranging)
         LOG_ADD(LOG_INT16, distTo7, distanceTowards + 7)
         LOG_ADD(LOG_INT16, distTo8, distanceTowards + 8)
         LOG_ADD(LOG_INT16, distTo8, distanceTowards + 9)
+        LOG_ADD(LOG_UINT32, LOG_RANGING_COUNT, &LOG_RANGING_COUNT)
 LOG_GROUP_STOP(Ranging)
