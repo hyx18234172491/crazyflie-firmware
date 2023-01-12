@@ -74,20 +74,40 @@ static void processRoutingDataMessage(UWB_Packet_t *packet) {
 
   RECEIVE_COUNT[neighborAddress]++;
   LAST_RECEIVED_SEQ[neighborAddress] = curSeqNumber;
-  PACKET_LOSS_RATE[neighborAddress] = (double) LOSS_COUNT[neighborAddress] / RECEIVE_COUNT[neighborAddress];
+  PACKET_LOSS_RATE[neighborAddress] = (double) LOSS_COUNT[neighborAddress] / (RECEIVE_COUNT[neighborAddress] + LOSS_COUNT[neighborAddress]);
 
 //  DEBUG_PRINT("received routing data from %d, seq number = %d \n", mockData->srcAddress, mockData->seqNumber);
 }
 
 static void printDebugInfo() {
   DEBUG_PRINT("------------------------\n");
+  double minPacketLossRate = 0.0;
+  double maxPacketLossRate = 0.0;
+  double averagePacketLossRate = 0.0;
+  int neighborCount = 0;
+  uint32_t receiveCount = 0;
+  uint32_t lossCount = 0;
+
   for (int i = 0; i <= MAX_NEIGHBOR_ADDRESS; i++) {
     if (RECEIVE_COUNT[i] == 0) {
       continue;
     }
-    DEBUG_PRINT("neighbor: %d, loss count: %lu, receive count: %lu, packet loss rate: %.2f \n",
-                i, LOSS_COUNT[i], RECEIVE_COUNT[i], PACKET_LOSS_RATE[i] * 100);
+    neighborCount++;
+    if (PACKET_LOSS_RATE[i] < minPacketLossRate) {
+      minPacketLossRate = PACKET_LOSS_RATE[i];
+    }
+    if (PACKET_LOSS_RATE[i] > maxPacketLossRate) {
+      maxPacketLossRate = PACKET_LOSS_RATE[i];
+    }
+    averagePacketLossRate += PACKET_LOSS_RATE[i];
+    receiveCount += RECEIVE_COUNT[i];
+    lossCount += LOSS_COUNT[i];
+
+    DEBUG_PRINT("neighbor: %d, loss count: %lu, receive count: %lu, total count : %lu, packet loss rate: %.2f \n",
+                i, LOSS_COUNT[i], RECEIVE_COUNT[i], LOSS_COUNT[i] + RECEIVE_COUNT[i], PACKET_LOSS_RATE[i] * 100);
   }
+  DEBUG_PRINT("min: %.2f, max: %.2f, average: %.2f, total loss: %lu, total received: %lu, neighbor count: %d \n",
+              minPacketLossRate * 100, maxPacketLossRate * 100, averagePacketLossRate * 100 / neighborCount, lossCount, receiveCount, neighborCount);
 }
 
 static void uwbRoutingTxTask(void *parameters) {
