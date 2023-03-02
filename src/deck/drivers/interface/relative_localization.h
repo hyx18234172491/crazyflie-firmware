@@ -1,7 +1,7 @@
 #ifndef RELATIVELOCA_H_
 #define RELATIVELOCA_H_
-#include "system.h"
-
+#include "ranging_struct.h"
+#include "swarm_ranging.h"
 typedef enum
 {
   STATE_rlX,
@@ -32,6 +32,6 @@ typedef struct
 void relativeLocoInit(void);
 void relativeLocoTask(void *arg);
 void relativeEKF(int n, float vxi, float vyi, float ri, float hi, float vxj, float vyj, float rj, float hj, uint16_t dij, float dt);
-bool relativeInfoRead(float *relaVarParam, float *inputVarParam);
+bool relativeInfoRead(float *relaVarParam, currentNeighborAddressInfo_t *dest);
 void relaVarInit(relaVariable_t *relaVar, uint16_t neighborAddress); // // Initialize EKF for relative localization
 #endif

@@ -12,15 +12,14 @@
 
 #include "log.h"
 #include "system.h"
-
+#include "semphr.h"
+#include "swarm_ranging.h"
 #include <radiolink.h>
 #include "estimator_kalman.h"
-#include "swarm_ranging.h"
-#include "ranging_struct.h"
 
 static bool isInit;
 
-static float Qv = 1.0f;   // velocity deviation
+static float Qv = 1.0f;   // velocity deviation,初始值为1.0
 static float Qr = 0.7f;   // yaw rate deviation
 static float Ruwb = 2.0f; // ranging deviation
 static float InitCovPos = 1000.0f;
@@ -60,7 +59,9 @@ static float vxi, vyi, ri; // self vx, vy, gz
 static uint16_t dij;       // distance between self i and other j
 static float hi, hj;       // height of robot i and j
 
-bool isNewAdd; // 邻居是否是新加入的
+static currentNeighborAddressInfo_t currentNeighborAddressInfo;
+static SemaphoreHandle_t currentNeighborAddressInfoMutex;
+
 // 矩阵转置
 static inline void mat_trans(const arm_matrix_instance_f32 *pSrc, arm_matrix_instance_f32 *pDst)
 {
@@ -89,6 +90,7 @@ void relativeLocoInit(void)
 {
     if (isInit)
         return;
+    // currentNeighborAddressInfoMutex = xSemaphoreCreateMutex();
     xTaskCreate(relativeLocoTask, "relative_Localization", ZRANGER_TASK_STACKSIZE, NULL, ZRANGER_TASK_PRI, NULL);
     isInit = true;
 }
@@ -118,15 +120,13 @@ void relativeLocoTask(void *arg)
     while (1)
     {
         vTaskDelay(10);
-        currentNeighborAddressInfo_t currentNeighborAddressInfo;
         getCurrentNeighborAddressInfo_t(&currentNeighborAddressInfo);
         for (int index = 0; index < currentNeighborAddressInfo.size; index++)
         {
             address_t neighborAddress = currentNeighborAddressInfo.address[index];
-            // DEBUG_PRINT("neighAdd:%d\n", neighborAddress);
+            bool isNewAdd; // 邻居是否是新加入的
             if (getNeighborStateInfo(neighborAddress, &dij, &vxj_t, &vyj_t, &rj, &hj_t, &isNewAdd))
             {
-                dij = dij * 10;
                 vxj = (vxj_t + 0.0) / 100;
                 vyj = (vyj_t + 0.0) / 100;
                 hj = (hj_t + 0.0) / 100;
@@ -135,11 +135,11 @@ void relativeLocoTask(void *arg)
                     relaVarInit(relaVar, neighborAddress);
                 }
                 connectCount = 0;
+                DEBUG_PRINT("vx:%f,vy:%f,gz:%f,h:%f,dij:%d\n", vxj, vyj, rj, hj, dij);
                 estimatorKalmanGetSwarmInfo(&vxi_t, &vyi_t, &ri, &hi_t); // 当前无人机的信息
                 vxi = (vxi_t + 0.0) / 100;
                 vyi = (vyi_t + 0.0) / 100;
                 hi = (hi_t + 0.0) / 100;
-                DEBUG_PRINT("vx:%f,vy:%f,gz:%f,h:%f,isNew:%d\n", vxi, vyi, ri, hi, isNewAdd);
                 if (relaVar[neighborAddress].receiveFlag)
                 {
                     uint32_t osTick = xTaskGetTickCount();
@@ -212,8 +212,8 @@ void relativeEKF(int n, float vxi, float vyi, float ri, float hi, float vxj, flo
     xij = relaVar[n].S[STATE_rlX];
     yij = relaVar[n].S[STATE_rlY];
     float distPred = arm_sqrt(xij * xij + yij * yij + (hi - hj) * (hi - hj)) + 0.0001f;
-    float distMeas = (float)(dij / 1000.0f);
-    distMeas = distMeas - (0.048f * distMeas + 0.65f); // UWB biad model
+    float distMeas = (float)(dij / 100.0f);
+    // distMeas = distMeas - (0.048f * distMeas + 0.65f); // UWB biad model
     h[0] = xij / distPred;
     h[1] = yij / distPred;
     h[2] = 0;
@@ -227,8 +227,10 @@ void relativeEKF(int n, float vxi, float vyi, float ri, float hi, float vxj, flo
     }
     for (int i = 0; i < STATE_DIM_rl; i++)
     {
-        K[i] = PHTd[i] / HPHR;                                            // kalman gain = (PH' (HPH' + R )^-1)
+        K[i] = PHTd[i] / HPHR; // kalman gain = (PH' (HPH' + R )^-1)
+        // DEBUG_PRINT("relaVarStart:%.3lf", relaVar[n].S[i]);
         relaVar[n].S[i] = relaVar[n].S[i] + K[i] * (distMeas - distPred); // state update
+        // DEBUG_PRINT(",relaVar:%.3f,K:%.3f,distMeas:%.3f,distPred%.3f\n", relaVar[n].S[i], K[i], distMeas, distPred);
     }
     mat_mult(&Km, &H, &tmpNN1m); // KH
     for (int i = 0; i < STATE_DIM_rl; i++)
@@ -240,28 +242,27 @@ void relativeEKF(int n, float vxi, float vyi, float ri, float hi, float vxj, flo
     mat_mult(&tmpNN3m, &tmpNN2m, &Pm); // (KH - I)*P*(KH - I)'
 }
 
-// bool relativeInfoRead(float_t *relaVarParam, float_t *inputVarParam)
-// {
-//     if (fullConnect)
-//     {
-//         for (int i = 0; i < NumUWB; i++)
-//         {
-//             *(relaVarParam + i * STATE_DIM_rl + 0) = relaVar[i].S[STATE_rlX];
-//             *(relaVarParam + i * STATE_DIM_rl + 1) = relaVar[i].S[STATE_rlY];
-//             *(relaVarParam + i * STATE_DIM_rl + 2) = relaVar[i].S[STATE_rlYaw];
-//             *(inputVarParam + i * STATE_DIM_rl + 0) = inputVar[i][STATE_rlX];
-//             *(inputVarParam + i * STATE_DIM_rl + 1) = inputVar[i][STATE_rlY];
-//             *(inputVarParam + i * STATE_DIM_rl + 2) = inputVar[i][STATE_rlYaw];
-//         }
-//         // DEBUG_PRINT("get\n");
-//         return true;
-//     }
-//     else
-//     {
-//         // DEBUG_PRINT("not get\n");
-//         return false;
-//     }
-// }
+bool relativeInfoRead(float *relaVarParam, currentNeighborAddressInfo_t *dest)
+{
+    if (fullConnect)
+    {
+        for (int index = 0; index < currentNeighborAddressInfo.size; index++)
+        {
+            address_t neighborAddress = currentNeighborAddressInfo.address[index];
+            *(relaVarParam + neighborAddress * STATE_DIM_rl + 0) = relaVar[neighborAddress].S[STATE_rlX];
+            *(relaVarParam + neighborAddress * STATE_DIM_rl + 1) = relaVar[neighborAddress].S[STATE_rlY];
+            *(relaVarParam + neighborAddress * STATE_DIM_rl + 2) = relaVar[neighborAddress].S[STATE_rlYaw];
+        }
+        memcpy(dest->address, currentNeighborAddressInfo.address, sizeof(currentNeighborAddressInfo.address));
+        dest->size = currentNeighborAddressInfo.size;
+        return true;
+    }
+    else
+    {
+        // DEBUG_PRINT("not get\n");
+        return false;
+    }
+}
 
 LOG_GROUP_START(relative_pos)
 LOG_ADD(LOG_FLOAT, rlX0, &relaVar[0].S[STATE_rlX])
