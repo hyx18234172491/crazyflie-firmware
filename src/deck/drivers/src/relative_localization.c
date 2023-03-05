@@ -21,12 +21,11 @@ static bool isInit;
 
 static float Qv = 1.0f;   // velocity deviation,初始值为1.0
 static float Qr = 0.7f;   // yaw rate deviation
-static float Ruwb = 1.0f; // ranging deviation
+static float Ruwb = 2.0f; // ranging deviation
 static float InitCovPos = 1000.0f;
 static float InitCovYaw = 1.0f;
 
 static relaVariable_t relaVar[RANGING_TABLE_SIZE];
-static float_t inputVar[RANGING_TABLE_SIZE][STATE_DIM_rl];
 
 static float A[STATE_DIM_rl][STATE_DIM_rl];
 static float h[STATE_DIM_rl] = {0};
@@ -146,9 +145,6 @@ void relativeLocoTask(void *arg)
                     float dtEKF = (float)(osTick - relaVar[neighborAddress].oldTimetick) / configTICK_RATE_HZ;
                     relaVar[neighborAddress].oldTimetick = osTick;
                     relativeEKF(neighborAddress, vxi, vyi, ri, hi, vxj, vyj, rj, hj, dij, dtEKF);
-                    inputVar[neighborAddress][STATE_rlX] = vxj;
-                    inputVar[neighborAddress][STATE_rlY] = vyj;
-                    inputVar[neighborAddress][STATE_rlYaw] = rj;
                 }
                 else
                 {
