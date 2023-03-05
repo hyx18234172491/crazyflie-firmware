@@ -14,7 +14,7 @@
 #define RANGING_INTERVAL_MIN 20  // default 20
 #define RANGING_INTERVAL_MAX 500 // default 500
 #define Tf_BUFFER_POOL_SIZE (4 * RANGING_INTERVAL_MAX / RANGING_INTERVAL_MIN)
-#define TX_PERIOD_IN_MS 100
+#define TX_PERIOD_IN_MS 30
 /*---自己添加---start---*/
 typedef struct
 {
@@ -46,7 +46,7 @@ void setDistance(uint16_t neighborAddress, int16_t distance);
 /*---自己添加---start---*/
 void setNeighborStateInfo(uint16_t neighborAddress, int16_t distance, Ranging_Message_Header_t *rangingMessageHeader, bool isNewAddNeighbor);
 bool getNeighborStateInfo(uint16_t neighborAddress, uint16_t *distance, short *vx, short *vy, float *gyroZ, uint16_t *height, bool *isNewAddNeighbor);
-bool getOrSetKeepflying(int RobIDfromControl, bool keep_flying);
+bool getOrSetKeepflying(uint16_t RobIDfromControl, bool keep_flying);
 void getCurrentNeighborAddressInfo_t(currentNeighborAddressInfo_t *currentNeighborAddressInfo); /*供外部调用，获取当前无人机的所有正在通信的邻居的地址*/
 /*---自己添加---end---*/
 

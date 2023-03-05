@@ -21,7 +21,7 @@ static bool isInit;
 
 static float Qv = 1.0f;   // velocity deviation,初始值为1.0
 static float Qr = 0.7f;   // yaw rate deviation
-static float Ruwb = 2.0f; // ranging deviation
+static float Ruwb = 1.0f; // ranging deviation
 static float InitCovPos = 1000.0f;
 static float InitCovYaw = 1.0f;
 
@@ -135,7 +135,7 @@ void relativeLocoTask(void *arg)
                     relaVarInit(relaVar, neighborAddress);
                 }
                 connectCount = 0;
-                DEBUG_PRINT("vx:%f,vy:%f,gz:%f,h:%f,dij:%d\n", vxj, vyj, rj, hj, dij);
+                // DEBUG_PRINT("vx:%f,vy:%f,gz:%f,h:%f,dij:%d\n", vxj, vyj, rj, hj, dij);
                 estimatorKalmanGetSwarmInfo(&vxi_t, &vyi_t, &ri, &hi_t); // 当前无人机的信息
                 vxi = (vxi_t + 0.0) / 100;
                 vyi = (vyi_t + 0.0) / 100;
@@ -228,6 +228,7 @@ void relativeEKF(int n, float vxi, float vyi, float ri, float hi, float vxj, flo
     for (int i = 0; i < STATE_DIM_rl; i++)
     {
         K[i] = PHTd[i] / HPHR; // kalman gain = (PH' (HPH' + R )^-1)
+        // DEBUG_PRINT("K[%d]:%f\n", i, K[i]);
         // DEBUG_PRINT("relaVarStart:%.3lf", relaVar[n].S[i]);
         relaVar[n].S[i] = relaVar[n].S[i] + K[i] * (distMeas - distPred); // state update
         // DEBUG_PRINT(",relaVar:%.3f,K:%.3f,distMeas:%.3f,distPred%.3f\n", relaVar[n].S[i], K[i], distMeas, distPred);

@@ -226,6 +226,7 @@ void relativeControlTask(void *arg)
     vTaskDelay(10);
     keepFlying = getOrSetKeepflying(MY_UWB_ADDRESS, keepFlying);
     bool is_connect = relativeInfoRead((float_t *)relaVarInCtrl, &currentNeighborAddressInfo);
+    // DEBUG_PRINT("keepFlying:%d,connect:%d\n", keepFlying, is_connect);
     if (is_connect && keepFlying && !isCompleteTaskAndLand)
     {
 

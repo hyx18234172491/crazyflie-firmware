@@ -73,7 +73,7 @@ bool getNeighborStateInfo(uint16_t neighborAddress, uint16_t *distance, short *v
   }
 }
 
-bool getOrSetKeepflying(int RobIDfromControl, bool keep_flying)
+bool getOrSetKeepflying(uint16_t RobIDfromControl, bool keep_flying)
 {
   if (RobIDfromControl == 0)
   {
@@ -396,6 +396,7 @@ int generateRangingMessage(Ranging_Message_t *rangingMessage)
   rangingMessage->header.velocity = (short)(velocity * 100);
   /* 自己添加 */
   estimatorKalmanGetSwarmInfo(&rangingMessage->header.velocityXInWorld, &rangingMessage->header.velocityYInWorld, &rangingMessage->header.gyroZ, &rangingMessage->header.positionZ);
+  rangingMessage->header.keep_flying = my_keep_flying;
   /* 自己添加 */
   return rangingMessage->header.msgLength;
 }
