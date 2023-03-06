@@ -226,7 +226,6 @@ void relativeControlTask(void *arg)
     vTaskDelay(10);
     keepFlying = getOrSetKeepflying(MY_UWB_ADDRESS, keepFlying);
     bool is_connect = relativeInfoRead((float_t *)relaVarInCtrl, &currentNeighborAddressInfo);
-    // DEBUG_PRINT("keepFlying:%d,connect:%d\n", keepFlying, is_connect);
     if (is_connect && keepFlying && !isCompleteTaskAndLand)
     {
 
@@ -234,13 +233,13 @@ void relativeControlTask(void *arg)
       if (onGround)
       {
         take_off();
+        // onGround = false;
         takeoff_tick = xTaskGetTickCount();
       }
 
       // control loop
-      // setHoverSetpoint(&setpoint, 0, 0, height, 0); // hover
       tickInterval = xTaskGetTickCount() - takeoff_tick;
-      // DEBUG_PRINT("tick:%d\n",tickInterval);
+      DEBUG_PRINT("tick:%d,rlx:%f,rly:%f,rlraw:%f\n", tickInterval, relaVarInCtrl[0][STATE_rlX], relaVarInCtrl[0][STATE_rlY], relaVarInCtrl[0][STATE_rlYaw]);
       if (tickInterval <= 20000)
       {
 
@@ -254,15 +253,21 @@ void relativeControlTask(void *arg)
         if ((tickInterval > 20000) && (tickInterval <= 50000))
         { // 0-random, other formation
           if (MY_UWB_ADDRESS == 0)
+          {
             flyRandomIn1meter();
+          }
           else
+          {
             formation0asCenter(targetX, targetY);
+          }
           // NDI_formation0asCenter(targetX, targetY);
         }
         else if ((tickInterval > 50000) && (tickInterval <= 70000))
         {
           if (MY_UWB_ADDRESS == 0)
+          {
             flyRandomIn1meter();
+          }
           else
           {
             targetX = -cosf(relaVarInCtrl[0][STATE_rlYaw]) * targetList[MY_UWB_ADDRESS][STATE_rlX] + sinf(relaVarInCtrl[0][STATE_rlYaw]) * targetList[MY_UWB_ADDRESS][STATE_rlY];
@@ -273,9 +278,13 @@ void relativeControlTask(void *arg)
         else if (tickInterval > 70000 && tickInterval <= 90000)
         {
           if (MY_UWB_ADDRESS == 0)
+          {
             setHoverSetpoint(&setpoint, 0, 0, height, 0);
+          }
           else
+          {
             formation0asCenter(targetX, targetY);
+          }
         }
         else
         {

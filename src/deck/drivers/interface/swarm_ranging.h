@@ -25,6 +25,7 @@ typedef struct
     uint16_t positionZ[RANGING_TABLE_SIZE + 1]; // cm
     bool refresh[RANGING_TABLE_SIZE + 1];
     bool isNewAdd[RANGING_TABLE_SIZE + 1]; // 这个邻居是否是新加入的
+    bool isNewAddUsed[RANGING_TABLE_SIZE + 1];
 } neighborStateInfo_t;
 
 typedef struct
@@ -44,7 +45,8 @@ int generateRangingMessage(Ranging_Message_t *rangingMessage);
 int16_t getDistance(uint16_t neighborAddress);
 void setDistance(uint16_t neighborAddress, int16_t distance);
 /*---自己添加---start---*/
-void setNeighborStateInfo(uint16_t neighborAddress, int16_t distance, Ranging_Message_Header_t *rangingMessageHeader, bool isNewAddNeighbor);
+void setNeighborStateInfo(uint16_t neighborAddress, int16_t distance, Ranging_Message_Header_t *rangingMessageHeader);
+void setNeighborStateInfo_isNewAdd(uint16_t neighborAddress, bool isNewAddNeighbor);
 bool getNeighborStateInfo(uint16_t neighborAddress, uint16_t *distance, short *vx, short *vy, float *gyroZ, uint16_t *height, bool *isNewAddNeighbor);
 bool getOrSetKeepflying(uint16_t RobIDfromControl, bool keep_flying);
 void getCurrentNeighborAddressInfo_t(currentNeighborAddressInfo_t *currentNeighborAddressInfo); /*供外部调用，获取当前无人机的所有正在通信的邻居的地址*/

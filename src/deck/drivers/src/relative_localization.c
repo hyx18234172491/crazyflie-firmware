@@ -17,12 +17,13 @@
 #include <radiolink.h>
 #include "estimator_kalman.h"
 
+static uint16_t MY_UWB_ADDRESS;
 static bool isInit;
 
 static float Qv = 1.0f;   // velocity deviation,初始值为1.0
 static float Qr = 0.7f;   // yaw rate deviation
-static float Ruwb = 2.0f; // ranging deviation
-static float InitCovPos = 1000.0f;
+static float Ruwb = 0.5f; // ranging deviation
+static float InitCovPos = 5.0f;
 static float InitCovYaw = 1.0f;
 
 static relaVariable_t relaVar[RANGING_TABLE_SIZE];
@@ -60,6 +61,7 @@ static float hi, hj;       // height of robot i and j
 
 static currentNeighborAddressInfo_t currentNeighborAddressInfo;
 static SemaphoreHandle_t currentNeighborAddressInfoMutex;
+static uint8_t initRelativePosition[5][5][STATE_DIM_rl];
 
 // 矩阵转置
 static inline void mat_trans(const arm_matrix_instance_f32 *pSrc, arm_matrix_instance_f32 *pDst)
@@ -88,7 +90,10 @@ static inline float arm_sqrt(float32_t in)
 void relativeLocoInit(void)
 {
     if (isInit)
+    {
         return;
+    }
+    MY_UWB_ADDRESS = getUWBAddress();
     // currentNeighborAddressInfoMutex = xSemaphoreCreateMutex();
     xTaskCreate(relativeLocoTask, "relative_Localization", ZRANGER_TASK_STACKSIZE, NULL, ZRANGER_TASK_PRI, NULL);
     isInit = true;
@@ -110,11 +115,21 @@ void relaVarInit(relaVariable_t *relaVar, uint16_t neighborAddress)
     relaVar[neighborAddress].S[STATE_rlX] = 0;
     relaVar[neighborAddress].S[STATE_rlY] = 0;
     relaVar[neighborAddress].S[STATE_rlYaw] = 0;
+    // relaVar[neighborAddress].S[STATE_rlX] = initRelativePosition[neighborAddress][MY_UWB_ADDRESS][STATE_rlX]; // 设定初始位置
+    // relaVar[neighborAddress].S[STATE_rlY] = initRelativePosition[neighborAddress][MY_UWB_ADDRESS][STATE_rlY];
+    // relaVar[neighborAddress].S[STATE_rlYaw] = initRelativePosition[neighborAddress][MY_UWB_ADDRESS][STATE_rlYaw];
     relaVar[neighborAddress].receiveFlag = false;
+    // DEBUG_PRINT("%f\n", relaVar[neighborAddress].S[STATE_rlX]);
 }
 
 void relativeLocoTask(void *arg)
 {
+    initRelativePosition[0][1][STATE_rlX] = 1; // 0号无人机相对于1号无人机的相对位置
+    initRelativePosition[0][1][STATE_rlY] = -1;
+    initRelativePosition[0][1][STATE_rlY] = 0;
+    initRelativePosition[1][0][STATE_rlX] = -1; // 1号无人机相对于0号无人机的相对位置
+    initRelativePosition[1][0][STATE_rlY] = 1;
+    initRelativePosition[1][0][STATE_rlY] = 0;
     systemWaitStart();
     while (1)
     {
@@ -126,19 +141,23 @@ void relativeLocoTask(void *arg)
             bool isNewAdd; // 邻居是否是新加入的
             if (getNeighborStateInfo(neighborAddress, &dij, &vxj_t, &vyj_t, &rj, &hj_t, &isNewAdd))
             {
+                // DEBUG_PRINT("isNewAdd:%d\n", isNewAdd);
                 vxj = (vxj_t + 0.0) / 100;
                 vyj = (vyj_t + 0.0) / 100;
                 hj = (hj_t + 0.0) / 100;
                 if (isNewAdd)
                 {
+                    DEBUG_PRINT("is nEW\n");
                     relaVarInit(relaVar, neighborAddress);
+                    DEBUG_PRINT("after init:%d\n", relaVar[neighborAddress].S[STATE_rlX]);
                 }
                 connectCount = 0;
-                // DEBUG_PRINT("vx:%f,vy:%f,gz:%f,h:%f,dij:%d\n", vxj, vyj, rj, hj, dij);
+                // DEBUG_PRINT("1:vx:%f,vy:%f,gz:%f,h:%f,dij:%d\n", vxj, vyj, rj, hj, dij);
                 estimatorKalmanGetSwarmInfo(&vxi_t, &vyi_t, &ri, &hi_t); // 当前无人机的信息
                 vxi = (vxi_t + 0.0) / 100;
                 vyi = (vyi_t + 0.0) / 100;
                 hi = (hi_t + 0.0) / 100;
+                // DEBUG_PRINT("2:vx:%f,vy:%f,gz:%f,h:%f,dij:%d\n", vxi, vyi, rj, hi, dij);
                 if (relaVar[neighborAddress].receiveFlag)
                 {
                     uint32_t osTick = xTaskGetTickCount();
@@ -209,6 +228,7 @@ void relativeEKF(int n, float vxi, float vyi, float ri, float hi, float vxj, flo
     yij = relaVar[n].S[STATE_rlY];
     float distPred = arm_sqrt(xij * xij + yij * yij + (hi - hj) * (hi - hj)) + 0.0001f;
     float distMeas = (float)(dij / 100.0f);
+    // DEBUG_PRINT("%f\n", distMeas);
     // distMeas = distMeas - (0.048f * distMeas + 0.65f); // UWB biad model
     h[0] = xij / distPred;
     h[1] = yij / distPred;

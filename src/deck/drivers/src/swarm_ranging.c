@@ -37,7 +37,11 @@ int16_t distanceTowards[RANGING_TABLE_SIZE + 1] = {[0 ... RANGING_TABLE_SIZE] = 
 /*---自己添加---start*/
 static neighborStateInfo_t neighborStateInfo; // 邻居的状态信息
 static bool my_keep_flying;                   // 当前无人机的keep_flying
-void setNeighborStateInfo(uint16_t neighborAddress, int16_t distance, Ranging_Message_Header_t *rangingMessageHeader, bool isNewAddNeighbor)
+
+void initNeighborStateInfo()
+{
+}
+void setNeighborStateInfo(uint16_t neighborAddress, int16_t distance, Ranging_Message_Header_t *rangingMessageHeader)
 {
   ASSERT(neighborAddress <= RANGING_TABLE_SIZE);
   neighborStateInfo.distanceTowards[neighborAddress] = distance;
@@ -45,12 +49,26 @@ void setNeighborStateInfo(uint16_t neighborAddress, int16_t distance, Ranging_Me
   neighborStateInfo.velocityYInWorld[neighborAddress] = rangingMessageHeader->velocityYInWorld;
   neighborStateInfo.gyroZ[neighborAddress] = rangingMessageHeader->gyroZ;
   neighborStateInfo.positionZ[neighborAddress] = rangingMessageHeader->positionZ;
-  neighborStateInfo.isNewAdd[neighborAddress] = isNewAddNeighbor;
   neighborStateInfo.refresh[neighborAddress] = true;
-
-  if (neighborAddress == 0)
+  if (neighborAddress == 1)
   { /*无人机的keep_flying都是由0号无人机来设置的*/
     my_keep_flying = rangingMessageHeader->keep_flying;
+  }
+}
+void setNeighborStateInfo_isNewAdd(uint16_t neighborAddress, bool isNewAddNeighbor)
+{
+  // DEBUG_PRINT("--%d,%d,%d\n", isNewAddNeighbor, neighborStateInfo.isNewAddUsed[neighborAddress], neighborAddress);
+  if (isNewAddNeighbor == true)
+  {
+    neighborStateInfo.isNewAdd[neighborAddress] = true;
+    neighborStateInfo.isNewAddUsed[neighborAddress] = false;
+  }
+  else
+  {
+    if (neighborStateInfo.isNewAddUsed[neighborAddress] == true)
+    {
+      neighborStateInfo.isNewAdd[neighborAddress] = false;
+    }
   }
 }
 
@@ -65,6 +83,9 @@ bool getNeighborStateInfo(uint16_t neighborAddress, uint16_t *distance, short *v
     *gyroZ = neighborStateInfo.gyroZ[neighborAddress];
     *height = neighborStateInfo.positionZ[neighborAddress];
     *isNewAddNeighbor = neighborStateInfo.isNewAdd[neighborAddress];
+    // DEBUG_PRINT("get isNew:%d\n", *isNewAddNeighbor);
+    neighborStateInfo.isNewAddUsed[neighborAddress] = true;
+    // DEBUG_PRINT("get--addr:%d,%d\n", neighborAddress, neighborStateInfo.isNewAddUsed[neighborAddress]);
     return true;
   }
   else
@@ -75,7 +96,7 @@ bool getNeighborStateInfo(uint16_t neighborAddress, uint16_t *distance, short *v
 
 bool getOrSetKeepflying(uint16_t RobIDfromControl, bool keep_flying)
 {
-  if (RobIDfromControl == 0)
+  if (RobIDfromControl == 1)
   {
     my_keep_flying = keep_flying;
     return keep_flying;
@@ -250,6 +271,8 @@ void processRangingMessage(Ranging_Message_With_Timestamp_t *rangingMessageWithT
   uint16_t neighborAddress = rangingMessage->header.srcAddress;
   set_index_t neighborIndex = findInRangingTableSet(&rangingTableSet, neighborAddress);
   bool isNewAddNeighbor = neighborIndex == -1 ? true : false; /*如果是新添加的邻居，则是true*/
+  setNeighborStateInfo_isNewAdd(neighborAddress, isNewAddNeighbor);
+  // DEBUG_PRINT("processRangingMessage:%d\n", isNewAddNeighbor);
   /* handle new neighbor */
   if (neighborIndex == -1)
   {
@@ -325,7 +348,7 @@ void processRangingMessage(Ranging_Message_With_Timestamp_t *rangingMessageWithT
         neighborRangingTable->distance = distance;
         setDistance(neighborRangingTable->neighborAddress, distance);
         /*自己添加*/
-        setNeighborStateInfo(neighborAddress, distance, &rangingMessage->header, isNewAddNeighbor);
+        setNeighborStateInfo(neighborAddress, distance, &rangingMessage->header);
         /*自己添加*/
       }
       else
