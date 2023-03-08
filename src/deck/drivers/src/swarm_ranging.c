@@ -18,6 +18,7 @@
 static uint16_t MY_UWB_ADDRESS;
 /*---自己添加---start---*/
 static SemaphoreHandle_t rangingTableSetMutex;
+static median_data_t median_data[RANGING_TABLE_SIZE + 1];
 /*---自己添加---end---*/
 static QueueHandle_t rxQueue;
 static Ranging_Table_Set_t rangingTableSet;
@@ -38,9 +39,16 @@ int16_t distanceTowards[RANGING_TABLE_SIZE + 1] = {[0 ... RANGING_TABLE_SIZE] = 
 static neighborStateInfo_t neighborStateInfo; // 邻居的状态信息
 static bool my_keep_flying;                   // 当前无人机的keep_flying
 
-void initNeighborStateInfo()
+void initNeighborStateInfoAndMedian_data()
 {
+  for (int i = 0; i < RANGING_TABLE_SIZE + 1; i++)
+  {
+    median_data[i].index_inserting = 0;
+    neighborStateInfo.refresh[i] = false;
+  }
+  my_keep_flying = false;
 }
+
 void setNeighborStateInfo(uint16_t neighborAddress, int16_t distance, Ranging_Message_Header_t *rangingMessageHeader)
 {
   ASSERT(neighborAddress <= RANGING_TABLE_SIZE);
@@ -74,7 +82,7 @@ void setNeighborStateInfo_isNewAdd(uint16_t neighborAddress, bool isNewAddNeighb
 
 bool getNeighborStateInfo(uint16_t neighborAddress, uint16_t *distance, short *vx, short *vy, float *gyroZ, uint16_t *height, bool *isNewAddNeighbor)
 {
-  if (neighborStateInfo.refresh[neighborAddress] == true)
+  if (neighborStateInfo.refresh[neighborAddress] == true && my_keep_flying == true)
   {
     neighborStateInfo.refresh[neighborAddress] = false;
     *distance = neighborStateInfo.distanceTowards[neighborAddress];
@@ -123,6 +131,25 @@ void getCurrentNeighborAddressInfo_t(currentNeighborAddressInfo_t *currentNeighb
   }
   xSemaphoreGive(rangingTableSetMutex);
 }
+
+static uint16_t median_filter_3(uint16_t *data)
+{
+  uint16_t middle;
+  if ((data[0] <= data[1]) && (data[0] <= data[2]))
+  {
+    middle = (data[1] <= data[2]) ? data[1] : data[2];
+  }
+  else if ((data[1] <= data[0]) && (data[1] <= data[2]))
+  {
+    middle = (data[0] <= data[2]) ? data[0] : data[2];
+  }
+  else
+  {
+    middle = (data[0] <= data[1]) ? data[0] : data[1];
+  }
+  return middle;
+}
+#define ABS(a) ((a) > 0 ? (a) : -(a))
 
 /*---自己添加---*/
 
@@ -207,6 +234,7 @@ void rangingInit()
 {
   MY_UWB_ADDRESS = getUWBAddress();
   DEBUG_PRINT("MY_UWB_ADDRESS = %d \n", MY_UWB_ADDRESS);
+  initNeighborStateInfoAndMedian_data();
   rxQueue = xQueueCreate(RANGING_RX_QUEUE_SIZE, RANGING_RX_QUEUE_ITEM_SIZE);
   /*---自己添加---start---*/
   rangingTableSetMutex = xSemaphoreCreateMutex();
@@ -229,7 +257,7 @@ void rangingInit()
               ADHOC_DECK_TASK_PRI, &uwbRangingRxTaskHandle); // TODO optimize STACK SIZE
 }
 
-int16_t computeDistance(Timestamp_Tuple_t Tp, Timestamp_Tuple_t Rp,
+int16_t computeDistance(uint16_t neighborAddress, Timestamp_Tuple_t Tp, Timestamp_Tuple_t Rp,
                         Timestamp_Tuple_t Tr, Timestamp_Tuple_t Rr,
                         Timestamp_Tuple_t Tf, Timestamp_Tuple_t Rf)
 {
@@ -242,27 +270,50 @@ int16_t computeDistance(Timestamp_Tuple_t Tp, Timestamp_Tuple_t Rp,
   diff1 = tRound1 - tReply1;
   diff2 = tRound2 - tReply2;
   tprop_ctn = (diff1 * tReply2 + diff2 * tReply1 + diff2 * diff1) / (tRound1 + tRound2 + tReply1 + tReply2);
-  int16_t distance = (int16_t)tprop_ctn * 0.4691763978616;
+  int16_t calcDist = (int16_t)tprop_ctn * 0.4691763978616;
 
-  bool isErrorOccurred = false;
-  if (distance > 1000 || distance < 0)
+  /*这里暂时采用和李树帅twr中一样的形式*/
+  if (calcDist > 0 && calcDist < 1000)
   {
-    DEBUG_PRINT("isErrorOccurred\n");
-    isErrorOccurred = true;
-  }
+    int16_t medianDist = median_filter_3(median_data[neighborAddress].distance_history);
 
-  if (tRound2 < 0 || tReply2 < 0)
-  {
-    DEBUG_PRINT("tRound2 < 0 || tReply2 < 0\n");
-    isErrorOccurred = true;
-  }
+    median_data[neighborAddress].index_inserting++;
+    if (median_data[neighborAddress].index_inserting == 3)
+    {
+      median_data[neighborAddress].index_inserting = 0;
+    }
+    median_data[neighborAddress].distance_history[median_data[neighborAddress].index_inserting] = calcDist;
 
-  if (isErrorOccurred)
-  {
-    return 0;
+    if (ABS(medianDist - calcDist) > 50)
+    {
+      return medianDist;
+    }
+    else
+    {
+      return calcDist;
+    }
   }
+  return 0;
 
-  return distance;
+  // bool isErrorOccurred = false;
+  // if (calcDist > 1000 || calcDist < 0)
+  // {
+  //   // DEBUG_PRINT("isErrorOccurred\n");
+  //   isErrorOccurred = true;
+  // }
+
+  // if (tRound2 < 0 || tReply2 < 0)
+  // {
+  //   DEBUG_PRINT("tRound2 < 0 || tReply2 < 0\n");
+  //   isErrorOccurred = true;
+  // }
+
+  // if (isErrorOccurred)
+  // {
+  //   return 0;
+  // }
+
+  // return distance;
 }
 
 void processRangingMessage(Ranging_Message_With_Timestamp_t *rangingMessageWithTimestamp)
@@ -340,10 +391,10 @@ void processRangingMessage(Ranging_Message_With_Timestamp_t *rangingMessageWithT
         neighborRangingTable->Tp.timestamp.full && neighborRangingTable->Rp.timestamp.full &&
         neighborRangingTable->Tf.timestamp.full && neighborRangingTable->Rf.timestamp.full)
     {
-      int16_t distance = computeDistance(neighborRangingTable->Tp, neighborRangingTable->Rp,
+      int16_t distance = computeDistance(neighborAddress, neighborRangingTable->Tp, neighborRangingTable->Rp,
                                          Tr_Rr_Candidate.Tr, Tr_Rr_Candidate.Rr,
                                          neighborRangingTable->Tf, neighborRangingTable->Rf);
-      if (distance > 0)
+      if (distance != 0)
       {
         neighborRangingTable->distance = distance;
         setDistance(neighborRangingTable->neighborAddress, distance);

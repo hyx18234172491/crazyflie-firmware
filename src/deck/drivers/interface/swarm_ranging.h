@@ -16,6 +16,12 @@
 #define Tf_BUFFER_POOL_SIZE (4 * RANGING_INTERVAL_MAX / RANGING_INTERVAL_MIN)
 #define TX_PERIOD_IN_MS 30
 /*---自己添加---start---*/
+
+typedef struct
+{
+    uint16_t distance_history[3];
+    uint8_t index_inserting;
+} median_data_t;
 typedef struct
 {
     uint16_t distanceTowards[RANGING_TABLE_SIZE + 1]; // cm
@@ -37,7 +43,7 @@ typedef struct
 
 /* Ranging Operations */
 void rangingInit();
-int16_t computeDistance(Timestamp_Tuple_t Tp, Timestamp_Tuple_t Rp,
+int16_t computeDistance(uint16_t neighborAddress, Timestamp_Tuple_t Tp, Timestamp_Tuple_t Rp,
                         Timestamp_Tuple_t Tr, Timestamp_Tuple_t Rr,
                         Timestamp_Tuple_t Tf, Timestamp_Tuple_t Rf);
 void processRangingMessage(Ranging_Message_With_Timestamp_t *rangingMessageWithTimestamp);

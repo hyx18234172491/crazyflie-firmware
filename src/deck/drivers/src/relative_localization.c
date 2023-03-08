@@ -22,7 +22,7 @@ static bool isInit;
 
 static float Qv = 1.0f;   // velocity deviation,初始值为1.0
 static float Qr = 0.7f;   // yaw rate deviation
-static float Ruwb = 0.5f; // ranging deviation
+static float Ruwb = 2.0f; // ranging deviation
 static float InitCovPos = 5.0f;
 static float InitCovYaw = 1.0f;
 
@@ -257,6 +257,7 @@ void relativeEKF(int n, float vxi, float vyi, float ri, float hi, float vxj, flo
     mat_trans(&tmpNN1m, &tmpNN2m);     // (KH - I)'
     mat_mult(&tmpNN1m, &Pm, &tmpNN3m); // (KH - I)*P
     mat_mult(&tmpNN3m, &tmpNN2m, &Pm); // (KH - I)*P*(KH - I)'
+    DEBUG_PRINT("dis:%d\n", dij);
 }
 
 bool relativeInfoRead(float *relaVarParam, currentNeighborAddressInfo_t *dest)

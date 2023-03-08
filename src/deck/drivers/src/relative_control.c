@@ -50,7 +50,7 @@ static void setHoverSetpoint(setpoint_t *setpoint, float vx, float vy, float z, 
 static void flyRandomIn1meter(void)
 {
   float_t randomYaw = (rand() / (float)RAND_MAX) * 6.28f; // 0-2pi rad
-  float_t randomVel = (rand() / (float)RAND_MAX) * 1;     // 0-1 m/s
+  float_t randomVel = (rand() / (float)RAND_MAX) * 1;   // 0-1 m/s
   float_t vxBody = randomVel * cosf(randomYaw);           // 速度分解
   float_t vyBody = randomVel * sinf(randomYaw);
   for (int i = 1; i < 100; i++)
