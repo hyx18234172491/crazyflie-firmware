@@ -132,9 +132,9 @@ void getCurrentNeighborAddressInfo_t(currentNeighborAddressInfo_t *currentNeighb
   xSemaphoreGive(rangingTableSetMutex);
 }
 
-static uint16_t median_filter_3(uint16_t *data)
+static int16_t median_filter_3(int16_t *data)
 {
-  uint16_t middle;
+  int16_t middle;
   if ((data[0] <= data[1]) && (data[0] <= data[2]))
   {
     middle = (data[1] <= data[2]) ? data[1] : data[2];

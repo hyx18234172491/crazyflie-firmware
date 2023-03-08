@@ -19,7 +19,7 @@
 
 typedef struct
 {
-    uint16_t distance_history[3];
+    int16_t distance_history[3];
     uint8_t index_inserting;
 } median_data_t;
 typedef struct
