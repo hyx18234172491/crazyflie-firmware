@@ -22,7 +22,7 @@ static bool isInit;
 
 static float Qv = 1.0f;   // velocity deviation,初始值为1.0
 static float Qr = 0.7f;   // yaw rate deviation
-static float Ruwb = 2.0f; // ranging deviation
+static float Ruwb = 0.5f; // ranging deviation
 static float InitCovPos = 5.0f;
 static float InitCovYaw = 1.0f;
 

@@ -5,6 +5,7 @@
 #include <string.h>
 #include "task.h"
 #include "debug.h"
+#include <stdlib.h> // random
 
 void rangingTableBufferInit(Ranging_Table_Tr_Rr_Buffer_t *rangingTableBuffer)
 {
@@ -56,7 +57,7 @@ void rangingTableInit(Ranging_Table_t *rangingTable, address_t address)
   memset(rangingTable, 0, sizeof(Ranging_Table_t));
   rangingTable->neighborAddress = address;
   rangingTable->period = TX_PERIOD_IN_MS;
-  rangingTable->nextDeliveryTime = xTaskGetTickCount() + rangingTable->period;
+  rangingTable->nextDeliveryTime = xTaskGetTickCount() + rangingTable->period + rand()%10;
   rangingTable->expirationTime = xTaskGetTickCount() + M2T(RANGING_TABLE_HOLD_TIME);
   rangingTable->state = RECEIVED;
   rangingTableBufferInit(&rangingTable->TrRrBuffer); // TODO remove this since memset() is called
