@@ -57,7 +57,7 @@ void rangingTableInit(Ranging_Table_t *rangingTable, address_t address)
   memset(rangingTable, 0, sizeof(Ranging_Table_t));
   rangingTable->neighborAddress = address;
   rangingTable->period = TX_PERIOD_IN_MS;
-  rangingTable->nextDeliveryTime = xTaskGetTickCount() + rangingTable->period + rand()%10;
+  rangingTable->nextDeliveryTime = xTaskGetTickCount() + rangingTable->period + rand() % 10;
   rangingTable->expirationTime = xTaskGetTickCount() + M2T(RANGING_TABLE_HOLD_TIME);
   rangingTable->state = RECEIVED;
   rangingTableBufferInit(&rangingTable->TrRrBuffer); // TODO remove this since memset() is called
@@ -91,7 +91,7 @@ static set_index_t rangingTableSetMalloc(
     // insert to full queue
     set_index_t temp = rangingTableSet->fullQueueEntry;
     rangingTableSet->fullQueueEntry = candidate;
-    rangingTableSet->setData[candidate].next = temp; // ？？？？
+    rangingTableSet->setData[candidate].next = temp;
     return candidate;
   }
 }
@@ -326,7 +326,3 @@ void printRangingMessage(Ranging_Message_t *rangingMessage)
                 rangingMessage->bodyUnits[i].timestamp.timestamp.low32);
   }
 }
-
-/*---自己添加---start---*/
-
-/*---自己添加---end---*/

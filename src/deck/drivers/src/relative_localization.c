@@ -20,11 +20,11 @@
 static uint16_t MY_UWB_ADDRESS;
 static bool isInit;
 
-static float Qv = 1.0f;   // velocity deviation,初始值为1.0
-static float Qr = 0.7f;   // yaw rate deviation
-static float Ruwb = 0.5f; // ranging deviation
-static float InitCovPos = 5.0f;
-static float InitCovYaw = 1.0f;
+static float Qv = 1.0f;         // velocity deviation,初始值为1.0
+static float Qr = 0.7f;         // yaw rate deviation
+static float Ruwb = 0.5f;       // ranging deviation
+static float InitCovPos = 5.0f; // 初始位置误差
+static float InitCovYaw = 1.0f; // 初始偏航角误差
 
 static relaVariable_t relaVar[RANGING_TABLE_SIZE];
 
@@ -60,8 +60,7 @@ static uint16_t dij;       // distance between self i and other j
 static float hi, hj;       // height of robot i and j
 
 static currentNeighborAddressInfo_t currentNeighborAddressInfo;
-static SemaphoreHandle_t currentNeighborAddressInfoMutex;
-static uint8_t initRelativePosition[5][5][STATE_DIM_rl];
+static uint8_t initRelativePosition[5][5][STATE_DIM_rl]; /*用于在指定无人机的初始位置时使用*/
 
 // 矩阵转置
 static inline void mat_trans(const arm_matrix_instance_f32 *pSrc, arm_matrix_instance_f32 *pDst)
@@ -94,7 +93,6 @@ void relativeLocoInit(void)
         return;
     }
     MY_UWB_ADDRESS = getUWBAddress();
-    // currentNeighborAddressInfoMutex = xSemaphoreCreateMutex();
     xTaskCreate(relativeLocoTask, "relative_Localization", ZRANGER_TASK_STACKSIZE, NULL, ZRANGER_TASK_PRI, NULL);
     isInit = true;
 }
@@ -124,12 +122,14 @@ void relaVarInit(relaVariable_t *relaVar, uint16_t neighborAddress)
 
 void relativeLocoTask(void *arg)
 {
+    /* 这块用于在指定无人机的初始位置时使用
     initRelativePosition[0][1][STATE_rlX] = 1; // 0号无人机相对于1号无人机的相对位置
     initRelativePosition[0][1][STATE_rlY] = -1;
     initRelativePosition[0][1][STATE_rlY] = 0;
     initRelativePosition[1][0][STATE_rlX] = -1; // 1号无人机相对于0号无人机的相对位置
     initRelativePosition[1][0][STATE_rlY] = 1;
     initRelativePosition[1][0][STATE_rlY] = 0;
+    */
     systemWaitStart();
     while (1)
     {
@@ -277,7 +277,6 @@ bool relativeInfoRead(float *relaVarParam, currentNeighborAddressInfo_t *dest)
     }
     else
     {
-        // DEBUG_PRINT("not get\n");
         return false;
     }
 }

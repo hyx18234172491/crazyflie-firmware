@@ -13,7 +13,6 @@
 #include "log.h"
 #include "math.h"
 #include "adhocdeck.h"
-#define USE_MONOCAM 0
 
 static uint16_t MY_UWB_ADDRESS;
 static bool isInit;
@@ -31,7 +30,6 @@ static float relaCtrl_p = 2.0f;
 static float relaCtrl_i = 0.0001f;
 static float relaCtrl_d = 0.01f;
 // static float NDI_k = 2.0f;
-static char c = 0; // monoCam
 
 static void setHoverSetpoint(setpoint_t *setpoint, float vx, float vy, float z, float yawrate)
 {
@@ -50,20 +48,20 @@ static void setHoverSetpoint(setpoint_t *setpoint, float vx, float vy, float z, 
 static void flyRandomIn1meter(void)
 {
   float_t randomYaw = (rand() / (float)RAND_MAX) * 6.28f; // 0-2pi rad
-  float_t randomVel = (rand() / (float)RAND_MAX) * 1;   // 0-1 m/s
+  float_t randomVel = (rand() / (float)RAND_MAX) * 1;     // 0-1 m/s
   float_t vxBody = randomVel * cosf(randomYaw);           // 速度分解
   float_t vyBody = randomVel * sinf(randomYaw);
   for (int i = 1; i < 100; i++)
   {
     setHoverSetpoint(&setpoint, vxBody, vyBody, height, 0);
     vTaskDelay(M2T(10));
-    tickInterval = xTaskGetTickCount() - takeoff_tick;
   }
+  setHoverSetpoint(&setpoint, 0, 0, height, 0);
+  vTaskDelay(M2T(10));
   for (int i = 1; i < 100; i++)
   {
     setHoverSetpoint(&setpoint, -vxBody, -vyBody, height, 0);
     vTaskDelay(M2T(10));
-    tickInterval = xTaskGetTickCount() - takeoff_tick;
   }
 }
 
@@ -84,17 +82,17 @@ static void formation0asCenter(float_t tarX, float_t tarY)
   // pid control for formation flight
   float err_x = -(tarX - relaVarInCtrl[0][STATE_rlX]);
   float err_y = -(tarY - relaVarInCtrl[0][STATE_rlY]);
-  float pid_vx = relaCtrl_p * err_x; // 基于距离差进行一个速度控制
-  float pid_vy = relaCtrl_p * err_y;
+  float pid_vx = relaCtrl_p * err_x;  // 2.0*err_x 基于距离差进行一个速度控制
+  float pid_vy = relaCtrl_p * err_y;  // 2.0*err_y
   float dx = (err_x - PreErr_x) / dt; // 先前的速度
   float dy = (err_y - PreErr_y) / dt;
   PreErr_x = err_x;
   PreErr_y = err_y;
-  pid_vx += relaCtrl_d * dx; // 加上先前速度*比例系数
-  pid_vy += relaCtrl_d * dy;
+  pid_vx += relaCtrl_d * dx; // 0.01*dx 先前速度*比例系数
+  pid_vy += relaCtrl_d * dy; // 0.01*dy
   IntErr_x += err_x * dt;
   IntErr_y += err_y * dt;
-  pid_vx += relaCtrl_i * constrain(IntErr_x, -0.5, 0.5);
+  pid_vx += relaCtrl_i * constrain(IntErr_x, -0.5, 0.5); // += (+-)0.00005
   pid_vy += relaCtrl_i * constrain(IntErr_y, -0.5, 0.5);
   pid_vx = constrain(pid_vx, -1.5f, 1.5f);
   pid_vy = constrain(pid_vy, -1.5f, 1.5f);
@@ -139,8 +137,8 @@ void land()
   if (!onGround)
   {
     int i = 0;
-    float land_height_per_100ms = 0.01;            // 每秒下降的高度为该变量的值*10
-    while (height - i * land_height_per_100ms > 0) // 1s下降0.1s
+    float land_height_per_100ms = 0.02;            // 每秒下降的高度为该变量的值*10
+    while (height - i * land_height_per_100ms > 0) // 1s下降0.2s
     {
       i++;
       setHoverSetpoint(&setpoint, 0, 0, height - (float)i * land_height_per_100ms, 0);
@@ -219,7 +217,7 @@ void relativeControlTask(void *arg)
 {
   static const float_t targetList[7][STATE_DIM_rl] = {{0.0f, 0.0f, 0.0f}, {-1.0f, 0.5f, 0.0f}, {-1.0f, -0.5f, 0.0f}, {-1.0f, -1.5f, 0.0f}, {0.0f, -1.0f, 0.0f}, {0.0f, -1.0f, 0.0f}, {-2.0f, 0.0f, 0.0f}};
   systemWaitStart();
-  reset_estimators();
+  reset_estimators(); // 判断无人机数值是否收敛
 
   while (1)
   {
@@ -240,7 +238,7 @@ void relativeControlTask(void *arg)
       // control loop
       tickInterval = xTaskGetTickCount() - takeoff_tick;
       DEBUG_PRINT("tick:%d,rlx:%f,rly:%f,rlraw:%f\n", tickInterval, relaVarInCtrl[0][STATE_rlX], relaVarInCtrl[0][STATE_rlY], relaVarInCtrl[0][STATE_rlYaw]);
-      if (tickInterval <= 20000)
+      if (tickInterval <= 25000)
       {
 
         flyRandomIn1meter(); // random flight within first 10 seconds
@@ -250,7 +248,7 @@ void relativeControlTask(void *arg)
       else
       {
 
-        if ((tickInterval > 20000) && (tickInterval <= 50000))
+        if ((tickInterval > 25000) && (tickInterval <= 50000))
         { // 0-random, other formation
           if (MY_UWB_ADDRESS == 0)
           {
@@ -288,14 +286,13 @@ void relativeControlTask(void *arg)
         }
         else
         {
-          // 运行90s之后，落地结束本次任务
+          // 运行90s之后，落地
           land();
         }
       }
     }
     else
     {
-      //  只是暂时没有无人机在运行了，不需要结束任务
       land();
     }
   }
@@ -309,19 +306,6 @@ void relativeControlInit(void)
   xTaskCreate(relativeControlTask, "relative_Control", configMINIMAL_STACK_SIZE, NULL, 3, NULL);
   isInit = true;
 }
-#if SELFIDIS0
-/*自己添加---注意只有0号无人机加这块代码，其他加没有意义*/
-LOG_GROUP_START(rlInfo)
-LOG_ADD(LOG_UINT32, tickInterval, &tickInterval)
-LOG_ADD(LOG_FLOAT, X1, &relaVarInCtrl[1][STATE_rlX])
-LOG_ADD(LOG_FLOAT, Y1, &relaVarInCtrl[1][STATE_rlY])
-LOG_ADD(LOG_FLOAT, Yaw1, &relaVarInCtrl[1][STATE_rlYaw])
-LOG_ADD(LOG_FLOAT, X2, &relaVarInCtrl[2][STATE_rlX])
-LOG_ADD(LOG_FLOAT, Y2, &relaVarInCtrl[2][STATE_rlY])
-LOG_ADD(LOG_FLOAT, Yaw2, &relaVarInCtrl[2][STATE_rlYaw])
-LOG_GROUP_STOP(relative_ctrl)
-/*自己添加*/
-#endif
 
 PARAM_GROUP_START(relative_ctrl)
 PARAM_ADD(PARAM_UINT8, keepFlying, &keepFlying)
@@ -329,7 +313,3 @@ PARAM_ADD(PARAM_FLOAT, relaCtrl_p, &relaCtrl_p)
 PARAM_ADD(PARAM_FLOAT, relaCtrl_i, &relaCtrl_i)
 PARAM_ADD(PARAM_FLOAT, relaCtrl_d, &relaCtrl_d)
 PARAM_GROUP_STOP(relative_ctrl)
-
-LOG_GROUP_START(mono_cam)
-LOG_ADD(LOG_UINT8, charCam, &c)
-LOG_GROUP_STOP(mono_cam)

@@ -16,10 +16,10 @@
 #include "estimator_kalman.h"
 
 static uint16_t MY_UWB_ADDRESS;
-/*---自己添加---start---*/
-static SemaphoreHandle_t rangingTableSetMutex;
-static median_data_t median_data[RANGING_TABLE_SIZE + 1];
-/*---自己添加---end---*/
+
+static SemaphoreHandle_t rangingTableSetMutex;            // 用于互斥访问rangingTableSet
+static median_data_t median_data[RANGING_TABLE_SIZE + 1]; // 存储测距的历史值
+
 static QueueHandle_t rxQueue;
 static Ranging_Table_Set_t rangingTableSet;
 static UWB_Message_Listener_t listener;
@@ -33,9 +33,8 @@ static int rangingSeqNumber = 1;
 static logVarId_t idVelocityX, idVelocityY, idVelocityZ;
 static float velocity;
 
-int16_t distanceTowards[RANGING_TABLE_SIZE + 1] = {[0 ... RANGING_TABLE_SIZE] = -1}; // 暂时删除
+int16_t distanceTowards[RANGING_TABLE_SIZE + 1] = {[0 ... RANGING_TABLE_SIZE] = -1};
 
-/*---自己添加---start*/
 static neighborStateInfo_t neighborStateInfo; // 邻居的状态信息
 static bool my_keep_flying;                   // 当前无人机的keep_flying
 
@@ -91,9 +90,7 @@ bool getNeighborStateInfo(uint16_t neighborAddress, uint16_t *distance, short *v
     *gyroZ = neighborStateInfo.gyroZ[neighborAddress];
     *height = neighborStateInfo.positionZ[neighborAddress];
     *isNewAddNeighbor = neighborStateInfo.isNewAdd[neighborAddress];
-    // DEBUG_PRINT("get isNew:%d\n", *isNewAddNeighbor);
     neighborStateInfo.isNewAddUsed[neighborAddress] = true;
-    // DEBUG_PRINT("get--addr:%d,%d\n", neighborAddress, neighborStateInfo.isNewAddUsed[neighborAddress]);
     return true;
   }
   else
@@ -210,7 +207,7 @@ static void uwbRangingTxTask(void *parameters)
     int msgLen = generateRangingMessage((Ranging_Message_t *)&txPacketCache.payload);
     txPacketCache.header.length = sizeof(Packet_Header_t) + msgLen;
     uwbSendPacketBlock(&txPacketCache);
-    vTaskDelay(TX_PERIOD_IN_MS + rand() % 10);
+    vTaskDelay(TX_PERIOD_IN_MS + rand() % 15);
   }
 }
 
@@ -224,7 +221,7 @@ static void uwbRangingRxTask(void *parameters)
   {
     if (xQueueReceive(rxQueue, &rxPacketCache, portMAX_DELAY))
     {
-      //      DEBUG_PRINT("uwbRangingRxTask: received ranging message \n");
+      //  DEBUG_PRINT("uwbRangingRxTask: received ranging message \n");
       processRangingMessage(&rxPacketCache);
     }
   }
@@ -236,9 +233,7 @@ void rangingInit()
   DEBUG_PRINT("MY_UWB_ADDRESS = %d \n", MY_UWB_ADDRESS);
   initNeighborStateInfoAndMedian_data();
   rxQueue = xQueueCreate(RANGING_RX_QUEUE_SIZE, RANGING_RX_QUEUE_ITEM_SIZE);
-  /*---自己添加---start---*/
   rangingTableSetMutex = xSemaphoreCreateMutex();
-  /*---自己添加---end---*/
   rangingTableSetInit(&rangingTableSet);
 
   listener.type = RANGING;
@@ -321,8 +316,10 @@ void processRangingMessage(Ranging_Message_With_Timestamp_t *rangingMessageWithT
   Ranging_Message_t *rangingMessage = &rangingMessageWithTimestamp->rangingMessage;
   uint16_t neighborAddress = rangingMessage->header.srcAddress;
   set_index_t neighborIndex = findInRangingTableSet(&rangingTableSet, neighborAddress);
+
   bool isNewAddNeighbor = neighborIndex == -1 ? true : false; /*如果是新添加的邻居，则是true*/
   setNeighborStateInfo_isNewAdd(neighborAddress, isNewAddNeighbor);
+
   // DEBUG_PRINT("processRangingMessage:%d\n", isNewAddNeighbor);
   /* handle new neighbor */
   if (neighborIndex == -1)
@@ -398,9 +395,8 @@ void processRangingMessage(Ranging_Message_With_Timestamp_t *rangingMessageWithT
       {
         neighborRangingTable->distance = distance;
         setDistance(neighborRangingTable->neighborAddress, distance);
-        /*自己添加*/
+
         setNeighborStateInfo(neighborAddress, distance, &rangingMessage->header);
-        /*自己添加*/
       }
       else
       {
@@ -468,10 +464,10 @@ int generateRangingMessage(Ranging_Message_t *rangingMessage)
   velocity = sqrt(pow(velocityX, 2) + pow(velocityY, 2) + pow(velocityZ, 2));
   /* velocity in cm/s */
   rangingMessage->header.velocity = (short)(velocity * 100);
-  /* 自己添加 */
+
   estimatorKalmanGetSwarmInfo(&rangingMessage->header.velocityXInWorld, &rangingMessage->header.velocityYInWorld, &rangingMessage->header.gyroZ, &rangingMessage->header.positionZ);
   rangingMessage->header.keep_flying = my_keep_flying;
-  /* 自己添加 */
+
   return rangingMessage->header.msgLength;
 }
 
