@@ -26,12 +26,14 @@
 /* Ranging Struct Constants */
 #define RANGING_MESSAGE_SIZE_MAX UWB_PAYLOAD_SIZE_MAX
 #define RANGING_MESSAGE_PAYLOAD_SIZE_MAX (RANGING_MESSAGE_SIZE_MAX - sizeof(Ranging_Message_Header_t))
-#define RANGING_MAX_Tr_UNIT 3
+// #define RANGING_MAX_Tr_UNIT 3
+#define RANGING_MAX_Tr_UNIT 1
 #define RANGING_MAX_BODY_UNIT (RANGING_MESSAGE_PAYLOAD_SIZE_MAX / sizeof(Body_Unit_t))
 #define RANGING_TABLE_SIZE_MAX 20 // default up to 20 one-hop neighbors
 #define RANGING_TABLE_HOLD_TIME (6 * RANGING_PERIOD_MAX)
 #define Tr_Rr_BUFFER_POOL_SIZE 3
-#define Tf_BUFFER_POOL_SIZE (2 * RANGING_PERIOD_MAX / RANGING_PERIOD_MIN)
+// #define Tf_BUFFER_POOL_SIZE (2 * RANGING_PERIOD_MAX / RANGING_PERIOD_MIN)
+#define Tf_BUFFER_POOL_SIZE 1
 
 /* Topology Sensing */
 #define NEIGHBOR_ADDRESS_MAX 32
@@ -123,9 +125,16 @@ typedef enum
   |  Tp  |  Rr  |  Tf  |  Re  |  ts  |
   +------+------+------+------+------+
 */
+
+typedef struct {
+  Timestamp_Tuple_t Rx;
+  Timestamp_Tuple_t Tx;
+}Ranging_Table_Tx_Rx_History_t;
+
 typedef struct
 {
   uint16_t neighborAddress;
+  Ranging_Table_Tx_Rx_History_t TxRxHistory;
 
   Timestamp_Tuple_t Rp;
   Timestamp_Tuple_t Tp;
