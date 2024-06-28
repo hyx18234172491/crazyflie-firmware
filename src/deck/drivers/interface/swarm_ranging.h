@@ -5,18 +5,18 @@
 #include "adhocdeck.h"
 #include "semphr.h"
 
-//#define RANGING_DEBUG_ENABLE
+#define RANGING_DEBUG_ENABLE
 
 /* Function Switch */
-//#define ENABLE_BUS_BOARDING_SCHEME
-//#define ENABLE_DYNAMIC_RANGING_PERIOD
+// #define ENABLE_BUS_BOARDING_SCHEME
+// #define ENABLE_DYNAMIC_RANGING_PERIOD
 #ifdef ENABLE_DYNAMIC_RANGING_PERIOD
-  #define DYNAMIC_RANGING_COEFFICIENT 1
+#define DYNAMIC_RANGING_COEFFICIENT 1
 #endif
 
 /* Ranging Constants */
-#define RANGING_PERIOD 200 // default in 200ms
-#define RANGING_PERIOD_MIN 50 // default 50ms
+#define RANGING_PERIOD 200     // default in 200ms
+#define RANGING_PERIOD_MIN 50  // default 50ms
 #define RANGING_PERIOD_MAX 500 // default 500ms
 
 /* Queue Constants */
@@ -40,56 +40,65 @@
 typedef short set_index_t;
 
 /* Timestamp Tuple */
-typedef struct {
-  dwTime_t timestamp; // 8 byte
-  uint16_t seqNumber; // 2 byte
+typedef struct
+{
+  dwTime_t timestamp;                        // 8 byte
+  uint16_t seqNumber;                        // 2 byte
 } __attribute__((packed)) Timestamp_Tuple_t; // 10 byte
 
 /* Body Unit */
-typedef struct {
-  struct {
-    uint8_t MPR: 1;
-    uint8_t RESERVED: 7;
-  } flags; // 1 byte
-  uint16_t address; // 2 byte
-  Timestamp_Tuple_t timestamp; // 10 byte
+typedef struct
+{
+  struct
+  {
+    uint8_t MPR : 1;
+    uint8_t RESERVED : 7;
+  } flags;                             // 1 byte
+  uint16_t address;                    // 2 byte
+  Timestamp_Tuple_t timestamp;         // 10 byte
 } __attribute__((packed)) Body_Unit_t; // 13 byte
 
 /* Ranging Message Header*/
-typedef struct {
-  uint16_t srcAddress; // 2 byte
-  uint16_t msgSequence; // 2 byte
+typedef struct
+{
+  uint16_t srcAddress;                                     // 2 byte
+  uint16_t msgSequence;                                    // 2 byte
   Timestamp_Tuple_t lastTxTimestamps[RANGING_MAX_Tr_UNIT]; // 10 byte * MAX_Tr_UNIT
-  short velocity; // 2 byte cm/s
-  uint16_t msgLength; // 2 byte
-  uint16_t filter; // 16 bits bloom filter
-} __attribute__((packed)) Ranging_Message_Header_t; // 10 byte + 10 byte * MAX_Tr_UNIT
+  short velocity;                                          // 2 byte cm/s
+  uint16_t msgLength;                                      // 2 byte
+  uint16_t filter;                                         // 16 bits bloom filter
+} __attribute__((packed)) Ranging_Message_Header_t;        // 10 byte + 10 byte * MAX_Tr_UNIT
 
 /* Ranging Message */
-typedef struct {
-  Ranging_Message_Header_t header; // 18 byte
+typedef struct
+{
+  Ranging_Message_Header_t header;              // 18 byte
   Body_Unit_t bodyUnits[RANGING_MAX_BODY_UNIT]; // 13 byte * MAX_BODY_UNIT
-} __attribute__((packed)) Ranging_Message_t; // 18 + 13 byte * MAX_BODY_UNIT
+} __attribute__((packed)) Ranging_Message_t;    // 18 + 13 byte * MAX_BODY_UNIT
 
 /* Ranging Message With RX Timestamp, used in RX Queue */
-typedef struct {
+typedef struct
+{
   Ranging_Message_t rangingMessage;
   dwTime_t rxTime;
 } __attribute__((packed)) Ranging_Message_With_Timestamp_t;
 
-typedef struct {
+typedef struct
+{
   Timestamp_Tuple_t Tr;
   Timestamp_Tuple_t Rr;
 } __attribute__((packed)) Ranging_Table_Tr_Rr_Candidate_t;
 
 /* Tr and Rr candidate buffer for each Ranging Table */
-typedef struct {
+typedef struct
+{
   set_index_t latest; /* Index of latest valid (Tr,Rr) pair */
-  set_index_t cur; /* Index of current empty slot for next valid (Tr,Rr) pair */
+  set_index_t cur;    /* Index of current empty slot for next valid (Tr,Rr) pair */
   Ranging_Table_Tr_Rr_Candidate_t candidates[Tr_Rr_BUFFER_POOL_SIZE];
 } __attribute__((packed)) Ranging_Table_Tr_Rr_Buffer_t;
 
-typedef enum {
+typedef enum
+{
   RANGING_STATE_RESERVED,
   RANGING_STATE_S1,
   RANGING_STATE_S2,
@@ -99,7 +108,8 @@ typedef enum {
   RANGING_TABLE_STATE_COUNT
 } RANGING_TABLE_STATE;
 
-typedef enum {
+typedef enum
+{
   RANGING_EVENT_TX_Tf,
   RANGING_EVENT_RX_NO_Rf,
   RANGING_EVENT_RX_Rf,
@@ -113,7 +123,8 @@ typedef enum {
   |  Tp  |  Rr  |  Tf  |  Re  |  ts  |
   +------+------+------+------+------+
 */
-typedef struct {
+typedef struct
+{
   uint16_t neighborAddress;
 
   Timestamp_Tuple_t Rp;
@@ -134,7 +145,8 @@ typedef struct {
 } __attribute__((packed)) Ranging_Table_t;
 
 /* Ranging Table Set */
-typedef struct {
+typedef struct
+{
   int size;
   SemaphoreHandle_t mu;
   Ranging_Table_t tables[RANGING_TABLE_SIZE_MAX];
@@ -142,19 +154,22 @@ typedef struct {
 
 typedef void (*RangingTableEventHandler)(Ranging_Table_t *);
 
-typedef struct {
+typedef struct
+{
   uint64_t bits;
   uint8_t size;
 } Neighbor_Bit_Set_t;
 
 typedef void (*neighborSetHook)(UWB_Address_t);
 
-typedef struct Neighbor_Set_Hook {
+typedef struct Neighbor_Set_Hook
+{
   neighborSetHook hook;
   struct Neighbor_Set_Hook_Node *next;
 } Neighbor_Set_Hooks_t;
 
-typedef struct {
+typedef struct
+{
   uint8_t size;
   SemaphoreHandle_t mu;
   Neighbor_Bit_Set_t oneHop;
