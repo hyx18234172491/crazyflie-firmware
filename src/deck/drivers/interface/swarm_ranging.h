@@ -114,7 +114,14 @@ typedef enum {
   +------+------+------+------+------+
 */
 typedef struct {
+  Timestamp_Tuple_t Rx;
+  Timestamp_Tuple_t Tx;
+}Ranging_Table_Tx_Rx_History_t;
+
+typedef struct {
   uint16_t neighborAddress;
+
+  Ranging_Table_Tx_Rx_History_t TxRxHistory;
 
   Timestamp_Tuple_t Rp;
   Timestamp_Tuple_t Tp;
