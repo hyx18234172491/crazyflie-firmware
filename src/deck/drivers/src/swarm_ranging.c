@@ -88,6 +88,13 @@ void rangingTableBufferInit(Ranging_Table_Tr_Rr_Buffer_t *rangingTableBuffer)
   }
 }
 
+void rangingTableTxRxHistoryInit(Ranging_Table_Tx_Rx_History_t *history)
+{
+  Timestamp_Tuple_t empty = {.seqNumber = 0, .timestamp.full = 0};
+  history->Tx = empty;
+  history->Rx = empty;
+}
+
 void rangingTableBufferUpdate(Ranging_Table_Tr_Rr_Buffer_t *rangingTableBuffer,
                               Timestamp_Tuple_t Tr,
                               Timestamp_Tuple_t Rr)
@@ -194,6 +201,7 @@ void rangingTableInit(Ranging_Table_t *table, UWB_Address_t neighborAddress)
   table->expirationTime = 0;
   table->lastSendTime = 0;
   rangingTableBufferInit(&table->TrRrBuffer); // Can be safely removed this line since memset() is called
+  rangingTableTxRxHistoryInit(&table->TxRxHistory);
 }
 
 /* Ranging Table Set Operations */
