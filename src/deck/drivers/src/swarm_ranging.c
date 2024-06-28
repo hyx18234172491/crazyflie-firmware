@@ -971,9 +971,8 @@ static int16_t computeDistance(Timestamp_Tuple_t Tp, Timestamp_Tuple_t Rp,
 }
 
 static int16_t computeDistance2(Timestamp_Tuple_t Tx, Timestamp_Tuple_t Rx,
-                               Timestamp_Tuple_t Tp, Timestamp_Tuple_t Rp,
-                               Timestamp_Tuple_t Tr, Timestamp_Tuple_t Rr
-                               )
+                                Timestamp_Tuple_t Tp, Timestamp_Tuple_t Rp,
+                                Timestamp_Tuple_t Tr, Timestamp_Tuple_t Rr)
 {
 
   bool isErrorOccurred = false;
@@ -1000,6 +999,7 @@ static int16_t computeDistance2(Timestamp_Tuple_t Tx, Timestamp_Tuple_t Rx,
   t = (diff1 * tReply2 + diff2 * tReply1 + diff2 * diff1) / (tRound1 + tRound2 + tReply1 + tReply2);
   int16_t distance = (int16_t)t * 0.4691763978616;
 
+  DEBUG_PRINT("compute dist 2:%d\n", distance);
   if (distance < 0)
   {
     DEBUG_PRINT("Ranging Error: distance < 0\n");
@@ -1120,10 +1120,9 @@ static void S3_RX_NO_Rf(Ranging_Table_t *rangingTable)
 
 {
   Ranging_Table_Tr_Rr_Candidate_t Tr_Rr_Candidate = rangingTableBufferGetLatest(&rangingTable->TrRrBuffer);
-  int16_t distance = computeDistance2(rangingTable->TxRxHistory.Tx,rangingTable->TxRxHistory.Rx,
-                                     rangingTable->Tp, rangingTable->Rp,
-                                     Tr_Rr_Candidate.Tr, Tr_Rr_Candidate.Rr
-                                     );
+  int16_t distance = computeDistance2(rangingTable->TxRxHistory.Tx, rangingTable->TxRxHistory.Rx,
+                                      rangingTable->Tp, rangingTable->Rp,
+                                      Tr_Rr_Candidate.Tr, Tr_Rr_Candidate.Rr);
   if (distance > 0)
   {
     rangingTable->distance = distance;
@@ -1133,7 +1132,6 @@ static void S3_RX_NO_Rf(Ranging_Table_t *rangingTable)
   {
     //    DEBUG_PRINT("distance is not updated since some error occurs\n");
   }
-
 
   RANGING_TABLE_STATE prevState = rangingTable->state;
 
@@ -1153,10 +1151,9 @@ static void S3_RX_NO_Rf(Ranging_Table_t *rangingTable)
 static void S3_RX_Rf(Ranging_Table_t *rangingTable)
 {
   Ranging_Table_Tr_Rr_Candidate_t Tr_Rr_Candidate = rangingTableBufferGetLatest(&rangingTable->TrRrBuffer);
-  int16_t distance = computeDistance2(rangingTable->TxRxHistory.Tx,rangingTable->TxRxHistory.Rx,
-                                     rangingTable->Tp, rangingTable->Rp,
-                                     Tr_Rr_Candidate.Tr, Tr_Rr_Candidate.Rr
-                                     );
+  int16_t distance = computeDistance2(rangingTable->TxRxHistory.Tx, rangingTable->TxRxHistory.Rx,
+                                      rangingTable->Tp, rangingTable->Rp,
+                                      Tr_Rr_Candidate.Tr, Tr_Rr_Candidate.Rr);
   if (distance > 0)
   {
     rangingTable->distance = distance;
@@ -1198,10 +1195,9 @@ static void S4_RX_NO_Rf(Ranging_Table_t *rangingTable)
 
   /*use history tx,rx to compute distance*/
   Ranging_Table_Tr_Rr_Candidate_t Tr_Rr_Candidate = rangingTableBufferGetLatest(&rangingTable->TrRrBuffer);
-  int16_t distance = computeDistance2(rangingTable->TxRxHistory.Tx,rangingTable->TxRxHistory.Rx,
-                                     rangingTable->Tp, rangingTable->Rp,
-                                     Tr_Rr_Candidate.Tr, Tr_Rr_Candidate.Rr
-                                     );
+  int16_t distance = computeDistance2(rangingTable->TxRxHistory.Tx, rangingTable->TxRxHistory.Rx,
+                                      rangingTable->Tp, rangingTable->Rp,
+                                      Tr_Rr_Candidate.Tr, Tr_Rr_Candidate.Rr);
   if (distance > 0)
   {
     rangingTable->distance = distance;
@@ -1385,17 +1381,29 @@ static void processRangingMessage(Ranging_Message_With_Timestamp_t *rangingMessa
       }
     }
   }
-
-  /* Trigger event handler according to Rf */
-  if (neighborRf.timestamp.full)
+  Timestamp_Tuple_t Tf = findTfBySeqNumber(neighborRf.seqNumber);
+  if (Tf.timestamp.full)
   {
+    DEBUG_PRINT("+\n");
     neighborRangingTable->Rf = neighborRf;
     rangingTableOnEvent(neighborRangingTable, RANGING_EVENT_RX_Rf);
   }
   else
   {
+    DEBUG_PRINT("------\n");
     rangingTableOnEvent(neighborRangingTable, RANGING_EVENT_RX_NO_Rf);
   }
+  // /* Trigger event handler according to Rf */
+  // if (neighborRf.timestamp.full)
+  // {
+  //   neighborRangingTable->Rf = neighborRf;
+  //   rangingTableOnEvent(neighborRangingTable, RANGING_EVENT_RX_Rf);
+  // }
+  // else
+  // {
+  //   DEBUG_PRINT("------");
+  //   rangingTableOnEvent(neighborRangingTable, RANGING_EVENT_RX_NO_Rf);
+  // }
 
 #ifdef ENABLE_DYNAMIC_RANGING_PERIOD
   /* update period according to distance and velocity */
@@ -1552,9 +1560,13 @@ static void uwbRangingTxTask(void *parameters)
     xSemaphoreTake(rangingTableSet.mu, portMAX_DELAY);
     xSemaphoreTake(neighborSet.mu, portMAX_DELAY);
 
+    int randnum = rand() % 10;
     Time_t taskDelay = generateRangingMessage(rangingMessage);
-    txPacketCache.header.length = sizeof(UWB_Packet_Header_t) + rangingMessage->header.msgLength;
-    uwbSendPacketBlock(&txPacketCache);
+    if (randnum < 6)
+    {
+      txPacketCache.header.length = sizeof(UWB_Packet_Header_t) + rangingMessage->header.msgLength;
+      uwbSendPacketBlock(&txPacketCache);
+    }
     //    printRangingTableSet(&rangingTableSet);
     //    printNeighborSet(&neighborSet);
 
