@@ -1386,13 +1386,11 @@ static void processRangingMessage(Ranging_Message_With_Timestamp_t *rangingMessa
   Timestamp_Tuple_t Tf = findTfBySeqNumber(neighborRf.seqNumber);
   if (Tf.timestamp.full)
   {
-    DEBUG_PRINT("+\n");
     neighborRangingTable->Rf = neighborRf;
     rangingTableOnEvent(neighborRangingTable, RANGING_EVENT_RX_Rf);
   }
   else
   {
-    DEBUG_PRINT("------\n");
     rangingTableOnEvent(neighborRangingTable, RANGING_EVENT_RX_NO_Rf);
   }
   // /* Trigger event handler according to Rf */
