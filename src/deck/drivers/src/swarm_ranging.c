@@ -64,6 +64,15 @@ static Ranging_Table_t EMPTY_RANGING_TABLE = {
 
 int16_t distanceTowards[NEIGHBOR_ADDRESS_MAX + 1] = {[0 ... NEIGHBOR_ADDRESS_MAX] = -1};
 
+typedef struct Stastistic
+{
+  int recvnum;
+  int compute1num;
+  int compute2num;
+  TimerHandle_t timer;
+} Stastistic;
+Stastistic statistic;
+
 int16_t getDistance(UWB_Address_t neighborAddress)
 {
   ASSERT(neighborAddress <= NEIGHBOR_ADDRESS_MAX);
@@ -93,6 +102,27 @@ void rangingTableTxRxHistoryInit(Ranging_Table_Tx_Rx_History_t *history)
   Timestamp_Tuple_t empty = {.seqNumber = 0, .timestamp.full = 0};
   history->Tx = empty;
   history->Rx = empty;
+}
+
+void printStasticCallback(TimerHandle_t timer)
+{
+  DEBUG_PRINT("recvnum:%d,compute1num:%d,compute2num:%d\n",
+              statistic.recvnum,
+              statistic.compute1num,
+              statistic.compute2num);
+}
+
+void statisticInit()
+{
+  statistic.recvnum = 0;
+  statistic.compute1num = 0;
+  statistic.compute2num = 0;
+  statistic.timer = xTimerCreate("statisticTimer",
+                                 500,
+                                 pdTRUE,
+                                 (void *)0,
+                                 printStasticCallback);
+  xTimerStart(statistic.timer, M2T(0));
 }
 
 void rangingTableBufferUpdate(Ranging_Table_Tr_Rr_Buffer_t *rangingTableBuffer,
@@ -925,6 +955,7 @@ static int16_t computeDistance(Timestamp_Tuple_t Tp, Timestamp_Tuple_t Rp,
                                Timestamp_Tuple_t Tr, Timestamp_Tuple_t Rr,
                                Timestamp_Tuple_t Tf, Timestamp_Tuple_t Rf)
 {
+  statistic.compute1num++;
 
   bool isErrorOccurred = false;
 
@@ -974,7 +1005,7 @@ static int16_t computeDistance2(Timestamp_Tuple_t Tx, Timestamp_Tuple_t Rx,
                                 Timestamp_Tuple_t Tp, Timestamp_Tuple_t Rp,
                                 Timestamp_Tuple_t Tr, Timestamp_Tuple_t Rr)
 {
-
+  statistic.compute2num++;
   bool isErrorOccurred = false;
 
   if (Tp.seqNumber != Rp.seqNumber || Tr.seqNumber != Rr.seqNumber || Tx.seqNumber != Rx.seqNumber)
@@ -1319,6 +1350,8 @@ void rangingTableOnEvent(Ranging_Table_t *table, RANGING_TABLE_EVENT event)
 /* Swarm Ranging */
 static void processRangingMessage(Ranging_Message_With_Timestamp_t *rangingMessageWithTimestamp)
 {
+  statistic.recvnum++;
+
   Ranging_Message_t *rangingMessage = &rangingMessageWithTimestamp->rangingMessage;
   uint16_t neighborAddress = rangingMessage->header.srcAddress;
   int neighborIndex = rangingTableSetSearchTable(&rangingTableSet, neighborAddress);
@@ -1494,7 +1527,9 @@ static Time_t generateRangingMessage(Ranging_Message_t *rangingMessage)
       if (randnum < 7)
       {
         rangingMessage->bodyUnits[bodyUnitNumber].timestamp = table->latestReceived;
-      }else{
+      }
+      else
+      {
         Timestamp_Tuple_t empty = {.seqNumber = 0, .timestamp.full = 0};
         rangingMessage->bodyUnits[bodyUnitNumber].timestamp = empty;
       }
@@ -1662,6 +1697,8 @@ void rangingInit()
   idVelocityX = logGetVarId("stateEstimate", "vx");
   idVelocityY = logGetVarId("stateEstimate", "vy");
   idVelocityZ = logGetVarId("stateEstimate", "vz");
+
+  statisticInit();
 
   xTaskCreate(uwbRangingTxTask, ADHOC_DECK_RANGING_TX_TASK_NAME, UWB_TASK_STACK_SIZE, NULL,
               ADHOC_DECK_TASK_PRI, &uwbRangingTxTaskHandle);
