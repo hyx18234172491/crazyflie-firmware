@@ -1017,7 +1017,7 @@ static int16_t computeDistance2(Timestamp_Tuple_t Tx, Timestamp_Tuple_t Rx,
     isErrorOccurred = true;
   }
 
-  if (Tx.seqNumber >= Tp.seqNumber || Rx.seqNumber >= Rp.seqNumber)
+  if (Tx.seqNumber >= Tr.seqNumber || Rx.seqNumber >= Rr.seqNumber)
   {
     DEBUG_PRINT("Ranging Error: sequence number out of order\n");
     isErrorOccurred = true;
