@@ -1119,6 +1119,7 @@ static void S3_Tf(Ranging_Table_t *rangingTable)
 static void S3_RX_NO_Rf(Ranging_Table_t *rangingTable)
 
 {
+  DEBUG_PRINT("T1-");
   Ranging_Table_Tr_Rr_Candidate_t Tr_Rr_Candidate = rangingTableBufferGetLatest(&rangingTable->TrRrBuffer);
   int16_t distance = computeDistance2(rangingTable->TxRxHistory.Tx, rangingTable->TxRxHistory.Rx,
                                       rangingTable->Tp, rangingTable->Rp,
@@ -1193,6 +1194,7 @@ static void S4_Tf(Ranging_Table_t *rangingTable)
 static void S4_RX_NO_Rf(Ranging_Table_t *rangingTable)
 {
 
+  DEBUG_PRINT("T2-");
   /*use history tx,rx to compute distance*/
   Ranging_Table_Tr_Rr_Candidate_t Tr_Rr_Candidate = rangingTableBufferGetLatest(&rangingTable->TrRrBuffer);
   int16_t distance = computeDistance2(rangingTable->TxRxHistory.Tx, rangingTable->TxRxHistory.Rx,
@@ -1490,7 +1492,14 @@ static Time_t generateRangingMessage(Ranging_Message_t *rangingMessage)
       /* It is possible that latestReceived is not the newest timestamp, because the newest may be in rxQueue
        * waiting to be handled.
        */
-      rangingMessage->bodyUnits[bodyUnitNumber].timestamp = table->latestReceived;
+      int randnum = rand() % 10;
+      if (randnum < 7)
+      {
+        rangingMessage->bodyUnits[bodyUnitNumber].timestamp = table->latestReceived;
+      }else{
+        Timestamp_Tuple_t empty = {.seqNumber = 0, .timestamp.full = 0};
+        rangingMessage->bodyUnits[bodyUnitNumber].timestamp = empty;
+      }
       rangingMessage->header.filter |= 1 << (table->neighborAddress % 16);
       rangingTableOnEvent(table, RANGING_EVENT_TX_Tf);
 
@@ -1560,14 +1569,10 @@ static void uwbRangingTxTask(void *parameters)
     xSemaphoreTake(rangingTableSet.mu, portMAX_DELAY);
     xSemaphoreTake(neighborSet.mu, portMAX_DELAY);
 
-    int randnum = rand() % 10;
-    Time_t taskDelay = RANGING_PERIOD;
-    if (randnum < 6)
-    {
-      taskDelay = generateRangingMessage(rangingMessage);
-      txPacketCache.header.length = sizeof(UWB_Packet_Header_t) + rangingMessage->header.msgLength;
-      uwbSendPacketBlock(&txPacketCache);
-    }
+    Time_t taskDelay = RANGING_PERIOD + rand() % RANGING_PERIOD;
+    generateRangingMessage(rangingMessage);
+    txPacketCache.header.length = sizeof(UWB_Packet_Header_t) + rangingMessage->header.msgLength;
+    uwbSendPacketBlock(&txPacketCache);
     //    printRangingTableSet(&rangingTableSet);
     //    printNeighborSet(&neighborSet);
 
