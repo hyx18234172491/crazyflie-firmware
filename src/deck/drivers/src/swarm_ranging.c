@@ -71,7 +71,7 @@ typedef struct Stastistic
   uint16_t compute1num;
   uint16_t compute2num;
 } Stastistic;
-Stastistic statistic[NEIGHBOR_ADDRESS_MAX + 1];
+static Stastistic statistic[NEIGHBOR_ADDRESS_MAX + 1];
 static TimerHandle_t statisticTimer;
 
 int16_t getDistance(UWB_Address_t neighborAddress)
@@ -1017,7 +1017,7 @@ static int16_t computeDistance2(Timestamp_Tuple_t Tx, Timestamp_Tuple_t Rx,
     isErrorOccurred = true;
   }
 
-  if (Tp.seqNumber >= Tx.seqNumber || Rp.seqNumber >= Rx.seqNumber)
+  if (Tx.seqNumber >= Tp.seqNumber || Rx.seqNumber >= Rp.seqNumber)
   {
     DEBUG_PRINT("Ranging Error: sequence number out of order\n");
     isErrorOccurred = true;
@@ -1722,19 +1722,19 @@ void rangingInit()
 }
 
 uint16_t getStatisticIndex = 3;
-uint16_t getStasticRecvSeq()
+static uint16_t getStasticRecvSeq()
 {
   return statistic[getStatisticIndex].recvSeq;
 }
-uint16_t getStasticRecvnum()
+static uint16_t getStasticRecvnum()
 {
   return statistic[getStatisticIndex].recvnum;
 }
-uint16_t getStasticCompute1num()
+static uint16_t getStasticCompute1num()
 {
   return statistic[getStatisticIndex].compute1num;
 }
-uint16_t getStasticCompute2num()
+static uint16_t getStasticCompute2num()
 {
   return statistic[getStatisticIndex].compute2num;
 }
@@ -1753,8 +1753,9 @@ LOG_ADD(LOG_INT16, distTo10, distanceTowards + 10)
 LOG_GROUP_STOP(Ranging)
 
 LOG_GROUP_START(Statistic)
-LOG_ADD(LOG_UINT16, recvSeq, getStasticRecvSeq)
-LOG_ADD(LOG_UINT16, recvNum, getStasticRecvnum)
-LOG_ADD(LOG_UINT16, compute1num, getStasticCompute1num)
-LOG_ADD(LOG_UINT16, compute2num, getStasticCompute2num)
+LOG_ADD(LOG_UINT16, recvSeq, &statistic[3].recvSeq)
+LOG_ADD(LOG_UINT16, recvNum, &statistic[3].recvnum)
+LOG_ADD(LOG_UINT16, compute1num, &statistic[3].compute1num)
+LOG_ADD(LOG_UINT16, compute2num, &statistic[3].compute2num)
+
 LOG_GROUP_STOP(Statistic)
