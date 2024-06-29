@@ -72,6 +72,7 @@ typedef struct Stastistic
   uint16_t compute2num;
 } Stastistic;
 Stastistic statistic[NEIGHBOR_ADDRESS_MAX + 1];
+static TimerHandle_t statisticTimer;
 
 int16_t getDistance(UWB_Address_t neighborAddress)
 {
@@ -106,10 +107,10 @@ void rangingTableTxRxHistoryInit(Ranging_Table_Tx_Rx_History_t *history)
 
 void printStasticCallback(TimerHandle_t timer)
 {
-  // DEBUG_PRINT("recvnum:%d,compute1num:%d,compute2num:%d\n",
-  //             statistic.recvnum,
-  //             statistic.compute1num,
-  //             statistic.compute2num);
+  DEBUG_PRINT("recvnum:%d,compute1num:%d,compute2num:%d\n",
+              statistic[3].recvnum,
+              statistic[3].compute1num,
+              statistic[3].compute2num);
 }
 
 void statisticInit()
@@ -121,6 +122,12 @@ void statisticInit()
     statistic[i].compute1num = 0;
     statistic[i].compute2num = 0;
   }
+  statisticTimer = xTimerCreate("statisticTimer",
+                                          M2T(NEIGHBOR_SET_HOLD_TIME / 2),
+                                          pdTRUE,
+                                          (void *)0,
+                                          printStasticCallback);
+  xTimerStart(statisticTimer, M2T(0));
 }
 
 void rangingTableBufferUpdate(Ranging_Table_Tr_Rr_Buffer_t *rangingTableBuffer,
@@ -1524,16 +1531,17 @@ static Time_t generateRangingMessage(Ranging_Message_t *rangingMessage)
       /* It is possible that latestReceived is not the newest timestamp, because the newest may be in rxQueue
        * waiting to be handled.
        */
-      int randnum = rand() % 10;
-      if (randnum < 7)
-      {
-        rangingMessage->bodyUnits[bodyUnitNumber].timestamp = table->latestReceived;
-      }
-      else
-      {
-        Timestamp_Tuple_t empty = {.seqNumber = 0, .timestamp.full = 0};
-        rangingMessage->bodyUnits[bodyUnitNumber].timestamp = empty;
-      }
+      rangingMessage->bodyUnits[bodyUnitNumber].timestamp = table->latestReceived;
+      // int randnum = rand() % 10;
+      // if (randnum < 7)
+      // {
+      //   rangingMessage->bodyUnits[bodyUnitNumber].timestamp = table->latestReceived;
+      // }
+      // else
+      // {
+      //   Timestamp_Tuple_t empty = {.seqNumber = 0, .timestamp.full = 0};
+      //   rangingMessage->bodyUnits[bodyUnitNumber].timestamp = empty;
+      // }
       rangingMessage->header.filter |= 1 << (table->neighborAddress % 16);
       rangingTableOnEvent(table, RANGING_EVENT_TX_Tf);
 
@@ -1603,10 +1611,15 @@ static void uwbRangingTxTask(void *parameters)
     xSemaphoreTake(rangingTableSet.mu, portMAX_DELAY);
     xSemaphoreTake(neighborSet.mu, portMAX_DELAY);
 
-    Time_t taskDelay = RANGING_PERIOD + rand() % RANGING_PERIOD;
+    // Time_t taskDelay = RANGING_PERIOD + rand() % RANGING_PERIOD;
+    Time_t taskDelay = RANGING_PERIOD;
+    int randNum = rand() % 10;
     generateRangingMessage(rangingMessage);
     txPacketCache.header.length = sizeof(UWB_Packet_Header_t) + rangingMessage->header.msgLength;
-    uwbSendPacketBlock(&txPacketCache);
+    if (randNum < 7)
+    {
+      uwbSendPacketBlock(&txPacketCache);
+    }
     //    printRangingTableSet(&rangingTableSet);
     //    printNeighborSet(&neighborSet);
 
@@ -1708,16 +1721,20 @@ void rangingInit()
 }
 
 uint16_t getStatisticIndex = 3;
-uint16_t getStasticRecvSeq(){
+uint16_t getStasticRecvSeq()
+{
   return statistic[getStatisticIndex].recvSeq;
 }
-uint16_t getStasticRecvnum(){
+uint16_t getStasticRecvnum()
+{
   return statistic[getStatisticIndex].recvnum;
 }
-uint16_t getStasticCompute1num(){
+uint16_t getStasticCompute1num()
+{
   return statistic[getStatisticIndex].compute1num;
 }
-uint16_t getStasticCompute2num(){
+uint16_t getStasticCompute2num()
+{
   return statistic[getStatisticIndex].compute2num;
 }
 
