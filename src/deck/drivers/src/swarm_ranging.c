@@ -1273,7 +1273,7 @@ static void S4_RX_Rf(Ranging_Table_t *rangingTable)
                                                                                    rangingTable->Tf);
 
   //  printRangingTable(rangingTable);
-
+  DEBUG_PRINT("Tp:%d,Rf:%d\n",rangingTable->Tp.seqNumber,rangingTable->Rf.seqNumber);
   /* try to compute distance */
   int16_t distance = computeDistance(rangingTable->Tp, rangingTable->Rp,
                                      Tr_Rr_Candidate.Tr, Tr_Rr_Candidate.Rr,
@@ -1425,7 +1425,8 @@ static void processRangingMessage(Ranging_Message_With_Timestamp_t *rangingMessa
     }
   }
   Timestamp_Tuple_t Tf = findTfBySeqNumber(neighborRf.seqNumber);
-  if (Tf.timestamp.full)
+  
+  if (TfBuffer[TfBufferIndex].seqNumber == neighborRf.seqNumber)
   {
     neighborRangingTable->Rf = neighborRf;
     rangingTableOnEvent(neighborRangingTable, RANGING_EVENT_RX_Rf);
