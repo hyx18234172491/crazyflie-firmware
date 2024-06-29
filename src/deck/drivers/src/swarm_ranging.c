@@ -66,12 +66,12 @@ int16_t distanceTowards[NEIGHBOR_ADDRESS_MAX + 1] = {[0 ... NEIGHBOR_ADDRESS_MAX
 
 typedef struct Stastistic
 {
+  int recvSeq;
   int recvnum;
   int compute1num;
   int compute2num;
-  TimerHandle_t timer;
 } Stastistic;
-Stastistic statistic;
+Stastistic statistic[NEIGHBOR_ADDRESS_MAX + 1];
 
 int16_t getDistance(UWB_Address_t neighborAddress)
 {
@@ -106,23 +106,21 @@ void rangingTableTxRxHistoryInit(Ranging_Table_Tx_Rx_History_t *history)
 
 void printStasticCallback(TimerHandle_t timer)
 {
-  DEBUG_PRINT("recvnum:%d,compute1num:%d,compute2num:%d\n",
-              statistic.recvnum,
-              statistic.compute1num,
-              statistic.compute2num);
+  // DEBUG_PRINT("recvnum:%d,compute1num:%d,compute2num:%d\n",
+  //             statistic.recvnum,
+  //             statistic.compute1num,
+  //             statistic.compute2num);
 }
 
 void statisticInit()
 {
-  statistic.recvnum = 0;
-  statistic.compute1num = 0;
-  statistic.compute2num = 0;
-  statistic.timer = xTimerCreate("statisticTimer",
-                                 500,
-                                 pdTRUE,
-                                 (void *)0,
-                                 printStasticCallback);
-  xTimerStart(statistic.timer, M2T(0));
+  for (int i = 0; i <= NEIGHBOR_ADDRESS_MAX; i++)
+  {
+    statistic[i].recvSeq = 0;
+    statistic[i].recvnum = 0;
+    statistic[i].compute1num = 0;
+    statistic[i].compute2num = 0;
+  }
 }
 
 void rangingTableBufferUpdate(Ranging_Table_Tr_Rr_Buffer_t *rangingTableBuffer,
@@ -955,7 +953,6 @@ static int16_t computeDistance(Timestamp_Tuple_t Tp, Timestamp_Tuple_t Rp,
                                Timestamp_Tuple_t Tr, Timestamp_Tuple_t Rr,
                                Timestamp_Tuple_t Tf, Timestamp_Tuple_t Rf)
 {
-  statistic.compute1num++;
 
   bool isErrorOccurred = false;
 
@@ -1005,7 +1002,6 @@ static int16_t computeDistance2(Timestamp_Tuple_t Tx, Timestamp_Tuple_t Rx,
                                 Timestamp_Tuple_t Tp, Timestamp_Tuple_t Rp,
                                 Timestamp_Tuple_t Tr, Timestamp_Tuple_t Rr)
 {
-  statistic.compute2num++;
   bool isErrorOccurred = false;
 
   if (Tp.seqNumber != Rp.seqNumber || Tr.seqNumber != Rr.seqNumber || Tx.seqNumber != Rx.seqNumber)
@@ -1157,6 +1153,7 @@ static void S3_RX_NO_Rf(Ranging_Table_t *rangingTable)
                                       Tr_Rr_Candidate.Tr, Tr_Rr_Candidate.Rr);
   if (distance > 0)
   {
+    statistic[rangingTable->neighborAddress].compute2num++;
     rangingTable->distance = distance;
     setDistance(rangingTable->neighborAddress, distance);
   }
@@ -1188,6 +1185,7 @@ static void S3_RX_Rf(Ranging_Table_t *rangingTable)
                                       Tr_Rr_Candidate.Tr, Tr_Rr_Candidate.Rr);
   if (distance > 0)
   {
+    statistic[rangingTable->neighborAddress].compute2num++;
     rangingTable->distance = distance;
     setDistance(rangingTable->neighborAddress, distance);
   }
@@ -1233,6 +1231,7 @@ static void S4_RX_NO_Rf(Ranging_Table_t *rangingTable)
                                       Tr_Rr_Candidate.Tr, Tr_Rr_Candidate.Rr);
   if (distance > 0)
   {
+    statistic[rangingTable->neighborAddress].compute2num++;
     rangingTable->distance = distance;
     setDistance(rangingTable->neighborAddress, distance);
   }
@@ -1274,6 +1273,7 @@ static void S4_RX_Rf(Ranging_Table_t *rangingTable)
                                      rangingTable->Tf, rangingTable->Rf);
   if (distance > 0)
   {
+    statistic[rangingTable->neighborAddress].compute1num++;
     rangingTable->distance = distance;
     setDistance(rangingTable->neighborAddress, distance);
   }
@@ -1350,11 +1350,12 @@ void rangingTableOnEvent(Ranging_Table_t *table, RANGING_TABLE_EVENT event)
 /* Swarm Ranging */
 static void processRangingMessage(Ranging_Message_With_Timestamp_t *rangingMessageWithTimestamp)
 {
-  statistic.recvnum++;
-
   Ranging_Message_t *rangingMessage = &rangingMessageWithTimestamp->rangingMessage;
   uint16_t neighborAddress = rangingMessage->header.srcAddress;
   int neighborIndex = rangingTableSetSearchTable(&rangingTableSet, neighborAddress);
+
+  statistic[neighborAddress].recvnum++;
+  statistic[neighborAddress].recvSeq = rangingMessage->header.msgSequence;
 
   /* Handle new neighbor */
   if (neighborIndex == -1)
