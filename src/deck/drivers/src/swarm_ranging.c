@@ -66,10 +66,10 @@ int16_t distanceTowards[NEIGHBOR_ADDRESS_MAX + 1] = {[0 ... NEIGHBOR_ADDRESS_MAX
 
 typedef struct Stastistic
 {
-  int recvSeq;
-  int recvnum;
-  int compute1num;
-  int compute2num;
+  uint16_t recvSeq;
+  uint16_t recvnum;
+  uint16_t compute1num;
+  uint16_t compute2num;
 } Stastistic;
 Stastistic statistic[NEIGHBOR_ADDRESS_MAX + 1];
 
@@ -1707,6 +1707,20 @@ void rangingInit()
               ADHOC_DECK_TASK_PRI, &uwbRangingRxTaskHandle);
 }
 
+uint16_t getStatisticIndex = 3;
+uint16_t getStasticRecvSeq(){
+  return statistic[getStatisticIndex].recvSeq;
+}
+uint16_t getStasticRecvnum(){
+  return statistic[getStatisticIndex].recvnum;
+}
+uint16_t getStasticCompute1num(){
+  return statistic[getStatisticIndex].compute1num;
+}
+uint16_t getStasticCompute2num(){
+  return statistic[getStatisticIndex].compute2num;
+}
+
 LOG_GROUP_START(Ranging)
 LOG_ADD(LOG_INT16, distTo1, distanceTowards + 1)
 LOG_ADD(LOG_INT16, distTo2, distanceTowards + 2)
@@ -1719,3 +1733,10 @@ LOG_ADD(LOG_INT16, distTo8, distanceTowards + 8)
 LOG_ADD(LOG_INT16, distTo9, distanceTowards + 9)
 LOG_ADD(LOG_INT16, distTo10, distanceTowards + 10)
 LOG_GROUP_STOP(Ranging)
+
+LOG_GROUP_START(Statistic)
+LOG_ADD(LOG_UINT16, recvSeq, getStasticRecvSeq)
+LOG_ADD(LOG_UINT16, recvNum, getStasticRecvnum)
+LOG_ADD(LOG_UINT16, compute1num, getStasticCompute1num)
+LOG_ADD(LOG_UINT16, compute2num, getStasticCompute2num)
+LOG_GROUP_STOP(Statistic)
