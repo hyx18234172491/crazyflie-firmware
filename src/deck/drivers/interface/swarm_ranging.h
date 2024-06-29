@@ -26,7 +26,7 @@
 /* Ranging Struct Constants */
 #define RANGING_MESSAGE_SIZE_MAX UWB_PAYLOAD_SIZE_MAX
 #define RANGING_MESSAGE_PAYLOAD_SIZE_MAX (RANGING_MESSAGE_SIZE_MAX - sizeof(Ranging_Message_Header_t))
-#define RANGING_MAX_Tr_UNIT 3
+#define RANGING_MAX_Tr_UNIT 1
 #define RANGING_MAX_BODY_UNIT (RANGING_MESSAGE_PAYLOAD_SIZE_MAX / sizeof(Body_Unit_t))
 #define RANGING_TABLE_SIZE_MAX 20 // default up to 20 one-hop neighbors
 #define RANGING_TABLE_HOLD_TIME (6 * RANGING_PERIOD_MAX)
