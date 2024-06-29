@@ -949,7 +949,7 @@ static int16_t computeDistance(Timestamp_Tuple_t Tp, Timestamp_Tuple_t Rp,
   diff2 = tRound2 - tReply2;
   t = (diff1 * tReply2 + diff2 * tReply1 + diff2 * diff1) / (tRound1 + tRound2 + tReply1 + tReply2);
   int16_t distance = (int16_t)t * 0.4691763978616;
-
+  DEBUG_PRINT("compute dist 1:%d\n", distance);
   if (distance < 0)
   {
     DEBUG_PRINT("Ranging Error: distance < 0\n");
@@ -1561,9 +1561,10 @@ static void uwbRangingTxTask(void *parameters)
     xSemaphoreTake(neighborSet.mu, portMAX_DELAY);
 
     int randnum = rand() % 10;
-    Time_t taskDelay = generateRangingMessage(rangingMessage);
+    Time_t taskDelay = RANGING_PERIOD;
     if (randnum < 6)
     {
+      taskDelay = generateRangingMessage(rangingMessage);
       txPacketCache.header.length = sizeof(UWB_Packet_Header_t) + rangingMessage->header.msgLength;
       uwbSendPacketBlock(&txPacketCache);
     }
