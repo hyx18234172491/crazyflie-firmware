@@ -1426,7 +1426,7 @@ static void processRangingMessage(Ranging_Message_With_Timestamp_t *rangingMessa
   }
   Timestamp_Tuple_t Tf = findTfBySeqNumber(neighborRf.seqNumber);
 
-  if (neighborRf.seqNumber != neighborRangingTable->Tp.seqNumber)
+  if (neighborRf.seqNumber != neighborRangingTable->Tp.seqNumber && Tf.timestamp.full)
   {
     neighborRangingTable->Rf = neighborRf;
     rangingTableOnEvent(neighborRangingTable, RANGING_EVENT_RX_Rf);
