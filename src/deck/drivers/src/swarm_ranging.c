@@ -1274,12 +1274,26 @@ static void S4_RX_Rf(Ranging_Table_t *rangingTable)
   {
     Ranging_Table_Tr_Rr_Candidate_t Tr_Rr_Candidate = rangingTableBufferGetCandidate(&rangingTable->TrRrBuffer,
                                                                                      rangingTable->Tf);
+    bool history = false;
+    if (Tr_Rr_Candidate.Tr.timestamp.full == 0)
+    {
+      history = true;
+      Tr_Rr_Candidate.Tr = rangingTable->TxRxHistory.Tx;
+      Tr_Rr_Candidate.Rr = rangingTable->TxRxHistory.Rx;
+    }
     int16_t distance = computeDistance2(Tr_Rr_Candidate.Tr, Tr_Rr_Candidate.Rr,
                                         rangingTable->Tf, rangingTable->Rf,
                                         Tr_Rr_Candidate_latest.Tr, Tr_Rr_Candidate_latest.Rr);
     if (distance > 0)
     {
-      statistic[rangingTable->neighborAddress].compute2num++;
+      // 之所以这样写是因为，如果是基于缓存的只是计算的时间更近了，为了方便实验
+      if (history)
+      {
+        statistic[rangingTable->neighborAddress].compute2num++;
+      }else{
+        statistic[rangingTable->neighborAddress].compute1num++;
+      }
+
       rangingTable->distance = distance;
       setDistance(rangingTable->neighborAddress, distance);
     }
