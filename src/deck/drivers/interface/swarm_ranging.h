@@ -30,7 +30,7 @@
 #define RANGING_MAX_BODY_UNIT (RANGING_MESSAGE_PAYLOAD_SIZE_MAX / sizeof(Body_Unit_t))
 #define RANGING_TABLE_SIZE_MAX 20 // default up to 20 one-hop neighbors
 #define RANGING_TABLE_HOLD_TIME (6 * RANGING_PERIOD_MAX)
-#define Tr_Rr_BUFFER_POOL_SIZE 1
+#define Tr_Rr_BUFFER_POOL_SIZE 3
 // #define Tf_BUFFER_POOL_SIZE (2 * RANGING_PERIOD_MAX / RANGING_PERIOD_MIN)
 #define Tf_BUFFER_POOL_SIZE 3
 
@@ -178,7 +178,7 @@ typedef struct {
 /* Ranging Operations */
 void rangingInit();
 int16_t getDistance(UWB_Address_t neighborAddress);
-void setDistance(UWB_Address_t neighborAddress, int16_t distance);
+void setDistance(UWB_Address_t neighborAddress, int16_t distance,uint8_t source);
 
 /* Tr_Rr Buffer Operations */
 void rangingTableBufferInit(Ranging_Table_Tr_Rr_Buffer_t *rangingTableBuffer);

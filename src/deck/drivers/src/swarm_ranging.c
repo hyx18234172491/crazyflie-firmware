@@ -63,6 +63,7 @@ static Ranging_Table_t EMPTY_RANGING_TABLE = {
     .distance = -1};
 
 int16_t distanceTowards[NEIGHBOR_ADDRESS_MAX + 1] = {[0 ... NEIGHBOR_ADDRESS_MAX] = -1};
+uint8_t distanceSource[NEIGHBOR_ADDRESS_MAX + 1] = {[0 ... NEIGHBOR_ADDRESS_MAX] = -1};
 
 typedef struct Stastistic
 {
@@ -80,10 +81,11 @@ int16_t getDistance(UWB_Address_t neighborAddress)
   return distanceTowards[neighborAddress];
 }
 
-void setDistance(UWB_Address_t neighborAddress, int16_t distance)
+void setDistance(UWB_Address_t neighborAddress, int16_t distance,uint8_t source)
 {
   ASSERT(neighborAddress <= NEIGHBOR_ADDRESS_MAX);
   distanceTowards[neighborAddress] = distance;
+  distanceSource[neighborAddress] = source;
 }
 
 void rangingTableBufferInit(Ranging_Table_Tr_Rr_Buffer_t *rangingTableBuffer)
@@ -394,7 +396,7 @@ static int rangingTableSetClearExpire(Ranging_Table_Set_t *set)
       DEBUG_PRINT("rangingTableSetClearExpire: Clean ranging table for neighbor %u that expire at %lu.\n",
                   rangingTableSet.tables[i].neighborAddress,
                   rangingTableSet.tables[i].expirationTime);
-      setDistance(rangingTableSet.tables[i].neighborAddress, -1);
+      setDistance(rangingTableSet.tables[i].neighborAddress, -1,-1);
       rangingTableSet.tables[i] = EMPTY_RANGING_TABLE;
       evictionCount++;
     }
@@ -1162,7 +1164,7 @@ static void S3_RX_NO_Rf(Ranging_Table_t *rangingTable)
   {
     statistic[rangingTable->neighborAddress].compute2num++;
     rangingTable->distance = distance;
-    setDistance(rangingTable->neighborAddress, distance);
+    setDistance(rangingTable->neighborAddress, distance,2);
   }
   else
   {
@@ -1194,7 +1196,7 @@ static void S3_RX_Rf(Ranging_Table_t *rangingTable)
   {
     statistic[rangingTable->neighborAddress].compute2num++;
     rangingTable->distance = distance;
-    setDistance(rangingTable->neighborAddress, distance);
+    setDistance(rangingTable->neighborAddress, distance,2);
   }
   else
   {
@@ -1240,7 +1242,7 @@ static void S4_RX_NO_Rf(Ranging_Table_t *rangingTable)
   {
     statistic[rangingTable->neighborAddress].compute2num++;
     rangingTable->distance = distance;
-    setDistance(rangingTable->neighborAddress, distance);
+    setDistance(rangingTable->neighborAddress, distance,2);
   }
   else
   {
@@ -1290,12 +1292,14 @@ static void S4_RX_Rf(Ranging_Table_t *rangingTable)
       {
         // compute2 only focuse the number of times distance measurement is performed based on historical data
         statistic[rangingTable->neighborAddress].compute2num++;
+        setDistance(rangingTable->neighborAddress, distance,2);
       }else{
         statistic[rangingTable->neighborAddress].compute1num++;
+        setDistance(rangingTable->neighborAddress, distance,1);
       }
 
       rangingTable->distance = distance;
-      setDistance(rangingTable->neighborAddress, distance);
+      
     }
     else
     {
@@ -1340,7 +1344,7 @@ static void S4_RX_Rf(Ranging_Table_t *rangingTable)
     {
       statistic[rangingTable->neighborAddress].compute1num++;
       rangingTable->distance = distance;
-      setDistance(rangingTable->neighborAddress, distance);
+      setDistance(rangingTable->neighborAddress, distance,1);
     }
     else
     {
@@ -1825,5 +1829,6 @@ LOG_ADD(LOG_UINT16, recvSeq, &statistic[3].recvSeq)
 LOG_ADD(LOG_UINT16, recvNum, &statistic[3].recvnum)
 LOG_ADD(LOG_UINT16, compute1num, &statistic[3].compute1num)
 LOG_ADD(LOG_UINT16, compute2num, &statistic[3].compute2num)
-
+LOG_ADD(LOG_INT16, dist, &distanceTowards+3)
+LOG_ADD(LOG_UINT8, distSrc, &distanceSource+3)
 LOG_GROUP_STOP(Statistic)
