@@ -1286,9 +1286,9 @@ static void S4_RX_Rf(Ranging_Table_t *rangingTable)
                                         Tr_Rr_Candidate_latest.Tr, Tr_Rr_Candidate_latest.Rr);
     if (distance > 0)
     {
-      // 之所以这样写是因为，如果是基于缓存的只是计算的时间更近了，为了方便实验
       if (history)
       {
+        // compute2 only focuse the number of times distance measurement is performed based on historical data
         statistic[rangingTable->neighborAddress].compute2num++;
       }else{
         statistic[rangingTable->neighborAddress].compute1num++;
