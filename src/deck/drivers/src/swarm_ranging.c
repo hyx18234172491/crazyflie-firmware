@@ -1648,6 +1648,7 @@ static void uwbRangingRxTask(void *parameters)
   {
     if (xQueueReceive(rxQueue, &rxPacketCache, portMAX_DELAY))
     {
+      vTaskDelay(M2T(5));
       xSemaphoreTake(rangingTableSet.mu, portMAX_DELAY);
       xSemaphoreTake(neighborSet.mu, portMAX_DELAY);
 
