@@ -1533,8 +1533,8 @@ static Time_t generateRangingMessage(Ranging_Message_t *rangingMessage)
        * waiting to be handled.
        */
       rangingMessage->bodyUnits[bodyUnitNumber].timestamp = table->latestReceived;
-      table->latestReceived.seqNumber = 0;
-      table->latestReceived.timestamp.full=0;
+      // table->latestReceived.seqNumber = 0;
+      // table->latestReceived.timestamp.full=0;
       // int randnum = rand() % 10;
       // if (randnum < 7)
       // {
