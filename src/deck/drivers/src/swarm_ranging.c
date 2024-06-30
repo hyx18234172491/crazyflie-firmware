@@ -1268,49 +1268,95 @@ static void S4_RX_Rf(Ranging_Table_t *rangingTable)
 
   /* Find corresponding Tf in TfBuffer, it is possible that can not find corresponding Tf. */
   rangingTable->Tf = findTfBySeqNumber(rangingTable->Rf.seqNumber);
-
-  Ranging_Table_Tr_Rr_Candidate_t Tr_Rr_Candidate = rangingTableBufferGetCandidate(&rangingTable->TrRrBuffer,
-                                                                                   rangingTable->Tf);
-
-  //  printRangingTable(rangingTable);
-  DEBUG_PRINT("Tp:%d,Rf:%d\n", rangingTable->Tp.seqNumber, rangingTable->Rf.seqNumber);
-  /* try to compute distance */
-  int16_t distance = computeDistance(rangingTable->Tp, rangingTable->Rp,
-                                     Tr_Rr_Candidate.Tr, Tr_Rr_Candidate.Rr,
-                                     rangingTable->Tf, rangingTable->Rf);
-  if (distance > 0)
+  Ranging_Table_Tr_Rr_Candidate_t Tr_Rr_Candidate_latest = rangingTableBufferGetLatest(&rangingTable->TrRrBuffer);
+  // if 情况是出现了乱序
+  if (Tr_Rr_Candidate_latest.Rr.timestamp.full % UWB_MAX_TIMESTAMP > rangingTable->Tf.timestamp.full % UWB_MAX_TIMESTAMP)
   {
-    statistic[rangingTable->neighborAddress].compute1num++;
-    rangingTable->distance = distance;
-    setDistance(rangingTable->neighborAddress, distance);
+    Ranging_Table_Tr_Rr_Candidate_t Tr_Rr_Candidate = rangingTableBufferGetCandidate(&rangingTable->TrRrBuffer,
+                                                                                     rangingTable->Tf);
+    int16_t distance = computeDistance2(Tr_Rr_Candidate.Tr, Tr_Rr_Candidate.Rr,
+                                        rangingTable->Tf, rangingTable->Rf,
+                                        Tr_Rr_Candidate_latest.Tr, Tr_Rr_Candidate_latest.Rr);
+    if (distance > 0)
+    {
+      statistic[rangingTable->neighborAddress].compute2num++;
+      rangingTable->distance = distance;
+      setDistance(rangingTable->neighborAddress, distance);
+    }
+    else
+    {
+      //    DEBUG_PRINT("distance is not updated since some error occurs\n");
+    }
+    /* update history tx,rx
+     *
+     */
+    rangingTable->TxRxHistory.Tx = Tr_Rr_Candidate.Tr;
+    rangingTable->TxRxHistory.Rx = Tr_Rr_Candidate.Rr;
+    /* Shift ranging table
+     * Rp <- Rf
+     * Tp <- Tf  Rr <- Re
+     */
+    rangingTable->Rp = rangingTable->Rf;
+    rangingTable->Tp = rangingTable->Tf;
+    rangingTable->TrRrBuffer.candidates[rangingTable->TrRrBuffer.cur].Rr = rangingTable->Re;
+
+    Timestamp_Tuple_t empty = {.timestamp.full = 0, .seqNumber = 0};
+    rangingTable->Rf = empty;
+    rangingTable->Tf = empty;
+    rangingTable->Re = empty;
+
+    // TODO: check if valid
+    rangingTable->state = RANGING_STATE_S3;
+
+    RANGING_TABLE_STATE curState = rangingTable->state;
   }
   else
   {
-    //    DEBUG_PRINT("distance is not updated since some error occurs\n");
+
+    Ranging_Table_Tr_Rr_Candidate_t Tr_Rr_Candidate = rangingTableBufferGetCandidate(&rangingTable->TrRrBuffer,
+                                                                                     rangingTable->Tf);
+
+    //  printRangingTable(rangingTable);
+    DEBUG_PRINT("Tp:%d,Rf:%d\n", rangingTable->Tp.seqNumber, rangingTable->Rf.seqNumber);
+    /* try to compute distance */
+    int16_t distance = computeDistance(rangingTable->Tp, rangingTable->Rp,
+                                       Tr_Rr_Candidate.Tr, Tr_Rr_Candidate.Rr,
+                                       rangingTable->Tf, rangingTable->Rf);
+    if (distance > 0)
+    {
+      statistic[rangingTable->neighborAddress].compute1num++;
+      rangingTable->distance = distance;
+      setDistance(rangingTable->neighborAddress, distance);
+    }
+    else
+    {
+      //    DEBUG_PRINT("distance is not updated since some error occurs\n");
+    }
+    /* update history tx,rx
+     *
+     */
+    rangingTable->TxRxHistory.Tx = Tr_Rr_Candidate.Tr;
+    rangingTable->TxRxHistory.Rx = Tr_Rr_Candidate.Rr;
+
+    /* Shift ranging table
+     * Rp <- Rf
+     * Tp <- Tf  Rr <- Re
+     */
+    rangingTable->Rp = rangingTable->Rf;
+    rangingTable->Tp = rangingTable->Tf;
+    rangingTable->TrRrBuffer.candidates[rangingTable->TrRrBuffer.cur].Rr = rangingTable->Re;
+
+    Timestamp_Tuple_t empty = {.timestamp.full = 0, .seqNumber = 0};
+    rangingTable->Rf = empty;
+    rangingTable->Tf = empty;
+    rangingTable->Re = empty;
+
+    // TODO: check if valid
+    rangingTable->state = RANGING_STATE_S3;
+
+    RANGING_TABLE_STATE curState = rangingTable->state;
   }
-  /* update history tx,rx
-   *
-   */
-  rangingTable->TxRxHistory.Tx = Tr_Rr_Candidate.Tr;
-  rangingTable->TxRxHistory.Rx = Tr_Rr_Candidate.Rr;
 
-  /* Shift ranging table
-   * Rp <- Rf
-   * Tp <- Tf  Rr <- Re
-   */
-  rangingTable->Rp = rangingTable->Rf;
-  rangingTable->Tp = rangingTable->Tf;
-  rangingTable->TrRrBuffer.candidates[rangingTable->TrRrBuffer.cur].Rr = rangingTable->Re;
-
-  Timestamp_Tuple_t empty = {.timestamp.full = 0, .seqNumber = 0};
-  rangingTable->Rf = empty;
-  rangingTable->Tf = empty;
-  rangingTable->Re = empty;
-
-  // TODO: check if valid
-  rangingTable->state = RANGING_STATE_S3;
-
-  RANGING_TABLE_STATE curState = rangingTable->state;
   //  DEBUG_PRINT("S4_RX_Rf: S%d -> S%d\n", prevState, curState);
 }
 
