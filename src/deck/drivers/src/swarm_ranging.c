@@ -1619,16 +1619,16 @@ static void uwbRangingTxTask(void *parameters)
     int randNum = rand() % 10;
     generateRangingMessage(rangingMessage);
     txPacketCache.header.length = sizeof(UWB_Packet_Header_t) + rangingMessage->header.msgLength;
-    if (randNum < 7)
-    {
-      uwbSendPacketBlock(&txPacketCache);
-    }
-    else
-    {
-      Timestamp_Tuple_t timestamp = {.timestamp = 0, .seqNumber = rangingMessage->header.msgSequence};
-      updateTfBuffer(timestamp);
-    }
-    // uwbSendPacketBlock(&txPacketCache);
+    // if (randNum < 7)
+    // {
+    //   uwbSendPacketBlock(&txPacketCache);
+    // }
+    // else
+    // {
+    //   Timestamp_Tuple_t timestamp = {.timestamp = 0, .seqNumber = rangingMessage->header.msgSequence};
+    //   updateTfBuffer(timestamp);
+    // }
+    uwbSendPacketBlock(&txPacketCache);
     //    printRangingTableSet(&rangingTableSet);
     //    printNeighborSet(&neighborSet);
 
