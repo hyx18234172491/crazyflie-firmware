@@ -1689,7 +1689,7 @@ static void uwbRangingTxTask(void *parameters)
     }
     else
     {
-      Timestamp_Tuple_t timestamp = {.timestamp = 0, .seqNumber = rangingMessage->header.msgSequence};
+      Timestamp_Tuple_t timestamp = {.timestamp.full = 0, .seqNumber = rangingMessage->header.msgSequence};
       updateTfBuffer(timestamp);
     }
     // uwbSendPacketBlock(&txPacketCache);
