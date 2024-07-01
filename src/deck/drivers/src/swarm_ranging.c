@@ -81,7 +81,7 @@ int16_t getDistance(UWB_Address_t neighborAddress)
   return distanceTowards[neighborAddress];
 }
 
-void setDistance(UWB_Address_t neighborAddress, int16_t distance,uint8_t source)
+void setDistance(UWB_Address_t neighborAddress, int16_t distance, uint8_t source)
 {
   ASSERT(neighborAddress <= NEIGHBOR_ADDRESS_MAX);
   distanceTowards[neighborAddress] = distance;
@@ -396,7 +396,7 @@ static int rangingTableSetClearExpire(Ranging_Table_Set_t *set)
       DEBUG_PRINT("rangingTableSetClearExpire: Clean ranging table for neighbor %u that expire at %lu.\n",
                   rangingTableSet.tables[i].neighborAddress,
                   rangingTableSet.tables[i].expirationTime);
-      setDistance(rangingTableSet.tables[i].neighborAddress, -1,-1);
+      setDistance(rangingTableSet.tables[i].neighborAddress, -1, -1);
       rangingTableSet.tables[i] = EMPTY_RANGING_TABLE;
       evictionCount++;
     }
@@ -967,6 +967,7 @@ static int16_t computeDistance(Timestamp_Tuple_t Tp, Timestamp_Tuple_t Rp,
 
   if (Tp.seqNumber != Rp.seqNumber || Tr.seqNumber != Rr.seqNumber || Tf.seqNumber != Rf.seqNumber)
   {
+    DEBUG_PRINT("Tp:%d,Rp:%d,Tr:%d,Rr:%d,Tf:%d,Rf:%d\n", Tp.seqNumber, Rp.seqNumber, Tr.seqNumber, Rr.seqNumber, Tf.seqNumber, Rf.seqNumber);
     DEBUG_PRINT("Ranging Error: sequence number mismatch\n");
     isErrorOccurred = true;
   }
@@ -1164,7 +1165,7 @@ static void S3_RX_NO_Rf(Ranging_Table_t *rangingTable)
   {
     statistic[rangingTable->neighborAddress].compute2num++;
     rangingTable->distance = distance;
-    setDistance(rangingTable->neighborAddress, distance,2);
+    setDistance(rangingTable->neighborAddress, distance, 2);
   }
   else
   {
@@ -1196,7 +1197,7 @@ static void S3_RX_Rf(Ranging_Table_t *rangingTable)
   {
     statistic[rangingTable->neighborAddress].compute2num++;
     rangingTable->distance = distance;
-    setDistance(rangingTable->neighborAddress, distance,2);
+    setDistance(rangingTable->neighborAddress, distance, 2);
   }
   else
   {
@@ -1242,7 +1243,7 @@ static void S4_RX_NO_Rf(Ranging_Table_t *rangingTable)
   {
     statistic[rangingTable->neighborAddress].compute2num++;
     rangingTable->distance = distance;
-    setDistance(rangingTable->neighborAddress, distance,2);
+    setDistance(rangingTable->neighborAddress, distance, 2);
   }
   else
   {
@@ -1292,14 +1293,15 @@ static void S4_RX_Rf(Ranging_Table_t *rangingTable)
       {
         // compute2 only focuse the number of times distance measurement is performed based on historical data
         statistic[rangingTable->neighborAddress].compute2num++;
-        setDistance(rangingTable->neighborAddress, distance,2);
-      }else{
+        setDistance(rangingTable->neighborAddress, distance, 2);
+      }
+      else
+      {
         statistic[rangingTable->neighborAddress].compute1num++;
-        setDistance(rangingTable->neighborAddress, distance,1);
+        setDistance(rangingTable->neighborAddress, distance, 1);
       }
 
       rangingTable->distance = distance;
-      
     }
     else
     {
@@ -1335,7 +1337,7 @@ static void S4_RX_Rf(Ranging_Table_t *rangingTable)
                                                                                      rangingTable->Tf);
 
     //  printRangingTable(rangingTable);
-    DEBUG_PRINT("Tp:%d,Rf:%d\n", rangingTable->Tp.seqNumber, rangingTable->Rf.seqNumber);
+    // DEBUG_PRINT("Tp:%d,Rf:%d\n", rangingTable->Tp.seqNumber, rangingTable->Rf.seqNumber);
     /* try to compute distance */
     int16_t distance = computeDistance(rangingTable->Tp, rangingTable->Rp,
                                        Tr_Rr_Candidate.Tr, Tr_Rr_Candidate.Rr,
@@ -1344,7 +1346,7 @@ static void S4_RX_Rf(Ranging_Table_t *rangingTable)
     {
       statistic[rangingTable->neighborAddress].compute1num++;
       rangingTable->distance = distance;
-      setDistance(rangingTable->neighborAddress, distance,1);
+      setDistance(rangingTable->neighborAddress, distance, 1);
     }
     else
     {
@@ -1597,8 +1599,8 @@ static Time_t generateRangingMessage(Ranging_Message_t *rangingMessage)
        * waiting to be handled.
        */
       rangingMessage->bodyUnits[bodyUnitNumber].timestamp = table->latestReceived;
-      table->latestReceived.seqNumber = 0;
-      table->latestReceived.timestamp.full=0;
+      // table->latestReceived.seqNumber = 0;
+      // table->latestReceived.timestamp.full = 0;
       // int randnum = rand() % 10;
       // if (randnum < 7)
       // {
@@ -1680,19 +1682,19 @@ static void uwbRangingTxTask(void *parameters)
 
     // Time_t taskDelay = RANGING_PERIOD + rand() % RANGING_PERIOD;
     Time_t taskDelay = RANGING_PERIOD;
-    int randNum = rand() % 10;
+    // int randNum = rand() % 20;
     generateRangingMessage(rangingMessage);
     txPacketCache.header.length = sizeof(UWB_Packet_Header_t) + rangingMessage->header.msgLength;
-    if (randNum < 7)
-    {
-      uwbSendPacketBlock(&txPacketCache);
-    }
-    else
-    {
-      Timestamp_Tuple_t timestamp = {.timestamp.full = 0, .seqNumber = rangingMessage->header.msgSequence};
-      updateTfBuffer(timestamp);
-    }
-    // uwbSendPacketBlock(&txPacketCache);
+    // if (randNum < 17)
+    // {
+    //   uwbSendPacketBlock(&txPacketCache);
+    // }
+    // else
+    // {
+    //   Timestamp_Tuple_t timestamp = {.timestamp.full = 0, .seqNumber = rangingMessage->header.msgSequence};
+    //   updateTfBuffer(timestamp);
+    // }
+    uwbSendPacketBlock(&txPacketCache);
     //    printRangingTableSet(&rangingTableSet);
     //    printNeighborSet(&neighborSet);
 
@@ -1712,14 +1714,18 @@ static void uwbRangingRxTask(void *parameters)
   {
     if (xQueueReceive(rxQueue, &rxPacketCache, portMAX_DELAY))
     {
-      xSemaphoreTake(rangingTableSet.mu, portMAX_DELAY);
-      xSemaphoreTake(neighborSet.mu, portMAX_DELAY);
+      int randNum = rand() % 20;
+      if (randNum < 15)
+      {
+        xSemaphoreTake(rangingTableSet.mu, portMAX_DELAY);
+        xSemaphoreTake(neighborSet.mu, portMAX_DELAY);
 
-      processRangingMessage(&rxPacketCache);
-      topologySensing(&rxPacketCache.rangingMessage);
+        processRangingMessage(&rxPacketCache);
+        topologySensing(&rxPacketCache.rangingMessage);
 
-      xSemaphoreGive(neighborSet.mu);
-      xSemaphoreGive(rangingTableSet.mu);
+        xSemaphoreGive(neighborSet.mu);
+        xSemaphoreGive(rangingTableSet.mu);
+      }
     }
     vTaskDelay(M2T(1));
   }
@@ -1829,6 +1835,6 @@ LOG_ADD(LOG_UINT16, recvSeq, &statistic[3].recvSeq)
 LOG_ADD(LOG_UINT16, recvNum, &statistic[3].recvnum)
 LOG_ADD(LOG_UINT16, compute1num, &statistic[3].compute1num)
 LOG_ADD(LOG_UINT16, compute2num, &statistic[3].compute2num)
-LOG_ADD(LOG_INT16, dist, &distanceTowards+3)
-LOG_ADD(LOG_UINT8, distSrc, &distanceSource+3)
+LOG_ADD(LOG_INT16, dist, &distanceTowards + 3)
+LOG_ADD(LOG_UINT8, distSrc, &distanceSource + 3)
 LOG_GROUP_STOP(Statistic)
