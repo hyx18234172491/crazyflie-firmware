@@ -186,7 +186,7 @@ void rangingTableBufferUpdate(Ranging_Table_Tr_Rr_Buffer_t *rangingTableBuffer,
                               Timestamp_Tuple_t Tr,
                               Timestamp_Tuple_t Rr);
 Ranging_Table_Tr_Rr_Candidate_t rangingTableBufferGetCandidate(Ranging_Table_Tr_Rr_Buffer_t *rangingTableBuffer,
-                                                               Timestamp_Tuple_t Tf);
+                                                               Timestamp_Tuple_t Tf,Timestamp_Tuple_t Tp);
 
 /* Tf Buffer Operations */
 void updateTfBuffer(Timestamp_Tuple_t timestamp);

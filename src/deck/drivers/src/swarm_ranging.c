@@ -110,9 +110,9 @@ void rangingTableTxRxHistoryInit(Ranging_Table_Tx_Rx_History_t *history)
 void printStasticCallback(TimerHandle_t timer)
 {
   DEBUG_PRINT("recvnum:%d,compute1num:%d,compute2num:%d\n",
-              statistic[3].recvnum,
-              statistic[3].compute1num,
-              statistic[3].compute2num);
+              statistic[1].recvnum,
+              statistic[1].compute1num,
+              statistic[1].compute2num);
 }
 
 void statisticInit()
@@ -144,16 +144,20 @@ void rangingTableBufferUpdate(Ranging_Table_Tr_Rr_Buffer_t *rangingTableBuffer,
 }
 
 Ranging_Table_Tr_Rr_Candidate_t rangingTableBufferGetCandidate(Ranging_Table_Tr_Rr_Buffer_t *rangingTableBuffer,
-                                                               Timestamp_Tuple_t Tf)
+                                                               Timestamp_Tuple_t Tf,Timestamp_Tuple_t Tp)
 {
   set_index_t index = rangingTableBuffer->latest;
   uint64_t rightBound = Tf.timestamp.full % UWB_MAX_TIMESTAMP;
+  uint64_t leftBound = Tp.timestamp.full % UWB_MAX_TIMESTAMP;
   Ranging_Table_Tr_Rr_Candidate_t candidate = {.Rr.timestamp.full = 0, .Tr.timestamp.full = 0};
 
   for (int count = 0; count < Tr_Rr_BUFFER_POOL_SIZE; count++)
   {
     if (rangingTableBuffer->candidates[index].Rr.timestamp.full &&
-        rangingTableBuffer->candidates[index].Rr.timestamp.full % UWB_MAX_TIMESTAMP < rightBound)
+        rangingTableBuffer->candidates[index].Rr.timestamp.full % UWB_MAX_TIMESTAMP < rightBound && 
+        rangingTableBuffer->candidates[index].Rr.timestamp.full % UWB_MAX_TIMESTAMP > leftBound &&
+        rangingTableBuffer->candidates[index].Rr.seqNumber == rangingTableBuffer->candidates[index].Tr.seqNumber
+        )
     {
       candidate.Tr = rangingTableBuffer->candidates[index].Tr;
       candidate.Rr = rangingTableBuffer->candidates[index].Rr;
@@ -965,9 +969,10 @@ static int16_t computeDistance(Timestamp_Tuple_t Tp, Timestamp_Tuple_t Rp,
 
   bool isErrorOccurred = false;
 
+  DEBUG_PRINT("Tp:%d,Rp:%d,Tr:%d,Rr:%d,Tf:%d,Rf:%d\n", Tp.seqNumber, Rp.seqNumber, Tr.seqNumber, Rr.seqNumber, Tf.seqNumber, Rf.seqNumber);
   if (Tp.seqNumber != Rp.seqNumber || Tr.seqNumber != Rr.seqNumber || Tf.seqNumber != Rf.seqNumber)
   {
-    DEBUG_PRINT("Tp:%d,Rp:%d,Tr:%d,Rr:%d,Tf:%d,Rf:%d\n", Tp.seqNumber, Rp.seqNumber, Tr.seqNumber, Rr.seqNumber, Tf.seqNumber, Rf.seqNumber);
+    // DEBUG_PRINT("Tp:%d,Rp:%d,Tr:%d,Rr:%d,Tf:%d,Rf:%d\n", Tp.seqNumber, Rp.seqNumber, Tr.seqNumber, Rr.seqNumber, Tf.seqNumber, Rf.seqNumber);
     DEBUG_PRINT("Ranging Error: sequence number mismatch\n");
     isErrorOccurred = true;
   }
@@ -1013,6 +1018,7 @@ static int16_t computeDistance2(Timestamp_Tuple_t Tx, Timestamp_Tuple_t Rx,
                                 Timestamp_Tuple_t Tr, Timestamp_Tuple_t Rr)
 {
   bool isErrorOccurred = false;
+  DEBUG_PRINT("Tx:%d,Rx:%d,Tp:%d,Rp:%d,Tr:%d,Rr:%d\n", Tx.seqNumber, Rx.seqNumber, Tp.seqNumber, Rp.seqNumber, Tr.seqNumber, Rr.seqNumber);
 
   if (Tp.seqNumber != Rp.seqNumber || Tr.seqNumber != Rr.seqNumber || Tx.seqNumber != Rx.seqNumber)
   {
@@ -1276,7 +1282,7 @@ static void S4_RX_Rf(Ranging_Table_t *rangingTable)
   if (Tr_Rr_Candidate_latest.Rr.timestamp.full % UWB_MAX_TIMESTAMP > rangingTable->Tf.timestamp.full % UWB_MAX_TIMESTAMP)
   {
     Ranging_Table_Tr_Rr_Candidate_t Tr_Rr_Candidate = rangingTableBufferGetCandidate(&rangingTable->TrRrBuffer,
-                                                                                     rangingTable->Tf);
+                                                                                     rangingTable->Tf,rangingTable->Tp);
     bool history = false;
     if (Tr_Rr_Candidate.Tr.timestamp.full == 0)
     {
@@ -1334,7 +1340,7 @@ static void S4_RX_Rf(Ranging_Table_t *rangingTable)
   {
 
     Ranging_Table_Tr_Rr_Candidate_t Tr_Rr_Candidate = rangingTableBufferGetCandidate(&rangingTable->TrRrBuffer,
-                                                                                     rangingTable->Tf);
+                                                                                     rangingTable->Tf,rangingTable->Tp);
 
     //  printRangingTable(rangingTable);
     // DEBUG_PRINT("Tp:%d,Rf:%d\n", rangingTable->Tp.seqNumber, rangingTable->Rf.seqNumber);
@@ -1681,7 +1687,7 @@ static void uwbRangingTxTask(void *parameters)
     xSemaphoreTake(neighborSet.mu, portMAX_DELAY);
 
     // Time_t taskDelay = RANGING_PERIOD + rand() % RANGING_PERIOD;
-    Time_t taskDelay = RANGING_PERIOD;
+    Time_t taskDelay = RANGING_PERIOD-2+rand()%5;
     // int randNum = rand() % 20;
     generateRangingMessage(rangingMessage);
     txPacketCache.header.length = sizeof(UWB_Packet_Header_t) + rangingMessage->header.msgLength;
@@ -1831,10 +1837,17 @@ LOG_ADD(LOG_INT16, distTo10, distanceTowards + 10)
 LOG_GROUP_STOP(Ranging)
 
 LOG_GROUP_START(Statistic)
-LOG_ADD(LOG_UINT16, recvSeq, &statistic[3].recvSeq)
-LOG_ADD(LOG_UINT16, recvNum, &statistic[3].recvnum)
-LOG_ADD(LOG_UINT16, compute1num, &statistic[3].compute1num)
-LOG_ADD(LOG_UINT16, compute2num, &statistic[3].compute2num)
-LOG_ADD(LOG_INT16, dist, distanceTowards + 3)
-LOG_ADD(LOG_UINT8, distSrc, distanceSource + 3)
+LOG_ADD(LOG_UINT16, recvSeq2, &statistic[2].recvSeq)
+LOG_ADD(LOG_UINT16, recvNum2, &statistic[2].recvnum)
+LOG_ADD(LOG_UINT16, compute1num2, &statistic[2].compute1num)
+LOG_ADD(LOG_UINT16, compute2num2, &statistic[2].compute2num)
+LOG_ADD(LOG_INT16, dist2, distanceTowards + 2)
+LOG_ADD(LOG_UINT8, distSrc2, distanceSource + 2)
+
+LOG_ADD(LOG_UINT16, recvSeq1, &statistic[1].recvSeq)
+LOG_ADD(LOG_UINT16, recvNum1, &statistic[1].recvnum)
+LOG_ADD(LOG_UINT16, compute1num1, &statistic[1].compute1num)
+LOG_ADD(LOG_UINT16, compute2num1, &statistic[1].compute2num)
+LOG_ADD(LOG_INT16, dist1, distanceTowards + 1)
+LOG_ADD(LOG_UINT8, distSrc1, distanceSource + 1)
 LOG_GROUP_STOP(Statistic)
