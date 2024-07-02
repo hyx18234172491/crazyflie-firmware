@@ -1715,7 +1715,7 @@ static void uwbRangingRxTask(void *parameters)
     if (xQueueReceive(rxQueue, &rxPacketCache, portMAX_DELAY))
     {
       int randNum = rand() % 20;
-      if (randNum < 15)
+      if (randNum < 14)
       {
         xSemaphoreTake(rangingTableSet.mu, portMAX_DELAY);
         xSemaphoreTake(neighborSet.mu, portMAX_DELAY);
@@ -1835,6 +1835,6 @@ LOG_ADD(LOG_UINT16, recvSeq, &statistic[3].recvSeq)
 LOG_ADD(LOG_UINT16, recvNum, &statistic[3].recvnum)
 LOG_ADD(LOG_UINT16, compute1num, &statistic[3].compute1num)
 LOG_ADD(LOG_UINT16, compute2num, &statistic[3].compute2num)
-LOG_ADD(LOG_INT16, dist, &distanceTowards + 3)
-LOG_ADD(LOG_UINT8, distSrc, &distanceSource + 3)
+LOG_ADD(LOG_INT16, dist, distanceTowards + 3)
+LOG_ADD(LOG_UINT8, distSrc, distanceSource + 3)
 LOG_GROUP_STOP(Statistic)
