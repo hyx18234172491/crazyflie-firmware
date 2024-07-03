@@ -1362,6 +1362,134 @@ void rangingTableOnEvent(Ranging_Table_t *table, RANGING_TABLE_EVENT event)
   EVENT_HANDLER[table->state][event](table);
 }
 
+
+//liujiangpeng add
+void initNeighborStateInfoAndMedian_data()
+{
+  for (int i = 0; i < RANGING_TABLE_SIZE + 1; i++)
+  {
+    tx_rv_interval_history[i].latest_data_index = 0;
+    tx_rv_interval_history[i].interval[0] = 1000;
+    median_data[i].index_inserting = 0;
+    neighborStateInfo.refresh[i] = false;
+    neighborStateInfo.isAlreadyTakeoff[i] = false;
+  }
+}
+
+void initLeaderStateInfo()
+{
+  leaderStateInfo.keepFlying = false;
+  leaderStateInfo.address = 0;
+  leaderStateInfo.stage = ZERO_STAGE;
+  // DEBUG_PRINT("--init--%d\n",leaderStateInfo.stage);
+}
+int8_t getLeaderStage()
+{
+  // DEBUG_PRINT("--get--%d\n",leaderStateInfo.stage);
+  return leaderStateInfo.stage;
+}
+
+void setMyTakeoff(bool isAlreadyTakeoff)
+{
+  MYisAlreadyTakeoff = isAlreadyTakeoff;
+}
+
+void setNeighborStateInfo(uint16_t neighborAddress, int16_t distance, Ranging_Message_Header_t *rangingMessageHeader)
+{
+  ASSERT(neighborAddress <= RANGING_TABLE_SIZE);
+  neighborStateInfo.distanceTowards[neighborAddress] = distance;
+  neighborStateInfo.velocityXInWorld[neighborAddress] = rangingMessageHeader->velocityXInWorld;
+  neighborStateInfo.velocityYInWorld[neighborAddress] = rangingMessageHeader->velocityYInWorld;
+  neighborStateInfo.gyroZ[neighborAddress] = rangingMessageHeader->gyroZ;
+  neighborStateInfo.positionZ[neighborAddress] = rangingMessageHeader->positionZ;
+  neighborStateInfo.refresh[neighborAddress] = true;
+  if (neighborAddress == leaderStateInfo.address)
+  { /*无人机的keep_flying都是由0号无人机来设置的*/
+    leaderStateInfo.keepFlying = rangingMessageHeader->keep_flying;
+    leaderStateInfo.stage = rangingMessageHeader->stage;
+    // DEBUG_PRINT("--before recv--%d\n",leaderStateInfo.stage);
+    // DEBUG_PRINT("--recv--%d\n",leaderStateInfo.stage);
+  }
+}
+
+bool getOrSetKeepflying(uint16_t uwbAddress, bool keep_flying)
+{
+  if (uwbAddress == leaderStateInfo.address)
+  {
+    if (leaderStateInfo.keepFlying == false && keep_flying == true)
+    {
+      leaderStateInfo.keepFlyingTrueTick = xTaskGetTickCount();
+    }
+    leaderStateInfo.keepFlying = keep_flying;
+    return keep_flying;
+  }
+  else
+  {
+    return leaderStateInfo.keepFlying;
+  }
+}
+
+void setNeighborStateInfo_isNewAdd(uint16_t neighborAddress, bool isNewAddNeighbor)
+{
+  if (isNewAddNeighbor == true)
+  {
+    neighborStateInfo.isNewAdd[neighborAddress] = true;
+    neighborStateInfo.isNewAddUsed[neighborAddress] = false;
+  }
+  else
+  {
+    if (neighborStateInfo.isNewAddUsed[neighborAddress] == true)
+    {
+      neighborStateInfo.isNewAdd[neighborAddress] = false;
+    }
+  }
+}
+
+bool getNeighborStateInfo(uint16_t neighborAddress,
+                          uint16_t *distance,
+                          short *vx,
+                          short *vy,
+                          float *gyroZ,
+                          uint16_t *height,
+                          bool *isNewAddNeighbor)
+{
+  if (neighborStateInfo.refresh[neighborAddress] == true && leaderStateInfo.keepFlying == true)
+  {
+    neighborStateInfo.refresh[neighborAddress] = false;
+    *distance = neighborStateInfo.distanceTowards[neighborAddress];
+    *vx = neighborStateInfo.velocityXInWorld[neighborAddress];
+    *vy = neighborStateInfo.velocityYInWorld[neighborAddress];
+    *gyroZ = neighborStateInfo.gyroZ[neighborAddress];
+    *height = neighborStateInfo.positionZ[neighborAddress];
+    *isNewAddNeighbor = neighborStateInfo.isNewAdd[neighborAddress];
+    neighborStateInfo.isNewAddUsed[neighborAddress] = true;
+    return true;
+  }
+  else
+  {
+    return false;
+  }
+}
+
+void getCurrentNeighborAddressInfo_t(currentNeighborAddressInfo_t *currentNeighborAddressInfo)
+{
+  /*--11添加--*/
+  xSemaphoreTake(rangingTableSetMutex, portMAX_DELAY);
+  currentNeighborAddressInfo->size = 0;
+  int i = 0;
+  set_index_t iter = rangingTableSet.fullQueueEntry;
+  while (iter != -1)
+  {
+    Ranging_Table_Set_Item_t cur = rangingTableSet.setData[iter];
+    currentNeighborAddressInfo->address[i] = cur.data.neighborAddress;
+    currentNeighborAddressInfo->size++;
+    i++;
+    iter = cur.next;
+  }
+  xSemaphoreGive(rangingTableSetMutex);
+  /*--11添加--*/
+}
+
 /* Swarm Ranging */
 static void processRangingMessage(Ranging_Message_With_Timestamp_t *rangingMessageWithTimestamp)
 {
