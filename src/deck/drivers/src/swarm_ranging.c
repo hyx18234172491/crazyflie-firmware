@@ -144,7 +144,7 @@ void rangingTableBufferUpdate(Ranging_Table_Tr_Rr_Buffer_t *rangingTableBuffer,
 }
 
 Ranging_Table_Tr_Rr_Candidate_t rangingTableBufferGetCandidate(Ranging_Table_Tr_Rr_Buffer_t *rangingTableBuffer,
-                                                               Timestamp_Tuple_t Tf,Timestamp_Tuple_t Tp)
+                                                               Timestamp_Tuple_t Tf, Timestamp_Tuple_t Tp)
 {
   set_index_t index = rangingTableBuffer->latest;
   uint64_t rightBound = Tf.timestamp.full % UWB_MAX_TIMESTAMP;
@@ -154,10 +154,9 @@ Ranging_Table_Tr_Rr_Candidate_t rangingTableBufferGetCandidate(Ranging_Table_Tr_
   for (int count = 0; count < Tr_Rr_BUFFER_POOL_SIZE; count++)
   {
     if (rangingTableBuffer->candidates[index].Rr.timestamp.full &&
-        rangingTableBuffer->candidates[index].Rr.timestamp.full % UWB_MAX_TIMESTAMP < rightBound && 
+        rangingTableBuffer->candidates[index].Rr.timestamp.full % UWB_MAX_TIMESTAMP < rightBound &&
         rangingTableBuffer->candidates[index].Rr.timestamp.full % UWB_MAX_TIMESTAMP > leftBound &&
-        rangingTableBuffer->candidates[index].Rr.seqNumber == rangingTableBuffer->candidates[index].Tr.seqNumber
-        )
+        rangingTableBuffer->candidates[index].Rr.seqNumber == rangingTableBuffer->candidates[index].Tr.seqNumber)
     {
       candidate.Tr = rangingTableBuffer->candidates[index].Tr;
       candidate.Rr = rangingTableBuffer->candidates[index].Rr;
@@ -1277,70 +1276,9 @@ static void S4_RX_Rf(Ranging_Table_t *rangingTable)
 
   /* Find corresponding Tf in TfBuffer, it is possible that can not find corresponding Tf. */
   rangingTable->Tf = findTfBySeqNumber(rangingTable->Rf.seqNumber);
-  Ranging_Table_Tr_Rr_Candidate_t Tr_Rr_Candidate_latest = rangingTableBufferGetLatest(&rangingTable->TrRrBuffer);
-  // if 情况是出现了乱序
-  if (Tr_Rr_Candidate_latest.Rr.timestamp.full % UWB_MAX_TIMESTAMP > rangingTable->Tf.timestamp.full % UWB_MAX_TIMESTAMP)
-  {
-    Ranging_Table_Tr_Rr_Candidate_t Tr_Rr_Candidate = rangingTableBufferGetCandidate(&rangingTable->TrRrBuffer,
-                                                                                     rangingTable->Tf,rangingTable->Tp);
-    bool history = false;
-    if (Tr_Rr_Candidate.Tr.timestamp.full == 0)
-    {
-      history = true;
-      Tr_Rr_Candidate.Tr = rangingTable->TxRxHistory.Tx;
-      Tr_Rr_Candidate.Rr = rangingTable->TxRxHistory.Rx;
-    }
-    int16_t distance = computeDistance2(Tr_Rr_Candidate.Tr, Tr_Rr_Candidate.Rr,
-                                        rangingTable->Tf, rangingTable->Rf,
-                                        Tr_Rr_Candidate_latest.Tr, Tr_Rr_Candidate_latest.Rr);
-    if (distance > 0)
-    {
-      if (history)
-      {
-        // compute2 only focuse the number of times distance measurement is performed based on historical data
-        statistic[rangingTable->neighborAddress].compute2num++;
-        setDistance(rangingTable->neighborAddress, distance, 2);
-      }
-      else
-      {
-        statistic[rangingTable->neighborAddress].compute1num++;
-        setDistance(rangingTable->neighborAddress, distance, 1);
-      }
-
-      rangingTable->distance = distance;
-    }
-    else
-    {
-      //    DEBUG_PRINT("distance is not updated since some error occurs\n");
-    }
-    /* update history tx,rx
-     *
-     */
-    rangingTable->TxRxHistory.Tx = Tr_Rr_Candidate.Tr;
-    rangingTable->TxRxHistory.Rx = Tr_Rr_Candidate.Rr;
-    /* Shift ranging table
-     * Rp <- Rf
-     * Tp <- Tf  Rr <- Re
-     */
-    rangingTable->Rp = rangingTable->Rf;
-    rangingTable->Tp = rangingTable->Tf;
-    rangingTable->TrRrBuffer.candidates[rangingTable->TrRrBuffer.cur].Rr = rangingTable->Re;
-
-    Timestamp_Tuple_t empty = {.timestamp.full = 0, .seqNumber = 0};
-    rangingTable->Rf = empty;
-    rangingTable->Tf = empty;
-    rangingTable->Re = empty;
-
-    // TODO: check if valid
-    rangingTable->state = RANGING_STATE_S3;
-
-    RANGING_TABLE_STATE curState = rangingTable->state;
-  }
-  else
-  {
 
     Ranging_Table_Tr_Rr_Candidate_t Tr_Rr_Candidate = rangingTableBufferGetCandidate(&rangingTable->TrRrBuffer,
-                                                                                     rangingTable->Tf,rangingTable->Tp);
+                                                                                     rangingTable->Tf, rangingTable->Tp);
 
     //  printRangingTable(rangingTable);
     // DEBUG_PRINT("Tp:%d,Rf:%d\n", rangingTable->Tp.seqNumber, rangingTable->Rf.seqNumber);
@@ -1353,16 +1291,16 @@ static void S4_RX_Rf(Ranging_Table_t *rangingTable)
       statistic[rangingTable->neighborAddress].compute1num++;
       rangingTable->distance = distance;
       setDistance(rangingTable->neighborAddress, distance, 1);
+      /* update history tx,rx
+       * only success distance,update history
+       */
+      rangingTable->TxRxHistory.Tx = Tr_Rr_Candidate.Tr;
+      rangingTable->TxRxHistory.Rx = Tr_Rr_Candidate.Rr;
     }
     else
     {
       //    DEBUG_PRINT("distance is not updated since some error occurs\n");
     }
-    /* update history tx,rx
-     *
-     */
-    rangingTable->TxRxHistory.Tx = Tr_Rr_Candidate.Tr;
-    rangingTable->TxRxHistory.Rx = Tr_Rr_Candidate.Rr;
 
     /* Shift ranging table
      * Rp <- Rf
@@ -1381,8 +1319,6 @@ static void S4_RX_Rf(Ranging_Table_t *rangingTable)
     rangingTable->state = RANGING_STATE_S3;
 
     RANGING_TABLE_STATE curState = rangingTable->state;
-  }
-
   //  DEBUG_PRINT("S4_RX_Rf: S%d -> S%d\n", prevState, curState);
 }
 
@@ -1432,6 +1368,8 @@ static void processRangingMessage(Ranging_Message_With_Timestamp_t *rangingMessa
   Ranging_Message_t *rangingMessage = &rangingMessageWithTimestamp->rangingMessage;
   uint16_t neighborAddress = rangingMessage->header.srcAddress;
   int neighborIndex = rangingTableSetSearchTable(&rangingTableSet, neighborAddress);
+
+  DEBUG_PRINT("seq:%d\n",rangingMessage->header.msgSequence);
 
   statistic[neighborAddress].recvnum++;
   statistic[neighborAddress].recvSeq = rangingMessage->header.msgSequence;
@@ -1687,7 +1625,7 @@ static void uwbRangingTxTask(void *parameters)
     xSemaphoreTake(neighborSet.mu, portMAX_DELAY);
 
     // Time_t taskDelay = RANGING_PERIOD + rand() % RANGING_PERIOD;
-    Time_t taskDelay = RANGING_PERIOD-2+rand()%5;
+    Time_t taskDelay = RANGING_PERIOD - 2 + rand() % 5;
     // int randNum = rand() % 20;
     generateRangingMessage(rangingMessage);
     txPacketCache.header.length = sizeof(UWB_Packet_Header_t) + rangingMessage->header.msgLength;
