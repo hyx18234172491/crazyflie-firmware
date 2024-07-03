@@ -38,6 +38,7 @@ static Timestamp_Tuple_t TfBuffer[Tf_BUFFER_POOL_SIZE] = {0};
 static SemaphoreHandle_t TfBufferMutex;
 static int rangingSeqNumber = 1;
 static logVarId_t idVelocityX, idVelocityY, idVelocityZ;
+static logVarId_t idX, idY, idZ;
 static float velocity;
 static Ranging_Table_t EMPTY_RANGING_TABLE = {
     .neighborAddress = UWB_DEST_EMPTY,
@@ -1589,6 +1590,11 @@ static Time_t generateRangingMessage(Ranging_Message_t *rangingMessage)
   float velocityX = logGetFloat(idVelocityX);
   float velocityY = logGetFloat(idVelocityY);
   float velocityZ = logGetFloat(idVelocityZ);
+
+  int16_t posiX = logGetFloat(idX);
+  int16_t posiY = logGetFloat(idY);
+  int16_t posiZ = logGetFloat(idZ);
+  
   velocity = sqrt(pow(velocityX, 2) + pow(velocityY, 2) + pow(velocityZ, 2));
   /* velocity in cm/s */
   rangingMessage->header.velocity = (short)(velocity * 100);
@@ -1611,6 +1617,10 @@ static void uwbRangingTxTask(void *parameters)
   idVelocityX = logGetVarId("stateEstimate", "vx");
   idVelocityY = logGetVarId("stateEstimate", "vy");
   idVelocityZ = logGetVarId("stateEstimate", "vz");
+
+  idX = logGetVarId("stateEstimate", "x");
+  idY = logGetVarId("stateEstimate", "y");
+  idZ = logGetVarId("stateEstimate", "z");
 
   UWB_Packet_t txPacketCache;
   txPacketCache.header.srcAddress = uwbGetAddress();
