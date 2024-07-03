@@ -29,6 +29,13 @@
 #define RANGING_MAX_Tr_UNIT 5
 #define RANGING_MAX_BODY_UNIT (RANGING_MESSAGE_PAYLOAD_SIZE_MAX / sizeof(Body_Unit_t))
 #define RANGING_TABLE_SIZE_MAX 20 // default up to 20 one-hop neighbors
+#define TX_RV_INTERVAL_HISTORY_SIZE 5
+#define RANGING_TABLE_SIZE 20
+#define RESET_INIT_STAGE 123 
+#define ZERO_STAGE 124  // 飞行阶段，0阶段随机飞
+#define FIRST_STAGE 125 //
+#define SECOND_STAGE 126
+#define LAND_STAGE 127
 #define RANGING_TABLE_HOLD_TIME (6 * RANGING_PERIOD_MAX)
 #define Tr_Rr_BUFFER_POOL_SIZE 5
 // #define Tf_BUFFER_POOL_SIZE (2 * RANGING_PERIOD_MAX / RANGING_PERIOD_MIN)
@@ -62,6 +69,12 @@ typedef struct {
   uint16_t msgSequence; // 2 byte
   Timestamp_Tuple_t lastTxTimestamps[RANGING_MAX_Tr_UNIT]; // 10 byte * MAX_Tr_UNIT
   short velocity; // 2 byte cm/s
+  short velocityXInWorld; // 2 byte cm/s 在世界坐标系下的速度（不是基于机体坐标系的速度）
+  short velocityYInWorld; // 2 byte cm/s 在世界坐标系下的速度（不是基于机体坐标系的速度）
+  float gyroZ;            // 4 byte rad/s
+  uint16_t positionZ;     // 2 byte cm/s
+  bool keep_flying;       // 无人机的飞行状态
+  int8_t stage;  
   uint16_t msgLength; // 2 byte
   uint16_t filter; // 16 bits bloom filter
 } __attribute__((packed)) Ranging_Message_Header_t; // 10 byte + 10 byte * MAX_Tr_UNIT
@@ -202,7 +215,7 @@ typedef struct
     bool refresh[RANGING_TABLE_SIZE + 1];             // 当前信息从上次EKF获取，到现在是否更新
     bool isNewAdd[RANGING_TABLE_SIZE + 1];            // 这个邻居是否是新加入的
     bool isNewAddUsed[RANGING_TABLE_SIZE + 1];
-    bool isAlreadyTakeoff[RANGING_TABLE_SIZE + 1];
+    bool isAlreadyTakeoff[RANGING_TABLE_SIZE_MAX+ 1];
     /* 用于辅助判断这个邻居是否是新加入的（注意：这里的'新加入'指的是，
     是相对于EKF来说的，主要用于在EKF中判断是否需要执行初始化工作）*/
 } neighborStateInfo_t; /*存储正在和本无人机进行通信的邻居的所有信息（用于EKF）*/
@@ -212,6 +225,12 @@ typedef struct
     address_t address[RANGING_TABLE_SIZE + 1];
     int size;
 } currentNeighborAddressInfo_t; /*当前正在和本无人机进行通信的邻居地址信息*/
+
+typedef struct
+{
+    int16_t distance_history[3];
+    uint8_t index_inserting;
+} median_data_t;
 
 /* Ranging Operations */
 void rangingInit();
@@ -284,7 +303,9 @@ int8_t getLeaderStage();
 void initLeaderStateInfo();
 
 /*set邻居的状态信息*/
-void setNeighborStateInfo(uint16_t neighborAddress, int16_t distance, Ranging_Message_Header_t *rangingMessageHeader);
+void setNeighborStateInfo(uint16_t neighborAddress, Ranging_Message_Header_t *rangingMessageHeader);
+
+void setNeighborDistance(uint16_t neighborAddress, int16_t distance);
 
 /*set邻居是否是新加入的*/
 void setNeighborStateInfo_isNewAdd(uint16_t neighborAddress, bool isNewAddNeighbor);

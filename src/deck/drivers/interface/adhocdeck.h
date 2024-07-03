@@ -41,6 +41,8 @@
 #define UWB_DEST_ANY 65535
 #define UWB_DEST_EMPTY 65534
 
+
+typedef uint16_t address_t;
 /* TX options */
 static dwt_txconfig_t uwbTxConfigOptions = {
     .PGcount = 0x0,

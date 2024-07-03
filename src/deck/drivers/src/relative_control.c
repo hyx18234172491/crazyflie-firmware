@@ -3,7 +3,6 @@
 #include "task.h"
 #include "commander.h"
 #include "relative_localization.h"
-#include "ranging_struct.h"
 #include "num.h"
 #include "param.h"
 #include "debug.h"
@@ -582,10 +581,11 @@ void relativeControlInit(void)
   isInit = true;
 }
 
-PARAM_GROUP_START(relative_ctrl)
-PARAM_ADD(PARAM_UINT8, keepFlying, &keepFlying)
-PARAM_ADD(PARAM_UINT8, mode, &CONTROL_MODE)
-PARAM_ADD(PARAM_FLOAT, relaCtrl_p, &relaCtrl_p)
-PARAM_ADD(PARAM_FLOAT, relaCtrl_i, &relaCtrl_i)
-PARAM_ADD(PARAM_FLOAT, relaCtrl_d, &relaCtrl_d)
-PARAM_GROUP_STOP(relative_ctrl)
+
+// PARAM_GROUP_START(relative_ctrl)
+// PARAM_ADD(PARAM_UINT8, keepFlying, &keepFlying)
+// PARAM_ADD(PARAM_UINT8, mode, &CONTROL_MODE)
+// PARAM_ADD(PARAM_FLOAT, relaCtrl_p, &relaCtrl_p)
+// PARAM_ADD(PARAM_FLOAT, relaCtrl_i, &relaCtrl_i)
+// PARAM_ADD(PARAM_FLOAT, relaCtrl_d, &relaCtrl_d)
+// PARAM_GROUP_STOP(relative_ctrl)

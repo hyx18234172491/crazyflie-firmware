@@ -25,6 +25,8 @@
 #include "swarm_ranging.h"
 #include "flooding.h"
 #include "routing.h"
+#include "relative_localization.h"
+#include "relative_control.h"
 #include "raft.h"
 
 #ifndef UWB_DEBUG_ENABLE
@@ -382,6 +384,8 @@ static void uwbTaskInit() {
               ADHOC_DECK_TASK_PRI, &uwbTxTaskHandle);
 #ifdef UWB_RANGING_ENABLE
   rangingInit();
+  relativeLocoInit();
+  relativeControlInit();
 #endif
 #ifdef UWB_ROUTING_ENABLE
   routingInit();

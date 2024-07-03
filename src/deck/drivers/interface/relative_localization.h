@@ -1,6 +1,5 @@
 #ifndef RELATIVELOCA_H_
 #define RELATIVELOCA_H_
-#include "ranging_struct.h"
 #include "swarm_ranging.h"
 #include "math.h"
 typedef enum
@@ -28,7 +27,7 @@ typedef struct
   float P[STATE_DIM_rl][STATE_DIM_rl];
   float height;
   uint32_t oldTimetick;
-  bool receiveFlag;
+  uint8_t receiveFlag;
 } relaVariable_t;
 
 /*--用于初始位置设定--*/
