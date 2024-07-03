@@ -65,6 +65,7 @@ static Ranging_Table_t EMPTY_RANGING_TABLE = {
 
 int16_t distanceTowards[NEIGHBOR_ADDRESS_MAX + 1] = {[0 ... NEIGHBOR_ADDRESS_MAX] = -1};
 uint8_t distanceSource[NEIGHBOR_ADDRESS_MAX + 1] = {[0 ... NEIGHBOR_ADDRESS_MAX] = -1};
+float distanceReal[NEIGHBOR_ADDRESS_MAX + 1] = {[0 ... NEIGHBOR_ADDRESS_MAX] = -1};
 
 typedef struct Stastistic
 {
@@ -1363,6 +1364,18 @@ void rangingTableOnEvent(Ranging_Table_t *table, RANGING_TABLE_EVENT event)
   EVENT_HANDLER[table->state][event](table);
 }
 
+void computeRealDistance(uint16_t neighborAddress, float x1, float y1, float z1, float x2, float y2, float z2) {
+    // 计算各坐标的差
+    float dx = x2 - x1;
+    float dy = y2 - y1;
+    float dz = z2 - z1;
+    
+    // 计算距离的平方和再开方
+    float distance = sqrt(dx * dx + dy * dy + dz * dz);
+    
+    distanceReal[neighborAddress] = distance;
+}
+
 /* Swarm Ranging */
 static void processRangingMessage(Ranging_Message_With_Timestamp_t *rangingMessageWithTimestamp)
 {
@@ -1371,6 +1384,11 @@ static void processRangingMessage(Ranging_Message_With_Timestamp_t *rangingMessa
   int neighborIndex = rangingTableSetSearchTable(&rangingTableSet, neighborAddress);
 
   DEBUG_PRINT("seq:%d\n", rangingMessage->header.msgSequence);
+
+  float posiX = logGetFloat(idX);
+  float posiY = logGetFloat(idY);
+  float posiZ = logGetFloat(idZ);
+  computeRealDistance(neighborAddress,posiX,posiY,posiZ,rangingMessage->header.posiX,rangingMessage->header.posiY,rangingMessage->header.posiZ);
 
   statistic[neighborAddress].recvnum++;
   statistic[neighborAddress].recvSeq = rangingMessage->header.msgSequence;
@@ -1591,10 +1609,14 @@ static Time_t generateRangingMessage(Ranging_Message_t *rangingMessage)
   float velocityY = logGetFloat(idVelocityY);
   float velocityZ = logGetFloat(idVelocityZ);
 
-  int16_t posiX = logGetFloat(idX);
-  int16_t posiY = logGetFloat(idY);
-  int16_t posiZ = logGetFloat(idZ);
-  
+  float posiX = logGetFloat(idX);
+  float posiY = logGetFloat(idY);
+  float posiZ = logGetFloat(idZ);
+
+  rangingMessage->header.posiX = posiX;
+  rangingMessage->header.posiY = posiY;
+  rangingMessage->header.posiZ = posiZ;
+
   velocity = sqrt(pow(velocityX, 2) + pow(velocityY, 2) + pow(velocityZ, 2));
   /* velocity in cm/s */
   rangingMessage->header.velocity = (short)(velocity * 100);
@@ -1791,6 +1813,7 @@ LOG_ADD(LOG_UINT16, compute1num2, &statistic[2].compute1num)
 LOG_ADD(LOG_UINT16, compute2num2, &statistic[2].compute2num)
 LOG_ADD(LOG_INT16, dist2, distanceTowards + 2)
 LOG_ADD(LOG_UINT8, distSrc2, distanceSource + 2)
+LOG_ADD(LOG_FLOAT, distReal2, distanceReal + 2)
 
 LOG_ADD(LOG_UINT16, recvSeq1, &statistic[1].recvSeq)
 LOG_ADD(LOG_UINT16, recvNum1, &statistic[1].recvnum)
@@ -1798,4 +1821,5 @@ LOG_ADD(LOG_UINT16, compute1num1, &statistic[1].compute1num)
 LOG_ADD(LOG_UINT16, compute2num1, &statistic[1].compute2num)
 LOG_ADD(LOG_INT16, dist1, distanceTowards + 1)
 LOG_ADD(LOG_UINT8, distSrc1, distanceSource + 1)
+LOG_ADD(LOG_FLOAT, distReal1, distanceReal + 1)
 LOG_GROUP_STOP(Statistic)
