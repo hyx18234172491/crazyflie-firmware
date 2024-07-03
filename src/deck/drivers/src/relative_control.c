@@ -286,32 +286,32 @@ void relativeControlTask(void *arg)
   const float_t initDist = 1;
   const float_t doubInitDist = 2;
   static const float_t targetList[25][STATE_DIM_rl] = {
-    {0.0f, 0.0f, 0.0f},                   // 0
-    {0.0f, -initDist, 0.0f},              // 1
-    {-initDist, -initDist, 0.0f},         // 2
-    {-initDist, 0.0f, 0.0f},              // 3
-    {-initDist, initDist, 0.0f},          // 4
-    {0.0f, initDist, 0.0f},               // 5
-    {initDist, initDist, 0.0f},           // 6
-    {initDist, 0.0f, 0.0f},               // 7
-    {initDist, -initDist, 0.0f},          // 8
-    {doubInitDist, initDist, 0.0f},       // 9
-    {doubInitDist, 0.0f, 0.0f},           // 10
-    {doubInitDist, -initDist, 0.0f},      // 11
-    {doubInitDist, -doubInitDist, 0.0f},  // 12 
-    {initDist, -doubInitDist, 0.0f},      // 13
-    {0.0f, -doubInitDist, 0.0f},          // 14
-    {-initDist, -doubInitDist, 0.0f},     // 15
-    {-doubInitDist, -doubInitDist, 0.0f}, // 16
-    {-doubInitDist, -initDist, 0.0f},     // 17
-    {-doubInitDist, 0.0f, 0.0f},          // 18
-    {-doubInitDist, initDist, 0.0f},      // 19
-    {-doubInitDist, doubInitDist, 0.0f},  // 20
-    {-initDist, doubInitDist, 0.0f},     // 21
-    {0.0f, doubInitDist, 0.0f},          // 22
-    {initDist, doubInitDist, 0.0f},      // 23
-    {doubInitDist, doubInitDist, 0.0f}};  // 24
-  uint8_t SQURE3_3_NUM = 9;             // 3阶段转圈的无人机数量+1（0号无人机）
+      {0.0f, 0.0f, 0.0f},                   // 0
+      {0.0f, -initDist, 0.0f},              // 1
+      {-initDist, -initDist, 0.0f},         // 2
+      {-initDist, 0.0f, 0.0f},              // 3
+      {-initDist, initDist, 0.0f},          // 4
+      {0.0f, initDist, 0.0f},               // 5
+      {initDist, initDist, 0.0f},           // 6
+      {initDist, 0.0f, 0.0f},               // 7
+      {initDist, -initDist, 0.0f},          // 8
+      {doubInitDist, initDist, 0.0f},       // 9
+      {doubInitDist, 0.0f, 0.0f},           // 10
+      {doubInitDist, -initDist, 0.0f},      // 11
+      {doubInitDist, -doubInitDist, 0.0f},  // 12
+      {initDist, -doubInitDist, 0.0f},      // 13
+      {0.0f, -doubInitDist, 0.0f},          // 14
+      {-initDist, -doubInitDist, 0.0f},     // 15
+      {-doubInitDist, -doubInitDist, 0.0f}, // 16
+      {-doubInitDist, -initDist, 0.0f},     // 17
+      {-doubInitDist, 0.0f, 0.0f},          // 18
+      {-doubInitDist, initDist, 0.0f},      // 19
+      {-doubInitDist, doubInitDist, 0.0f},  // 20
+      {-initDist, doubInitDist, 0.0f},      // 21
+      {0.0f, doubInitDist, 0.0f},           // 22
+      {initDist, doubInitDist, 0.0f},       // 23
+      {doubInitDist, doubInitDist, 0.0f}};  // 24
+  uint8_t SQURE3_3_NUM = 9;                 // 3阶段转圈的无人机数量+1（0号无人机）
   uint8_t SQURE3_4_NUM = 11;
   static const uint8_t targetSquere3_3[15] = {
       0, 1, 2, 3, 4, 5, 6, 7, 8 // 8个位置,为了使得索引和值一一对应，所以有0
@@ -425,8 +425,8 @@ void relativeControlTask(void *arg)
           {
             flyRandomIn1meter(randomVel, set_height);
           }
-        //  targetX = relaVarInCtrl[0][STATE_rlX];
-        // targetY = relaVarInCtrl[0][STATE_rlY];
+          //  targetX = relaVarInCtrl[0][STATE_rlX];
+          // targetY = relaVarInCtrl[0][STATE_rlY];
         }
         else if (leaderStage == SECOND_STAGE) // 第2个阶段跟随飞行
         {
@@ -437,9 +437,10 @@ void relativeControlTask(void *arg)
             flyRandomIn1meter(randomVel, set_height);
           }
           else
-          { int8_t index = MY_UWB_ADDRESS;
-            if( MY_UWB_ADDRESS > 8 )
-            index = MY_UWB_ADDRESS + (MY_UWB_ADDRESS - 9)/3;
+          {
+            int8_t index = MY_UWB_ADDRESS;
+            if (MY_UWB_ADDRESS > 8)
+              index = MY_UWB_ADDRESS + (MY_UWB_ADDRESS - 9) / 3;
             targetX = -cosf(relaVarInCtrl[0][STATE_rlYaw]) * targetList[index][STATE_rlX] + sinf(relaVarInCtrl[0][STATE_rlYaw]) * targetList[index][STATE_rlY];
             targetY = -sinf(relaVarInCtrl[0][STATE_rlYaw]) * targetList[index][STATE_rlX] - cosf(relaVarInCtrl[0][STATE_rlYaw]) * targetList[index][STATE_rlY];
             formation0asCenter(targetX, targetY, set_height);
@@ -462,10 +463,11 @@ void relativeControlTask(void *arg)
             }
             else
             {
-              targetShift = leaderStage + (MY_UWB_ADDRESS - 9)/3;
+              targetShift = leaderStage + (MY_UWB_ADDRESS - 9) / 3;
               // 使得targetList在1~UAV_NUM之间偏移
-              index = (MY_UWB_ADDRESS + targetShift+1) % 25; // 目标地址索引
-              if(index < 9) index += 9;
+              index = (MY_UWB_ADDRESS + targetShift + 1) % 25; // 目标地址索引
+              if (index < 9)
+                index += 9;
             }
             targetX = -cosf(relaVarInCtrl[0][STATE_rlYaw]) * targetList[index][STATE_rlX] + sinf(relaVarInCtrl[0][STATE_rlYaw]) * targetList[index][STATE_rlY];
             targetY = -sinf(relaVarInCtrl[0][STATE_rlYaw]) * targetList[index][STATE_rlX] - cosf(relaVarInCtrl[0][STATE_rlYaw]) * targetList[index][STATE_rlY];
@@ -495,47 +497,48 @@ void relativeControlTask(void *arg)
       else if (leaderStage == SECOND_STAGE) // 第2个阶段跟随飞行
       {
         if (MY_UWB_ADDRESS == 0)
-          {
+        {
           //  float_t randomVel = 0.3;
           //  flyRandomIn1meter(randomVel, set_height);
-          }
-          else
-          { int8_t index = MY_UWB_ADDRESS;
-            if( MY_UWB_ADDRESS > 8 )
-            index = MY_UWB_ADDRESS + (MY_UWB_ADDRESS - 9)/3;
-            DEBUG_PRINT("2:%d\n", index);
-            targetX = -cosf(relaVarInCtrl[0][STATE_rlYaw]) * targetList[index][STATE_rlX] + sinf(relaVarInCtrl[0][STATE_rlYaw]) * targetList[index][STATE_rlY];
-            targetY = -sinf(relaVarInCtrl[0][STATE_rlYaw]) * targetList[index][STATE_rlX] - cosf(relaVarInCtrl[0][STATE_rlYaw]) * targetList[index][STATE_rlY];
+        }
+        else
+        {
+          int8_t index = MY_UWB_ADDRESS;
+          if (MY_UWB_ADDRESS > 8)
+            index = MY_UWB_ADDRESS + (MY_UWB_ADDRESS - 9) / 3;
+          DEBUG_PRINT("2:%d\n", index);
+          targetX = -cosf(relaVarInCtrl[0][STATE_rlYaw]) * targetList[index][STATE_rlX] + sinf(relaVarInCtrl[0][STATE_rlYaw]) * targetList[index][STATE_rlY];
+          targetY = -sinf(relaVarInCtrl[0][STATE_rlYaw]) * targetList[index][STATE_rlX] - cosf(relaVarInCtrl[0][STATE_rlYaw]) * targetList[index][STATE_rlY];
           //  formation0asCenter(targetX, targetY, set_height);
-          }
+        }
       }
       else if (leaderStage >= -30 && leaderStage <= 30) // 第3个阶段，3*3转圈
       {
-       if (MY_UWB_ADDRESS == 0)
+        if (MY_UWB_ADDRESS == 0)
+        {
+        }
+        else
+        {
+          int8_t index = MY_UWB_ADDRESS;
+          if (MY_UWB_ADDRESS < 9) // 根据目前方案只要小于9，就是第2阶段
           {
-           
+            targetShift = leaderStage;
+            // 使得targetList在1~UAV_NUM之间偏移
+            index = (MY_UWB_ADDRESS + targetShift) % (SQURE3_3_NUM - 1) + 1; // 目标地址索引
           }
           else
           {
-            int8_t index = MY_UWB_ADDRESS;
-            if (MY_UWB_ADDRESS < 9) // 根据目前方案只要小于9，就是第2阶段
-            {
-              targetShift = leaderStage;
-              // 使得targetList在1~UAV_NUM之间偏移
-              index = (MY_UWB_ADDRESS + targetShift) % (SQURE3_3_NUM - 1) + 1; // 目标地址索引
-            }
-            else
-            {
-              targetShift = leaderStage + (MY_UWB_ADDRESS - 9)/3;
-              // 使得targetList在1~UAV_NUM之间偏移
-              index = (MY_UWB_ADDRESS + targetShift+1) % 25; // 目标地址索引
-              if(index < 9) index += 9;
-              DEBUG_PRINT("3:%d\n", index);
-            }
-            targetX = -cosf(relaVarInCtrl[0][STATE_rlYaw]) * targetList[index][STATE_rlX] + sinf(relaVarInCtrl[0][STATE_rlYaw]) * targetList[index][STATE_rlY];
-            targetY = -sinf(relaVarInCtrl[0][STATE_rlYaw]) * targetList[index][STATE_rlX] - cosf(relaVarInCtrl[0][STATE_rlYaw]) * targetList[index][STATE_rlY];
-           // formation0asCenter(targetX, targetY, set_height);
+            targetShift = leaderStage + (MY_UWB_ADDRESS - 9) / 3;
+            // 使得targetList在1~UAV_NUM之间偏移
+            index = (MY_UWB_ADDRESS + targetShift + 1) % 25; // 目标地址索引
+            if (index < 9)
+              index += 9;
+            DEBUG_PRINT("3:%d\n", index);
           }
+          targetX = -cosf(relaVarInCtrl[0][STATE_rlYaw]) * targetList[index][STATE_rlX] + sinf(relaVarInCtrl[0][STATE_rlYaw]) * targetList[index][STATE_rlY];
+          targetY = -sinf(relaVarInCtrl[0][STATE_rlYaw]) * targetList[index][STATE_rlX] - cosf(relaVarInCtrl[0][STATE_rlYaw]) * targetList[index][STATE_rlY];
+          // formation0asCenter(targetX, targetY, set_height);
+        }
       }
       else if (leaderStage > 30 && leaderStage < 90)
       {
@@ -580,7 +583,6 @@ void relativeControlInit(void)
   xTaskCreate(relativeControlTask, "relative_Control", configMINIMAL_STACK_SIZE, NULL, 3, NULL);
   isInit = true;
 }
-
 
 // PARAM_GROUP_START(relative_ctrl)
 // PARAM_ADD(PARAM_UINT8, keepFlying, &keepFlying)

@@ -1,4 +1,3 @@
-#include "relative_localization.h"
 #include "debug.h"
 
 #include <string.h>
@@ -65,8 +64,8 @@ static currentNeighborAddressInfo_t currentNeighborAddressInfo;
 // 初始时，所有无人机基于0号无人机的相对位置
 // 正方向编队方案
 // const float_t initDist = 1.3;
-const float_t initDist = 1;
-const float_t doubInitDist = 2;
+float_t initDist = 1;
+float_t doubInitDist = 2;
 static const float_t initPositionRela0[25][STATE_DIM_rl] = {
     {0.0f, 0.0f, 0.0f},               // 0
     {0.0f, -initDist, 0.0f},          // 1
@@ -89,8 +88,7 @@ static const float_t initPositionRela0[25][STATE_DIM_rl] = {
     {-initDist, doubInitDist, 0.0f},  // 18
     {0.0f, doubInitDist, 0.0f},       // 19
     {initDist, doubInitDist, 0.0f},   // 20
-    {0.0f, 0.0f, 0.0f}
-    };        
+    {0.0f, 0.0f, 0.0f}};
 // 八边形编队方案
 // static const float_t initPositionRela0[15][STATE_DIM_rl] = {
 //     {0.0f, 0.0f, 0.0f},   // 0
@@ -187,9 +185,10 @@ void relativeLocoTask(void *arg)
         {
             connectCount = 0;
             address_t neighborAddress = currentNeighborAddressInfo.address[index];
-            
+
             // Add by lcy
-            if(neighborAddress != 0) continue;
+            if (neighborAddress != 0)
+                continue;
 
             bool isNewAdd; // 邻居是否是新加入的
 
@@ -302,7 +301,7 @@ void relativeEKF(int n, float vxi, float vyi, float ri, float hi, float vxj, flo
     for (int i = 0; i < STATE_DIM_rl; i++)
     {
         tmpNN1d[STATE_DIM_rl * i + i] -= 1;
-    }                                  // KH - I
+    } // KH - I
     mat_trans(&tmpNN1m, &tmpNN2m);     // (KH - I)'
     mat_mult(&tmpNN1m, &Pm, &tmpNN3m); // (KH - I)*P
     mat_mult(&tmpNN3m, &tmpNN2m, &Pm); // (KH - I)*P*(KH - I)'

@@ -302,6 +302,8 @@ int8_t getLeaderStage();
 /*初始化leader状态信息*/
 void initLeaderStateInfo();
 
+int16_t getDistance(UWB_Address_t neighborAddress);
+
 /*set邻居的状态信息*/
 void setNeighborStateInfo(uint16_t neighborAddress, Ranging_Message_Header_t *rangingMessageHeader);
 

@@ -1237,8 +1237,8 @@ static void S3_RX_Rf(Ranging_Table_t *rangingTable)
     statistic[rangingTable->neighborAddress].compute2num++;
     rangingTable->distance = distance;
     setDistance(rangingTable->neighborAddress, distance, 2);
+
     setNeighborDistance(rangingTable->neighborAddress, distance);
-    
   }
   else
   {
@@ -1400,8 +1400,7 @@ void rangingTableOnEvent(Ranging_Table_t *table, RANGING_TABLE_EVENT event)
   EVENT_HANDLER[table->state][event](table);
 }
 
-
-//liujiangpeng add
+// liujiangpeng add
 void initNeighborStateInfoAndMedian_data()
 {
   for (int i = 0; i < RANGING_TABLE_SIZE + 1; i++)
@@ -1435,7 +1434,7 @@ void setMyTakeoff(bool isAlreadyTakeoff)
 void setNeighborStateInfo(uint16_t neighborAddress, Ranging_Message_Header_t *rangingMessageHeader)
 {
   ASSERT(neighborAddress <= RANGING_TABLE_SIZE);
- 
+
   neighborStateInfo.velocityXInWorld[neighborAddress] = rangingMessageHeader->velocityXInWorld;
   neighborStateInfo.velocityYInWorld[neighborAddress] = rangingMessageHeader->velocityYInWorld;
   neighborStateInfo.gyroZ[neighborAddress] = rangingMessageHeader->gyroZ;
@@ -1518,10 +1517,11 @@ void getCurrentNeighborAddressInfo_t(currentNeighborAddressInfo_t *currentNeighb
 {
   /*--11添加--*/
   currentNeighborAddressInfo->size = rangingTableSet.size;
-  for(set_index_t iter = 0; iter< rangingTableSet.size; iter++){
+  for (set_index_t iter = 0; iter < rangingTableSet.size; iter++)
+  {
     currentNeighborAddressInfo->address[iter] = rangingTableSet.tables[iter].neighborAddress;
   }
-   
+
   /*--11添加--*/
 }
 
