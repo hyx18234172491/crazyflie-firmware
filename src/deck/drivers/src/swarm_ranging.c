@@ -1277,48 +1277,48 @@ static void S4_RX_Rf(Ranging_Table_t *rangingTable)
   /* Find corresponding Tf in TfBuffer, it is possible that can not find corresponding Tf. */
   rangingTable->Tf = findTfBySeqNumber(rangingTable->Rf.seqNumber);
 
-    Ranging_Table_Tr_Rr_Candidate_t Tr_Rr_Candidate = rangingTableBufferGetCandidate(&rangingTable->TrRrBuffer,
-                                                                                     rangingTable->Tf, rangingTable->Tp);
+  Ranging_Table_Tr_Rr_Candidate_t Tr_Rr_Candidate = rangingTableBufferGetCandidate(&rangingTable->TrRrBuffer,
+                                                                                   rangingTable->Tf, rangingTable->Tp);
 
-    //  printRangingTable(rangingTable);
-    // DEBUG_PRINT("Tp:%d,Rf:%d\n", rangingTable->Tp.seqNumber, rangingTable->Rf.seqNumber);
-    /* try to compute distance */
-    int16_t distance = computeDistance(rangingTable->Tp, rangingTable->Rp,
-                                       Tr_Rr_Candidate.Tr, Tr_Rr_Candidate.Rr,
-                                       rangingTable->Tf, rangingTable->Rf);
-    if (distance > 0)
-    {
-      statistic[rangingTable->neighborAddress].compute1num++;
-      rangingTable->distance = distance;
-      setDistance(rangingTable->neighborAddress, distance, 1);
-      /* update history tx,rx
-       * only success distance,update history
-       */
-      rangingTable->TxRxHistory.Tx = Tr_Rr_Candidate.Tr;
-      rangingTable->TxRxHistory.Rx = Tr_Rr_Candidate.Rr;
-    }
-    else
-    {
-      //    DEBUG_PRINT("distance is not updated since some error occurs\n");
-    }
-
-    /* Shift ranging table
-     * Rp <- Rf
-     * Tp <- Tf  Rr <- Re
+  //  printRangingTable(rangingTable);
+  // DEBUG_PRINT("Tp:%d,Rf:%d\n", rangingTable->Tp.seqNumber, rangingTable->Rf.seqNumber);
+  /* try to compute distance */
+  int16_t distance = computeDistance(rangingTable->Tp, rangingTable->Rp,
+                                     Tr_Rr_Candidate.Tr, Tr_Rr_Candidate.Rr,
+                                     rangingTable->Tf, rangingTable->Rf);
+  if (distance > 0)
+  {
+    statistic[rangingTable->neighborAddress].compute1num++;
+    rangingTable->distance = distance;
+    setDistance(rangingTable->neighborAddress, distance, 1);
+    /* update history tx,rx
+     * only success distance,update history
      */
-    rangingTable->Rp = rangingTable->Rf;
-    rangingTable->Tp = rangingTable->Tf;
-    rangingTable->TrRrBuffer.candidates[rangingTable->TrRrBuffer.cur].Rr = rangingTable->Re;
+    rangingTable->TxRxHistory.Tx = Tr_Rr_Candidate.Tr;
+    rangingTable->TxRxHistory.Rx = Tr_Rr_Candidate.Rr;
+  }
+  else
+  {
+    //    DEBUG_PRINT("distance is not updated since some error occurs\n");
+  }
 
-    Timestamp_Tuple_t empty = {.timestamp.full = 0, .seqNumber = 0};
-    rangingTable->Rf = empty;
-    rangingTable->Tf = empty;
-    rangingTable->Re = empty;
+  /* Shift ranging table
+   * Rp <- Rf
+   * Tp <- Tf  Rr <- Re
+   */
+  rangingTable->Rp = rangingTable->Rf;
+  rangingTable->Tp = rangingTable->Tf;
+  rangingTable->TrRrBuffer.candidates[rangingTable->TrRrBuffer.cur].Rr = rangingTable->Re;
 
-    // TODO: check if valid
-    rangingTable->state = RANGING_STATE_S3;
+  Timestamp_Tuple_t empty = {.timestamp.full = 0, .seqNumber = 0};
+  rangingTable->Rf = empty;
+  rangingTable->Tf = empty;
+  rangingTable->Re = empty;
 
-    RANGING_TABLE_STATE curState = rangingTable->state;
+  // TODO: check if valid
+  rangingTable->state = RANGING_STATE_S3;
+
+  RANGING_TABLE_STATE curState = rangingTable->state;
   //  DEBUG_PRINT("S4_RX_Rf: S%d -> S%d\n", prevState, curState);
 }
 
@@ -1369,7 +1369,7 @@ static void processRangingMessage(Ranging_Message_With_Timestamp_t *rangingMessa
   uint16_t neighborAddress = rangingMessage->header.srcAddress;
   int neighborIndex = rangingTableSetSearchTable(&rangingTableSet, neighborAddress);
 
-  DEBUG_PRINT("seq:%d\n",rangingMessage->header.msgSequence);
+  DEBUG_PRINT("seq:%d\n", rangingMessage->header.msgSequence);
 
   statistic[neighborAddress].recvnum++;
   statistic[neighborAddress].recvSeq = rangingMessage->header.msgSequence;
