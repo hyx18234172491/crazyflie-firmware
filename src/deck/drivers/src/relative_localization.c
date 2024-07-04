@@ -1,3 +1,4 @@
+#include "relative_localization.h"
 #include "debug.h"
 
 #include <string.h>
@@ -64,8 +65,8 @@ static currentNeighborAddressInfo_t currentNeighborAddressInfo;
 // 初始时，所有无人机基于0号无人机的相对位置
 // 正方向编队方案
 // const float_t initDist = 1.3;
-float_t initDist = 1;
-float_t doubInitDist = 2;
+static const float_t initDist = 1;
+static const float_t doubInitDist = 2;
 static const float_t initPositionRela0[25][STATE_DIM_rl] = {
     {0.0f, 0.0f, 0.0f},               // 0
     {0.0f, -initDist, 0.0f},          // 1
@@ -133,7 +134,7 @@ void relativeLocoInit(void)
     {
         return;
     }
-    MY_UWB_ADDRESS = getUWBAddress();
+    MY_UWB_ADDRESS = uwbGetAddress();
     xTaskCreate(relativeLocoTask, "relative_Localization", ZRANGER_TASK_STACKSIZE, NULL, ZRANGER_TASK_PRI, NULL);
     isInit = true;
 }
@@ -214,7 +215,7 @@ void relativeLocoTask(void *arg)
                     relaVar[neighborAddress].height = hj;
                     relativeEKF(neighborAddress, vxi, vyi, ri, hi, vxj, vyj, rj, hj, dij, dtEKF);
                 }
-                // DEBUG_PRINT("addr:%d,X:%f,Y:%f",neighborAddress,relaVar[neighborAddress].S[STATE_rlX],relaVar[neighborAddress].S[STATE_rlY]);
+                 DEBUG_PRINT("addr:%d,X:%f,Y:%f",neighborAddress,relaVar[neighborAddress].S[STATE_rlX],relaVar[neighborAddress].S[STATE_rlY]);
             }
         }
         // connectCount++;

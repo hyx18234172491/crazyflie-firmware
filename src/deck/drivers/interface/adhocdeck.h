@@ -3,6 +3,7 @@
 
 #include "libdw3000.h"
 #include "mac_802_15_4.h"
+#include "FreeRTOS.h"
 #include "queue.h"
 
 // #define UWB_DEBUG_ENABLE
