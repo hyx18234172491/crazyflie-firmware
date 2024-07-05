@@ -181,21 +181,21 @@ void relativeLocoTask(void *arg)
     while (1)
     {
         vTaskDelay(10);
+
         getCurrentNeighborAddressInfo_t(&currentNeighborAddressInfo); // TODO
+    
         for (int index = 0; index < currentNeighborAddressInfo.size; index++)
         {
+            //DEBUG_PRINT("%d\n",index);
             connectCount = 0;
             address_t neighborAddress = currentNeighborAddressInfo.address[index];
-
-            // Add by lcy
-            if (neighborAddress != 0)
-                continue;
+        
 
             bool isNewAdd; // 邻居是否是新加入的
 
             if (getNeighborStateInfo(neighborAddress, &dij, &vxj_t, &vyj_t, &rj, &hj_t, &isNewAdd))
             {
-                // DEBUG_PRINT("start：%d\n", xTaskGetTickCount());
+               // DEBUG_PRINT("start%d\n", xTaskGetTickCount());
                 vxj = (vxj_t + 0.0) / 100;
                 vyj = (vyj_t + 0.0) / 100;
                 hj = (hj_t + 0.0) / 100;
@@ -215,7 +215,7 @@ void relativeLocoTask(void *arg)
                     relaVar[neighborAddress].height = hj;
                     relativeEKF(neighborAddress, vxi, vyi, ri, hi, vxj, vyj, rj, hj, dij, dtEKF);
                 }
-                 DEBUG_PRINT("addr:%d,X:%f,Y:%f",neighborAddress,relaVar[neighborAddress].S[STATE_rlX],relaVar[neighborAddress].S[STATE_rlY]);
+                DEBUG_PRINT("addr:%d,X:%f,Y:%f",neighborAddress,relaVar[neighborAddress].S[STATE_rlX],relaVar[neighborAddress].S[STATE_rlY]);
             }
         }
         // connectCount++;

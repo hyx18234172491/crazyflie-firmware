@@ -12,7 +12,7 @@
 #include "log.h"
 #include "math.h"
 #include "adhocdeck.h"
-#define RUNNING_STAGE 0// 0代码debug阶段，1代码运行阶段
+#define RUNNING_STAGE 1// 0代码debug阶段，1代码运行阶段
 
 static uint16_t MY_UWB_ADDRESS;
 static bool isInit;
@@ -23,7 +23,7 @@ static setpoint_t setpoint;
 static float_t relaVarInCtrl[RANGING_TABLE_SIZE + 1][STATE_DIM_rl];
 static float_t neighbor_height[RANGING_TABLE_SIZE + 1];
 static currentNeighborAddressInfo_t currentNeighborAddressInfo;
-static float_t set_height = 0.5;
+static float_t set_height = 1;
 static float_t set_height0 = 0.5;
 static paramVarId_t idMultiranger;
 static logVarId_t idUp;
@@ -416,7 +416,7 @@ void relativeControlTask(void *arg)
         else if (leaderStage == FIRST_STAGE) // 第1个阶段随机飞行
         {
           // DEBUG_PRINT("--1--\n");
-          float_t randomVel = 0.3;
+          float_t randomVel = 0.2;
           if (MY_UWB_ADDRESS == 0)
           {
             flyRandomIn1meter(randomVel, set_height);
@@ -585,10 +585,10 @@ void relativeControlInit(void)
   isInit = true;
 }
 
-// PARAM_GROUP_START(relative_ctrl)
-// PARAM_ADD(PARAM_UINT8, keepFlying, &keepFlying)
-// PARAM_ADD(PARAM_UINT8, mode, &CONTROL_MODE)
-// PARAM_ADD(PARAM_FLOAT, relaCtrl_p, &relaCtrl_p)
-// PARAM_ADD(PARAM_FLOAT, relaCtrl_i, &relaCtrl_i)
-// PARAM_ADD(PARAM_FLOAT, relaCtrl_d, &relaCtrl_d)
-// PARAM_GROUP_STOP(relative_ctrl)
+PARAM_GROUP_START(relative_ctrl)
+PARAM_ADD(PARAM_UINT8, keepFlying, &keepFlying)
+PARAM_ADD(PARAM_UINT8, mode, &CONTROL_MODE)
+PARAM_ADD(PARAM_FLOAT, relaCtrl_p, &relaCtrl_p)
+PARAM_ADD(PARAM_FLOAT, relaCtrl_i, &relaCtrl_i)
+PARAM_ADD(PARAM_FLOAT, relaCtrl_d, &relaCtrl_d)
+PARAM_GROUP_STOP(relative_ctrl)

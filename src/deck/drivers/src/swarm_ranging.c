@@ -22,7 +22,7 @@
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
-
+#define ABS(a) ((a) > 0 ? (a) : -(a))
 static uint16_t MY_UWB_ADDRESS;
 
 static QueueHandle_t rxQueue;
@@ -64,6 +64,9 @@ static Ranging_Table_t EMPTY_RANGING_TABLE = {
 
 int16_t distanceTowards[NEIGHBOR_ADDRESS_MAX + 1] = {[0 ... NEIGHBOR_ADDRESS_MAX] = -1};
 uint8_t distanceSource[NEIGHBOR_ADDRESS_MAX + 1] = {[0 ... NEIGHBOR_ADDRESS_MAX] = -1};
+// Add by lcy
+static uint16_t txPeriodDelay = 0; // the tx send period delay
+static SemaphoreHandle_t rangingTxTaskBinary; // if it is open, then tx, Semaphore for synchronization
 
 typedef struct Stastistic
 {
@@ -108,6 +111,11 @@ static leaderStateInfo_t leaderStateInfo;
 static neighborStateInfo_t neighborStateInfo; // 邻居的状态信息
 
 
+//Add by lcy
+inline static void txPeriodDelayset()
+{
+  txPeriodDelay = MY_UWB_ADDRESS * 4;
+}
 int16_t getDistance(UWB_Address_t neighborAddress)
 {
   ASSERT(neighborAddress <= NEIGHBOR_ADDRESS_MAX);
@@ -117,8 +125,28 @@ int16_t getDistance(UWB_Address_t neighborAddress)
 void setDistance(UWB_Address_t neighborAddress, int16_t distance, uint8_t source)
 {
   ASSERT(neighborAddress <= NEIGHBOR_ADDRESS_MAX);
+  DEBUG_PRINT("setBeforeDistance: neighborAddress = %d\n", neighborAddress);
   distanceTowards[neighborAddress] = distance;
+
   distanceSource[neighborAddress] = source;
+}
+
+static int16_t median_filter_3(int16_t *data)
+{
+  int16_t middle;
+  if ((data[0] <= data[1]) && (data[0] <= data[2]))
+  {
+    middle = (data[1] <= data[2]) ? data[1] : data[2];
+  }
+  else if ((data[1] <= data[0]) && (data[1] <= data[2]))
+  {
+    middle = (data[0] <= data[2]) ? data[0] : data[2];
+  }
+  else
+  {
+    middle = (data[0] <= data[1]) ? data[0] : data[1];
+  }
+  return middle;
 }
 
 void rangingTableBufferInit(Ranging_Table_Tr_Rr_Buffer_t *rangingTableBuffer)
@@ -1199,11 +1227,13 @@ static void S3_RX_NO_Rf(Ranging_Table_t *rangingTable)
   int16_t distance = computeDistance2(rangingTable->TxRxHistory.Tx, rangingTable->TxRxHistory.Rx,
                                       rangingTable->Tp, rangingTable->Rp,
                                       Tr_Rr_Candidate.Tr, Tr_Rr_Candidate.Rr);
+
   if (distance > 0)
   {
     statistic[rangingTable->neighborAddress].compute2num++;
     rangingTable->distance = distance;
     setDistance(rangingTable->neighborAddress, distance, 2);
+    
     setNeighborDistance(rangingTable->neighborAddress, distance);
   }
   else
@@ -1234,6 +1264,7 @@ static void S3_RX_Rf(Ranging_Table_t *rangingTable)
                                       Tr_Rr_Candidate.Tr, Tr_Rr_Candidate.Rr);
   if (distance > 0)
   {
+   
     statistic[rangingTable->neighborAddress].compute2num++;
     rangingTable->distance = distance;
     setDistance(rangingTable->neighborAddress, distance, 2);
@@ -1282,6 +1313,7 @@ static void S4_RX_NO_Rf(Ranging_Table_t *rangingTable)
                                       Tr_Rr_Candidate.Tr, Tr_Rr_Candidate.Rr);
   if (distance > 0)
   {
+   
     statistic[rangingTable->neighborAddress].compute2num++;
     rangingTable->distance = distance;
     setDistance(rangingTable->neighborAddress, distance, 2);
@@ -1325,6 +1357,7 @@ static void S4_RX_Rf(Ranging_Table_t *rangingTable)
                                      rangingTable->Tf, rangingTable->Rf);
   if (distance > 0)
   {
+  
     statistic[rangingTable->neighborAddress].compute1num++;
     rangingTable->distance = distance;
     setDistance(rangingTable->neighborAddress, distance, 1);
@@ -1401,6 +1434,7 @@ void rangingTableOnEvent(Ranging_Table_t *table, RANGING_TABLE_EVENT event)
 }
 
 // liujiangpeng add
+
 void initNeighborStateInfoAndMedian_data()
 {
   for (int i = 0; i < RANGING_TABLE_SIZE + 1; i++)
@@ -1440,12 +1474,13 @@ void setNeighborStateInfo(uint16_t neighborAddress, Ranging_Message_Header_t *ra
   neighborStateInfo.gyroZ[neighborAddress] = rangingMessageHeader->gyroZ;
   neighborStateInfo.positionZ[neighborAddress] = rangingMessageHeader->positionZ;
   neighborStateInfo.refresh[neighborAddress] = true;
+   DEBUG_PRINT("set sucess%d\n",leaderStateInfo.stage);
   if (neighborAddress == leaderStateInfo.address)
   { /*无人机的keep_flying都是由0号无人机来设置的*/
     leaderStateInfo.keepFlying = rangingMessageHeader->keep_flying;
     leaderStateInfo.stage = rangingMessageHeader->stage;
     // DEBUG_PRINT("--before recv--%d\n",leaderStateInfo.stage);
-    // DEBUG_PRINT("--recv--%d\n",leaderStateInfo.stage);
+
   }
 }
 void setNeighborDistance(uint16_t neighborAddress, int16_t distance)
@@ -1495,7 +1530,7 @@ bool getNeighborStateInfo(uint16_t neighborAddress,
                           uint16_t *height,
                           bool *isNewAddNeighbor)
 {
-  if (neighborStateInfo.refresh[neighborAddress] == true && leaderStateInfo.keepFlying == true)
+  if (neighborStateInfo.refresh[neighborAddress] == true)//&& leaderStateInfo.keepFlying == true
   {
     neighborStateInfo.refresh[neighborAddress] = false;
     *distance = neighborStateInfo.distanceTowards[neighborAddress];
@@ -1530,6 +1565,7 @@ static void processRangingMessage(Ranging_Message_With_Timestamp_t *rangingMessa
 {
   Ranging_Message_t *rangingMessage = &rangingMessageWithTimestamp->rangingMessage;
   uint16_t neighborAddress = rangingMessage->header.srcAddress;
+  DEBUG_PRINT("processRangingMessage: neighborAddress = %d\n", neighborAddress);
   int neighborIndex = rangingTableSetSearchTable(&rangingTableSet, neighborAddress);
 
   DEBUG_PRINT("seq:%d\n", rangingMessage->header.msgSequence);
@@ -1538,6 +1574,7 @@ static void processRangingMessage(Ranging_Message_With_Timestamp_t *rangingMessa
   statistic[neighborAddress].recvSeq = rangingMessage->header.msgSequence;
   bool isNewAddNeighbor = neighborIndex == -1 ? true : false; /*如果是新添加的邻居，则是true*/
   setNeighborStateInfo_isNewAdd(neighborAddress, isNewAddNeighbor);
+  DEBUG_PRINT("processRangingMessage: neighborIndex = %d, isNewAddNeighbor = %d\n", neighborIndex, isNewAddNeighbor);
   /* Handle new neighbor */
   if (neighborIndex == -1)
   {
@@ -1599,7 +1636,9 @@ static void processRangingMessage(Ranging_Message_With_Timestamp_t *rangingMessa
     }
   }
   Timestamp_Tuple_t Tf = findTfBySeqNumber(neighborRf.seqNumber);
+  //DEBUG_PRINT("setNeightborStateInfo: neighborAddress = %d\n", neighborAddress);
   setNeighborStateInfo(neighborAddress, &rangingMessage->header);
+  //DEBUG_PRINT("afterSetNeightborStateInfo: neighborAddress = %d\n", neighborAddress);
   if (neighborRf.seqNumber != neighborRangingTable->Tp.seqNumber && Tf.timestamp.full)
   {
     neighborRangingTable->Rf = neighborRf;
@@ -1829,14 +1868,31 @@ static void uwbRangingTxTask(void *parameters)
   txPacketCache.header.type = UWB_RANGING_MESSAGE;
   txPacketCache.header.length = 0;
   Ranging_Message_t *rangingMessage = (Ranging_Message_t *)&txPacketCache.payload;
-
+  // Add by lcy
+  BaseType_t xReturn = pdPASS;
   while (true)
   {
+    if (MY_UWB_ADDRESS != 0)
+    {
+      // DEBUG_PRINT("I am not 0\n");
+      TickType_t overTime_tick_count = (TX_PERIOD_IN_MS * configTICK_RATE_HZ) / 1000;
+      xReturn = xSemaphoreTake(rangingTxTaskBinary, overTime_tick_count);
+      if (pdTRUE == xReturn) 
+      {
+        // DEBUG_PRINT("Delay: %u\n", txPeriodDelay);
+        vTaskDelay(txPeriodDelay);
+      }
+      else
+      {
+        // DEBUG_PRINT("Delay: Overtime!\n");
+      }
+    }
     xSemaphoreTake(rangingTableSet.mu, portMAX_DELAY);
     xSemaphoreTake(neighborSet.mu, portMAX_DELAY);
 
+
     // Time_t taskDelay = RANGING_PERIOD + rand() % RANGING_PERIOD;
-    Time_t taskDelay = RANGING_PERIOD - 2 + rand() % 5;
+    Time_t taskDelay = RANGING_PERIOD - 6 + rand() % 13;
     // int randNum = rand() % 20;
     generateRangingMessage(rangingMessage);
     txPacketCache.header.length = sizeof(UWB_Packet_Header_t) + rangingMessage->header.msgLength;
@@ -1873,7 +1929,7 @@ static void uwbRangingRxTask(void *parameters)
     if (xQueueReceive(rxQueue, &rxPacketCache, portMAX_DELAY))
     {
       int randNum = rand() % 20;
-      if (randNum < 14)
+      if (randNum < 50)
       {
         xSemaphoreTake(rangingTableSet.mu, portMAX_DELAY);
         xSemaphoreTake(neighborSet.mu, portMAX_DELAY);
@@ -1924,6 +1980,10 @@ void rangingInit()
   MY_UWB_ADDRESS = uwbGetAddress();
   rxQueue = xQueueCreate(RANGING_RX_QUEUE_SIZE, RANGING_RX_QUEUE_ITEM_SIZE);
   neighborSetInit(&neighborSet);
+  // Add by lcy
+  txPeriodDelayset();
+  // Add by lcy
+  rangingTxTaskBinary = xSemaphoreCreateBinary(); // a binary semaphore 
   neighborSetEvictionTimer = xTimerCreate("neighborSetEvictionTimer",
                                           M2T(NEIGHBOR_SET_HOLD_TIME / 2),
                                           pdTRUE,
@@ -1940,7 +2000,7 @@ void rangingInit()
                                               rangingTableSetClearExpireTimerCallback);
   xTimerStart(rangingTableSetEvictionTimer, M2T(0));
   TfBufferMutex = xSemaphoreCreateMutex();
-
+  
   listener.type = UWB_RANGING_MESSAGE;
   listener.rxQueue = NULL; // handle rxQueue in swarm_ranging.c instead of adhocdeck.c
   listener.rxCb = rangingRxCallback;
