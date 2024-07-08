@@ -38,6 +38,13 @@
 #define NEIGHBOR_ADDRESS_MAX 32
 #define NEIGHBOR_SET_HOLD_TIME (6 * RANGING_PERIOD_MAX)
 
+/*fly control*/
+#define RESET_INIT_STAGE 123 
+#define ZERO_STAGE 124  // 飞行阶段，0阶段随机飞
+#define FIRST_STAGE 125 //
+#define SECOND_STAGE 126
+#define LAND_STAGE 127
+
 typedef short set_index_t;
 
 /* Timestamp Tuple */
@@ -56,6 +63,7 @@ typedef struct {
   Timestamp_Tuple_t timestamp; // 10 byte
 } __attribute__((packed)) Body_Unit_t; // 13 byte
 
+
 /* Ranging Message Header*/
 typedef struct {
   uint16_t srcAddress; // 2 byte
@@ -65,6 +73,8 @@ typedef struct {
   uint16_t msgLength; // 2 byte
   uint16_t filter; // 16 bits bloom filter
 
+  int8_t stage;
+  bool keep_flying;
   float posiX;
   float posiY;
   float posiZ;
@@ -241,4 +251,18 @@ void printRangingMessage(Ranging_Message_t *rangingMessage);
 void printNeighborBitSet(Neighbor_Bit_Set_t *bitSet);
 void printNeighborSet(Neighbor_Set_t *set);
 
+
+typedef struct
+{
+    uint16_t address;
+    int8_t stage;
+    bool keepFlying;
+    uint32_t keepFlyingTrueTick;
+    bool alreadyTakeoff;
+
+} leaderStateInfo_t;
+/*getOrSetKeepflying*/
+bool getOrSetKeepflying(uint16_t RobIDfromControl, bool keep_flying);
+
+int8_t getLeaderStage();
 #endif

@@ -77,6 +77,81 @@ typedef struct Stastistic
 static Stastistic statistic[NEIGHBOR_ADDRESS_MAX + 1];
 static TimerHandle_t statisticTimer;
 
+static leaderStateInfo_t leaderStateInfo;
+/* fly control*/
+bool getOrSetKeepflying(uint16_t uwbAddress, bool keep_flying)
+{
+  if (uwbAddress == leaderStateInfo.address)
+  {
+    if (leaderStateInfo.keepFlying == false && keep_flying == true)
+    {
+      leaderStateInfo.keepFlyingTrueTick = xTaskGetTickCount();
+    }
+    leaderStateInfo.keepFlying = keep_flying;
+    return keep_flying;
+  }
+  else
+  {
+    return leaderStateInfo.keepFlying;
+  }
+}
+
+void initLeaderStateInfo()
+{
+  leaderStateInfo.keepFlying = false;
+  leaderStateInfo.address = 0;
+  leaderStateInfo.stage = ZERO_STAGE;
+  // DEBUG_PRINT("--init--%d\n",leaderStateInfo.stage);
+}
+int8_t getLeaderStage()
+{
+  // DEBUG_PRINT("--get--%d\n",leaderStateInfo.stage);
+  return leaderStateInfo.stage;
+}
+void setleaderStateInfo(UWB_Address_t neighborAddress, Ranging_Message_t *rangingMessage)
+{
+  if (neighborAddress == leaderStateInfo.address)
+  { /*无人机的keep_flying都是由0号无人机来设置的*/
+    leaderStateInfo.keepFlying = rangingMessage->header.keep_flying;
+    leaderStateInfo.stage = rangingMessage->header.stage;
+    // DEBUG_PRINT("--before recv--%d\n",leaderStateInfo.stage);
+    // DEBUG_PRINT("--recv--%d\n",leaderStateInfo.stage);
+  }
+}
+
+int8_t generateStage()
+{
+  int8_t stage = ZERO_STAGE;
+  if (MY_UWB_ADDRESS == leaderStateInfo.address && leaderStateInfo.keepFlying)
+  {
+    // 分阶段控制
+    uint32_t tickInterval = xTaskGetTickCount() - leaderStateInfo.keepFlyingTrueTick;
+    uint32_t hoverTick = 15000;                                              // 到达目标点，且悬停时间15s
+    uint32_t maintainTick = 5000;                                            // 每转一次需要的时间
+    uint32_t rotationNums_3Stage = 8;                                        // 第3阶段旋转次数
+    uint32_t rotationNums_4Stage = 5;                                        // 第4阶段旋转次数
+    uint32_t rotationTick_3Stage = maintainTick * (rotationNums_3Stage + 1); // 旋转总时间
+    uint32_t rotationTick_4Stage = maintainTick * (rotationNums_4Stage + 1);
+    int8_t stageStartPoint_4 = 64; // 第4阶段起始stage值，因为阶段的区分靠的是stage的值域,(-30,30)为第三阶段
+
+    if (tickInterval < hoverTick)
+    {
+      stage = FIRST_STAGE; // 第一个阶段，到达目标点且悬停
+    }
+    else if (tickInterval >= hoverTick && tickInterval < rotationTick_3Stage)
+    {
+      stage = tickInterval / maintainTick; // 计算旋转次数
+      stage = stage - 1;
+    }
+    else
+    {
+      stage = LAND_STAGE;
+    }
+    leaderStateInfo.stage = stage; // 这里设置leader的stage
+  }
+  return stage;
+}
+
 int16_t getDistance(UWB_Address_t neighborAddress)
 {
   ASSERT(neighborAddress <= NEIGHBOR_ADDRESS_MAX);
@@ -1364,16 +1439,17 @@ void rangingTableOnEvent(Ranging_Table_t *table, RANGING_TABLE_EVENT event)
   EVENT_HANDLER[table->state][event](table);
 }
 
-void computeRealDistance(uint16_t neighborAddress, float x1, float y1, float z1, float x2, float y2, float z2) {
-    // 计算各坐标的差
-    float dx = x2 - x1;
-    float dy = y2 - y1;
-    float dz = z2 - z1;
-    
-    // 计算距离的平方和再开方
-    float distance = sqrt(dx * dx + dy * dy + dz * dz);
-    
-    distanceReal[neighborAddress] = distance;
+void computeRealDistance(uint16_t neighborAddress, float x1, float y1, float z1, float x2, float y2, float z2)
+{
+  // 计算各坐标的差
+  float dx = x2 - x1;
+  float dy = y2 - y1;
+  float dz = z2 - z1;
+
+  // 计算距离的平方和再开方
+  float distance = sqrt(dx * dx + dy * dy + dz * dz);
+
+  distanceReal[neighborAddress] = distance;
 }
 
 /* Swarm Ranging */
@@ -1382,13 +1458,13 @@ static void processRangingMessage(Ranging_Message_With_Timestamp_t *rangingMessa
   Ranging_Message_t *rangingMessage = &rangingMessageWithTimestamp->rangingMessage;
   uint16_t neighborAddress = rangingMessage->header.srcAddress;
   int neighborIndex = rangingTableSetSearchTable(&rangingTableSet, neighborAddress);
-
-  DEBUG_PRINT("seq:%d\n", rangingMessage->header.msgSequence);
+  setleaderStateInfo(neighborAddress, rangingMessage);
+  // DEBUG_PRINT("seq:%d\n", rangingMessage->header.msgSequence);
 
   float posiX = logGetFloat(idX);
   float posiY = logGetFloat(idY);
   float posiZ = logGetFloat(idZ);
-  computeRealDistance(neighborAddress,posiX,posiY,posiZ,rangingMessage->header.posiX,rangingMessage->header.posiY,rangingMessage->header.posiZ);
+  computeRealDistance(neighborAddress, posiX, posiY, posiZ, rangingMessage->header.posiX, rangingMessage->header.posiY, rangingMessage->header.posiZ);
 
   statistic[neighborAddress].recvnum++;
   statistic[neighborAddress].recvSeq = rangingMessage->header.msgSequence;
@@ -1617,6 +1693,11 @@ static Time_t generateRangingMessage(Ranging_Message_t *rangingMessage)
   rangingMessage->header.posiY = posiY;
   rangingMessage->header.posiZ = posiZ;
 
+  // generate fly stage
+  generateStage();
+  rangingMessage->header.keep_flying = leaderStateInfo.keepFlying;
+  rangingMessage->header.stage = leaderStateInfo.stage;
+
   velocity = sqrt(pow(velocityX, 2) + pow(velocityY, 2) + pow(velocityZ, 2));
   /* velocity in cm/s */
   rangingMessage->header.velocity = (short)(velocity * 100);
@@ -1768,6 +1849,7 @@ void rangingInit()
   idVelocityZ = logGetVarId("stateEstimate", "vz");
 
   statisticInit();
+  initLeaderStateInfo();
 
   xTaskCreate(uwbRangingTxTask, ADHOC_DECK_RANGING_TX_TASK_NAME, UWB_TASK_STACK_SIZE, NULL,
               ADHOC_DECK_TASK_PRI, &uwbRangingTxTaskHandle);

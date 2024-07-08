@@ -6,6 +6,11 @@
     },
     "files.associations": {
         "bootloader.h": "c",
-        "iterator": "c"
+        "iterator": "c",
+        "formation.h": "c",
+        "debug.h": "c",
+        "swarm_ranging.h": "c",
+        "planner.h": "c",
+        "crtp_commander_high_level.h": "c"
     }
 }
