@@ -16,7 +16,7 @@ static float takeoff_time1 = 2;
 static float takeoff_time2 = 2;
 
 static float gotoPosiTime0 = 1;
-static float gotoPosiTime1 = 1;
+static float gotoPosiTime1 = 2;
 static float gotoPosiTime2 = 1;
 typedef enum
 {

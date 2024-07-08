@@ -1852,24 +1852,6 @@ void rangingInit()
               ADHOC_DECK_TASK_PRI, &uwbRangingRxTaskHandle);
 }
 
-uint16_t getStatisticIndex = 3;
-static uint16_t getStasticRecvSeq()
-{
-  return statistic[getStatisticIndex].recvSeq;
-}
-static uint16_t getStasticRecvnum()
-{
-  return statistic[getStatisticIndex].recvnum;
-}
-static uint16_t getStasticCompute1num()
-{
-  return statistic[getStatisticIndex].compute1num;
-}
-static uint16_t getStasticCompute2num()
-{
-  return statistic[getStatisticIndex].compute2num;
-}
-
 LOG_GROUP_START(Ranging)
 LOG_ADD(LOG_INT16, distTo1, distanceTowards + 1)
 LOG_ADD(LOG_INT16, distTo2, distanceTowards + 2)
@@ -1884,13 +1866,7 @@ LOG_ADD(LOG_INT16, distTo10, distanceTowards + 10)
 LOG_GROUP_STOP(Ranging)
 
 LOG_GROUP_START(Statistic)
-LOG_ADD(LOG_UINT16, recvSeq2, &statistic[2].recvSeq)
-LOG_ADD(LOG_UINT16, recvNum2, &statistic[2].recvnum)
-LOG_ADD(LOG_UINT16, compute1num2, &statistic[2].compute1num)
-LOG_ADD(LOG_UINT16, compute2num2, &statistic[2].compute2num)
-LOG_ADD(LOG_INT16, dist2, distanceTowards + 2)
-LOG_ADD(LOG_UINT8, distSrc2, distanceSource + 2)
-LOG_ADD(LOG_FLOAT, distReal2, distanceReal + 2)
+
 
 LOG_ADD(LOG_UINT16, recvSeq1, &statistic[1].recvSeq)
 LOG_ADD(LOG_UINT16, recvNum1, &statistic[1].recvnum)
@@ -1899,4 +1875,191 @@ LOG_ADD(LOG_UINT16, compute2num1, &statistic[1].compute2num)
 LOG_ADD(LOG_INT16, dist1, distanceTowards + 1)
 LOG_ADD(LOG_UINT8, distSrc1, distanceSource + 1)
 LOG_ADD(LOG_FLOAT, distReal1, distanceReal + 1)
+
+LOG_ADD(LOG_UINT16, recvSeq2, &statistic[2].recvSeq)
+LOG_ADD(LOG_UINT16, recvNum2, &statistic[2].recvnum)
+LOG_ADD(LOG_UINT16, compute1num2, &statistic[2].compute1num)
+LOG_ADD(LOG_UINT16, compute2num2, &statistic[2].compute2num)
+LOG_ADD(LOG_INT16, dist2, distanceTowards + 2)
+LOG_ADD(LOG_UINT8, distSrc2, distanceSource + 2)
+LOG_ADD(LOG_FLOAT, distReal2, distanceReal + 2)
+
+LOG_ADD(LOG_UINT16, recvSeq3, &statistic[3].recvSeq)
+LOG_ADD(LOG_UINT16, recvNum3, &statistic[3].recvnum)
+LOG_ADD(LOG_UINT16, compute1num3, &statistic[3].compute1num)
+LOG_ADD(LOG_UINT16, compute2num3, &statistic[3].compute2num)
+LOG_ADD(LOG_INT16, dist3, distanceTowards + 3)
+LOG_ADD(LOG_UINT8, distSrc3, distanceSource + 3)
+LOG_ADD(LOG_FLOAT, distReal3, distanceReal + 3)
+
+LOG_ADD(LOG_UINT16, recvSeq4, &statistic[4].recvSeq)
+LOG_ADD(LOG_UINT16, recvNum4, &statistic[4].recvnum)
+LOG_ADD(LOG_UINT16, compute1num4, &statistic[4].compute1num)
+LOG_ADD(LOG_UINT16, compute2num4, &statistic[4].compute2num)
+LOG_ADD(LOG_INT16, dist4, distanceTowards + 4)
+LOG_ADD(LOG_UINT8, distSrc4, distanceSource + 4)
+LOG_ADD(LOG_FLOAT, distReal4, distanceReal + 4)
+
+LOG_ADD(LOG_UINT16, recvSeq5, &statistic[5].recvSeq)
+LOG_ADD(LOG_UINT16, recvNum5, &statistic[5].recvnum)
+LOG_ADD(LOG_UINT16, compute1num5, &statistic[5].compute1num)
+LOG_ADD(LOG_UINT16, compute2num5, &statistic[5].compute2num)
+LOG_ADD(LOG_INT16, dist5, distanceTowards + 5)
+LOG_ADD(LOG_UINT8, distSrc5, distanceSource + 5)
+LOG_ADD(LOG_FLOAT, distReal5, distanceReal + 5)
+
+LOG_ADD(LOG_UINT16, recvSeq6, &statistic[6].recvSeq)
+LOG_ADD(LOG_UINT16, recvNum6, &statistic[6].recvnum)
+LOG_ADD(LOG_UINT16, compute1num6, &statistic[6].compute1num)
+LOG_ADD(LOG_UINT16, compute2num6, &statistic[6].compute2num)
+LOG_ADD(LOG_INT16, dist6, distanceTowards + 6)
+LOG_ADD(LOG_UINT8, distSrc6, distanceSource + 6)
+LOG_ADD(LOG_FLOAT, distReal6, distanceReal + 6)
+
+LOG_ADD(LOG_UINT16, recvSeq7, &statistic[7].recvSeq)
+LOG_ADD(LOG_UINT16, recvNum7, &statistic[7].recvnum)
+LOG_ADD(LOG_UINT16, compute1num7, &statistic[7].compute1num)
+LOG_ADD(LOG_UINT16, compute2num7, &statistic[7].compute2num)
+LOG_ADD(LOG_INT16, dist7, distanceTowards + 7)
+LOG_ADD(LOG_UINT8, distSrc7, distanceSource + 7)
+LOG_ADD(LOG_FLOAT, distReal7, distanceReal + 7)
+
+LOG_ADD(LOG_UINT16, recvSeq8, &statistic[8].recvSeq)
+LOG_ADD(LOG_UINT16, recvNum8, &statistic[8].recvnum)
+LOG_ADD(LOG_UINT16, compute1num8, &statistic[8].compute1num)
+LOG_ADD(LOG_UINT16, compute2num8, &statistic[8].compute2num)
+LOG_ADD(LOG_INT16, dist8, distanceTowards + 8)
+LOG_ADD(LOG_UINT8, distSrc8, distanceSource + 8)
+LOG_ADD(LOG_FLOAT, distReal8, distanceReal + 8)
+
+LOG_ADD(LOG_UINT16, recvSeq9, &statistic[9].recvSeq)
+LOG_ADD(LOG_UINT16, recvNum9, &statistic[9].recvnum)
+LOG_ADD(LOG_UINT16, compute1num9, &statistic[9].compute1num)
+LOG_ADD(LOG_UINT16, compute2num9, &statistic[9].compute2num)
+LOG_ADD(LOG_INT16, dist9, distanceTowards + 9)
+LOG_ADD(LOG_UINT8, distSrc9, distanceSource + 9)
+LOG_ADD(LOG_FLOAT, distReal9, distanceReal + 9)
+
+LOG_ADD(LOG_UINT16, recvSeq10, &statistic[10].recvSeq)
+LOG_ADD(LOG_UINT16, recvNum10, &statistic[10].recvnum)
+LOG_ADD(LOG_UINT16, compute1num10, &statistic[10].compute1num)
+LOG_ADD(LOG_UINT16, compute2num10, &statistic[10].compute2num)
+LOG_ADD(LOG_INT16, dist10, distanceTowards + 10)
+LOG_ADD(LOG_UINT8, distSrc10, distanceSource + 10)
+LOG_ADD(LOG_FLOAT, distReal10, distanceReal + 10)
+
+LOG_ADD(LOG_UINT16, recvSeq11, &statistic[11].recvSeq)
+LOG_ADD(LOG_UINT16, recvNum11, &statistic[11].recvnum)
+LOG_ADD(LOG_UINT16, compute1num11, &statistic[11].compute1num)
+LOG_ADD(LOG_UINT16, compute2num11, &statistic[11].compute2num)
+LOG_ADD(LOG_INT16, dist11, distanceTowards + 11)
+LOG_ADD(LOG_UINT8, distSrc11, distanceSource + 11)
+LOG_ADD(LOG_FLOAT, distReal11, distanceReal + 11)
+
+LOG_ADD(LOG_UINT16, recvSeq12, &statistic[12].recvSeq)
+LOG_ADD(LOG_UINT16, recvNum12, &statistic[12].recvnum)
+LOG_ADD(LOG_UINT16, compute1num12, &statistic[12].compute1num)
+LOG_ADD(LOG_UINT16, compute2num12, &statistic[12].compute2num)
+LOG_ADD(LOG_INT16, dist12, distanceTowards + 12)
+LOG_ADD(LOG_UINT8, distSrc12, distanceSource + 12)
+LOG_ADD(LOG_FLOAT, distReal12, distanceReal + 12)
+
+LOG_ADD(LOG_UINT16, recvSeq13, &statistic[13].recvSeq)
+LOG_ADD(LOG_UINT16, recvNum13, &statistic[13].recvnum)
+LOG_ADD(LOG_UINT16, compute1num13, &statistic[13].compute1num)
+LOG_ADD(LOG_UINT16, compute2num13, &statistic[13].compute2num)
+LOG_ADD(LOG_INT16, dist13, distanceTowards + 13)
+LOG_ADD(LOG_UINT8, distSrc13, distanceSource + 13)
+LOG_ADD(LOG_FLOAT, distReal13, distanceReal + 13)
+
+LOG_ADD(LOG_UINT16, recvSeq14, &statistic[14].recvSeq)
+LOG_ADD(LOG_UINT16, recvNum14, &statistic[14].recvnum)
+LOG_ADD(LOG_UINT16, compute1num14, &statistic[14].compute1num)
+LOG_ADD(LOG_UINT16, compute2num14, &statistic[14].compute2num)
+LOG_ADD(LOG_INT16, dist14, distanceTowards + 14)
+LOG_ADD(LOG_UINT8, distSrc14, distanceSource + 14)
+LOG_ADD(LOG_FLOAT, distReal14, distanceReal + 14)
+
+LOG_ADD(LOG_UINT16, recvSeq15, &statistic[15].recvSeq)
+LOG_ADD(LOG_UINT16, recvNum15, &statistic[15].recvnum)
+LOG_ADD(LOG_UINT16, compute1num15, &statistic[15].compute1num)
+LOG_ADD(LOG_UINT16, compute2num15, &statistic[15].compute2num)
+LOG_ADD(LOG_INT16, dist15, distanceTowards + 15)
+LOG_ADD(LOG_UINT8, distSrc15, distanceSource + 15)
+LOG_ADD(LOG_FLOAT, distReal15, distanceReal + 15)
+
+LOG_ADD(LOG_UINT16, recvSeq16, &statistic[16].recvSeq)
+LOG_ADD(LOG_UINT16, recvNum16, &statistic[16].recvnum)
+LOG_ADD(LOG_UINT16, compute1num16, &statistic[16].compute1num)
+LOG_ADD(LOG_UINT16, compute2num16, &statistic[16].compute2num)
+LOG_ADD(LOG_INT16, dist16, distanceTowards + 16)
+LOG_ADD(LOG_UINT8, distSrc16, distanceSource + 16)
+LOG_ADD(LOG_FLOAT, distReal16, distanceReal + 16)
+
+LOG_ADD(LOG_UINT16, recvSeq17, &statistic[17].recvSeq)
+LOG_ADD(LOG_UINT16, recvNum17, &statistic[17].recvnum)
+LOG_ADD(LOG_UINT16, compute1num17, &statistic[17].compute1num)
+LOG_ADD(LOG_UINT16, compute2num17, &statistic[17].compute2num)
+LOG_ADD(LOG_INT16, dist17, distanceTowards + 17)
+LOG_ADD(LOG_UINT8, distSrc17, distanceSource + 17)
+LOG_ADD(LOG_FLOAT, distReal17, distanceReal + 17)
+
+LOG_ADD(LOG_UINT16, recvSeq18, &statistic[18].recvSeq)
+LOG_ADD(LOG_UINT16, recvNum18, &statistic[18].recvnum)
+LOG_ADD(LOG_UINT16, compute1num18, &statistic[18].compute1num)
+LOG_ADD(LOG_UINT16, compute2num18, &statistic[18].compute2num)
+LOG_ADD(LOG_INT16, dist18, distanceTowards + 18)
+LOG_ADD(LOG_UINT8, distSrc18, distanceSource + 18)
+LOG_ADD(LOG_FLOAT, distReal18, distanceReal + 18)
+
+LOG_ADD(LOG_UINT16, recvSeq19, &statistic[19].recvSeq)
+LOG_ADD(LOG_UINT16, recvNum19, &statistic[19].recvnum)
+LOG_ADD(LOG_UINT16, compute1num19, &statistic[19].compute1num)
+LOG_ADD(LOG_UINT16, compute2num19, &statistic[19].compute2num)
+LOG_ADD(LOG_INT16, dist19, distanceTowards + 19)
+LOG_ADD(LOG_UINT8, distSrc19, distanceSource + 19)
+LOG_ADD(LOG_FLOAT, distReal19, distanceReal + 19)
+
+LOG_ADD(LOG_UINT16, recvSeq20, &statistic[20].recvSeq)
+LOG_ADD(LOG_UINT16, recvNum20, &statistic[20].recvnum)
+LOG_ADD(LOG_UINT16, compute1num20, &statistic[20].compute1num)
+LOG_ADD(LOG_UINT16, compute2num20, &statistic[20].compute2num)
+LOG_ADD(LOG_INT16, dist20, distanceTowards + 20)
+LOG_ADD(LOG_UINT8, distSrc20, distanceSource + 20)
+LOG_ADD(LOG_FLOAT, distReal20, distanceReal + 20)
+
+LOG_ADD(LOG_UINT16, recvSeq21, &statistic[21].recvSeq)
+LOG_ADD(LOG_UINT16, recvNum21, &statistic[21].recvnum)
+LOG_ADD(LOG_UINT16, compute1num21, &statistic[21].compute1num)
+LOG_ADD(LOG_UINT16, compute2num21, &statistic[21].compute2num)
+LOG_ADD(LOG_INT16, dist21, distanceTowards + 21)
+LOG_ADD(LOG_UINT8, distSrc21, distanceSource + 21)
+LOG_ADD(LOG_FLOAT, distReal21, distanceReal + 21)
+
+LOG_ADD(LOG_UINT16, recvSeq22, &statistic[22].recvSeq)
+LOG_ADD(LOG_UINT16, recvNum22, &statistic[22].recvnum)
+LOG_ADD(LOG_UINT16, compute1num22, &statistic[22].compute1num)
+LOG_ADD(LOG_UINT16, compute2num22, &statistic[22].compute2num)
+LOG_ADD(LOG_INT16, dist22, distanceTowards + 22)
+LOG_ADD(LOG_UINT8, distSrc22, distanceSource + 22)
+LOG_ADD(LOG_FLOAT, distReal22, distanceReal + 22)
+
+LOG_ADD(LOG_UINT16, recvSeq23, &statistic[23].recvSeq)
+LOG_ADD(LOG_UINT16, recvNum23, &statistic[23].recvnum)
+LOG_ADD(LOG_UINT16, compute1num23, &statistic[23].compute1num)
+LOG_ADD(LOG_UINT16, compute2num23, &statistic[23].compute2num)
+LOG_ADD(LOG_INT16, dist23, distanceTowards + 23)
+LOG_ADD(LOG_UINT8, distSrc23, distanceSource + 23)
+LOG_ADD(LOG_FLOAT, distReal23, distanceReal + 23)
+
+LOG_ADD(LOG_UINT16, recvSeq24, &statistic[24].recvSeq)
+LOG_ADD(LOG_UINT16, recvNum24, &statistic[24].recvnum)
+LOG_ADD(LOG_UINT16, compute1num24, &statistic[24].compute1num)
+LOG_ADD(LOG_UINT16, compute2num24, &statistic[24].compute2num)
+LOG_ADD(LOG_INT16, dist24, distanceTowards + 24)
+LOG_ADD(LOG_UINT8, distSrc24, distanceSource + 24)
+LOG_ADD(LOG_FLOAT, distReal24, distanceReal + 24)
+
+// Continue in the same pattern for indices 11 to 24
+
 LOG_GROUP_STOP(Statistic)
