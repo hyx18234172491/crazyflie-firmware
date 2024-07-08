@@ -1733,7 +1733,7 @@ static void uwbRangingTxTask(void *parameters)
     xSemaphoreTake(neighborSet.mu, portMAX_DELAY);
 
     // Time_t taskDelay = RANGING_PERIOD + rand() % RANGING_PERIOD;
-    Time_t taskDelay = RANGING_PERIOD - 2 + rand() % 5;
+    Time_t taskDelay = RANGING_PERIOD - RANGING_PERIOD/3 + rand() % (RANGING_PERIOD/3*2+1);
     // int randNum = rand() % 20;
     generateRangingMessage(rangingMessage);
     txPacketCache.header.length = sizeof(UWB_Packet_Header_t) + rangingMessage->header.msgLength;
