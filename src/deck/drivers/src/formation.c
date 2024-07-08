@@ -7,13 +7,13 @@ static bool isInit;
 static bool onGround = true;               // 无人机当前是否在地面上?
 static bool isCompleteTaskAndLand = false; // 无人机是否已经执行了飞行任务并落地?
 bool keepFlying = false;
-static float_t set_height0 = 0.5;
-static float_t set_height1 = 0.5;
-static float_t set_height2 = 0.5;
+static float_t set_height0 = 1;
+static float_t set_height1 = 0.6;
+static float_t set_height2 = 0.4;
 
 static float takeoff_time0 = 2;
 static float takeoff_time1 = 2;
-static float takeoff_time2 = 2;
+static float takeoff_time2 = 1;
 
 static float gotoPosiTime0 = 1;
 static float gotoPosiTime1 = 2;
