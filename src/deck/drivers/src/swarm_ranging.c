@@ -1659,7 +1659,7 @@ static void uwbRangingRxTask(void *parameters)
     if (xQueueReceive(rxQueue, &rxPacketCache, portMAX_DELAY))
     {
       int randNum = rand() % 20;
-      if (randNum < 14)
+      if (randNum < 50)
       {
         xSemaphoreTake(rangingTableSet.mu, portMAX_DELAY);
         xSemaphoreTake(neighborSet.mu, portMAX_DELAY);
