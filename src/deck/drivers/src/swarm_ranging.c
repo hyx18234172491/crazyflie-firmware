@@ -127,13 +127,9 @@ int8_t generateStage()
     // 分阶段控制
     uint32_t tickInterval = xTaskGetTickCount() - leaderStateInfo.keepFlyingTrueTick;
     uint32_t hoverTick = 15000;                                              // 到达目标点，且悬停时间15s
-    uint32_t maintainTick = 5000;                                            // 每转一次需要的时间
+    uint32_t maintainTick = 3000;                                            // 每转一次需要的时间
     uint32_t rotationNums_3Stage = 8;                                        // 第3阶段旋转次数
-    uint32_t rotationNums_4Stage = 5;                                        // 第4阶段旋转次数
     uint32_t rotationTick_3Stage = maintainTick * (rotationNums_3Stage + 1); // 旋转总时间
-    uint32_t rotationTick_4Stage = maintainTick * (rotationNums_4Stage + 1);
-    int8_t stageStartPoint_4 = 64; // 第4阶段起始stage值，因为阶段的区分靠的是stage的值域,(-30,30)为第三阶段
-
     if (tickInterval < hoverTick)
     {
       stage = FIRST_STAGE; // 第一个阶段，到达目标点且悬停
@@ -141,7 +137,6 @@ int8_t generateStage()
     else if (tickInterval >= hoverTick && tickInterval < rotationTick_3Stage)
     {
       stage = tickInterval / maintainTick; // 计算旋转次数
-      stage = stage - 1;
     }
     else
     {

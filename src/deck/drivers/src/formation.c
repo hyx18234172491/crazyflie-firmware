@@ -10,9 +10,11 @@ bool keepFlying = false;
 static float_t set_height0 = 0.5;
 static float_t set_height1 = 0.5;
 static float_t set_height2 = 0.5;
-static int takeoff_time0 = 2;
-static int takeoff_time1 = 2;
-static int takeoff_time2 = 2;
+
+static float takeoff_time0 = 2;
+static float takeoff_time1 = 2;
+static float takeoff_time2 = 2;
+
 static float gotoPosiTime0 = 1;
 static float gotoPosiTime1 = 1;
 static float gotoPosiTime2 = 1;
@@ -54,20 +56,15 @@ void formationTask(void *arg)
       {initDist, doubInitDist, 0.0f},       // 23
       {doubInitDist, doubInitDist, 0.0f}};  // 24
 
-  uint8_t SQURE3_3_NUM = 9; // 3阶段转圈的无人机数量+1（0号无人机）
   int8_t targetShift = 0;
-  static const uint8_t targetSquere3_3[15] = {
-      0, 1, 2, 3, 4, 5, 6, 7, 8 // 8个位置,为了使得索引和值一一对应，所以有0
-  };
-  static const uint8_t indexToPosi3_4[15] = {
-      0, 1, 2, 3, 4, 5, 6, 7, 11, 10, 9 // 11个位置
-  };
-  static const int8_t posiToIndex3_4[15] = {// -1代码无效
-                                            -1, 1, 2, 3, 4, 5, 6, 7, -1, 10, 9, 8};
-  /*
-  posi  0, 1, 2, 3, 4, 5, 6, 7, 11, 10, 9
-  index 0  1  2  3  4  5  6  7  8   9   10
-  */
+  uint16_t MY_UWB_ADDRESS = 1;
+
+  uint16_t INNER_3_3_NUM = 3 * 3;
+  uint16_t INNER_3_3_START = 1;
+
+  uint16_t OUTER5_5_NUM = 5 * 5 - INNER_3_3_NUM;
+  uint16_t OUTER5_5_START = INNER_3_3_NUM;
+
   systemWaitStart();
   while (1)
   {
@@ -88,7 +85,7 @@ void formationTask(void *arg)
             crtpCommanderHighLevelTakeoff(set_height0, takeoff_time0);
             vTaskDelay(M2T(takeoff_time0));
           }
-          else if (MY_UWB_ADDRESS > 0 && MY_UWB_ADDRESS < SQURE3_3_NUM)
+          else if (MY_UWB_ADDRESS > 0 && MY_UWB_ADDRESS < INNER_3_3_NUM)
           {
             crtpCommanderHighLevelTakeoff(set_height1, takeoff_time1);
             vTaskDelay(M2T(takeoff_time1));
@@ -99,14 +96,14 @@ void formationTask(void *arg)
             vTaskDelay(M2T(takeoff_time2));
           }
         }
-        if (leaderStage == ZERO_STAGE) // 第0个阶段到达目标点
+        if (leaderStage == FIRST_STAGE) // 第0个阶段到达目标点,且悬停
         {
           if (MY_UWB_ADDRESS == 0)
           {
             crtpCommanderHighLevelGoTo(targetList[MY_UWB_ADDRESS][XIndex], targetList[MY_UWB_ADDRESS][YIndex], targetList[MY_UWB_ADDRESS][ZIndex], 0, gotoPosiTime0, false);
             vTaskDelay(M2T(gotoPosiTime0));
           }
-          else if (MY_UWB_ADDRESS > 0 && MY_UWB_ADDRESS < SQURE3_3_NUM)
+          else if (MY_UWB_ADDRESS > 0 && MY_UWB_ADDRESS < INNER_3_3_NUM)
           {
             crtpCommanderHighLevelGoTo(targetList[MY_UWB_ADDRESS][XIndex], targetList[MY_UWB_ADDRESS][YIndex], targetList[MY_UWB_ADDRESS][ZIndex], 0, gotoPosiTime1, false);
             vTaskDelay(M2T(gotoPosiTime1));
@@ -119,28 +116,27 @@ void formationTask(void *arg)
         }
         else if (leaderStage >= -30 && leaderStage <= 30) // 第3个阶段，3*3转圈
         {
+          targetShift = leaderStage;
           if (MY_UWB_ADDRESS == 0)
           {
             crtpCommanderHighLevelGoTo(targetList[MY_UWB_ADDRESS][XIndex], targetList[MY_UWB_ADDRESS][YIndex], targetList[MY_UWB_ADDRESS][ZIndex], 0, gotoPosiTime0, false);
             vTaskDelay(M2T(gotoPosiTime0));
           }
-          else if (MY_UWB_ADDRESS > 0 && MY_UWB_ADDRESS < SQURE3_3_NUM)
+          else if (MY_UWB_ADDRESS > 0 && MY_UWB_ADDRESS < INNER_3_3_NUM)
           {
             int8_t index = MY_UWB_ADDRESS;
-
-            targetShift = leaderStage;
-            // 使得targetList在1~UAV_NUM之间偏移
-            index = (MY_UWB_ADDRESS + targetShift) % (SQURE3_3_NUM - 1) + 1; // 目标地址索引
-          }
+            index = (MY_UWB_ADDRESS - INNER_3_3_START + targetShift/2) % (INNER_3_3_NUM-1) + INNER_3_3_START;
+            crtpCommanderHighLevelGoTo(targetList[MY_UWB_ADDRESS][XIndex], targetList[MY_UWB_ADDRESS][YIndex], targetList[MY_UWB_ADDRESS][ZIndex], 0, gotoPosiTime1, false);
+            vTaskDelay(M2T(gotoPosiTime1));
+          } 
           else
           {
             int8_t index = MY_UWB_ADDRESS;
-            targetShift = leaderStage + (MY_UWB_ADDRESS - 9) / 3;
-            // 使得targetList在1~UAV_NUM之间偏移
-            index = (MY_UWB_ADDRESS + targetShift + 1) % 25; // 目标地址索引
-            if (index < 9)
-              index += 9;
+            index = (MY_UWB_ADDRESS - OUTER5_5_START + targetShift) % (OUTER5_5_NUM-1) + OUTER5_5_START;
+            crtpCommanderHighLevelGoTo(targetList[MY_UWB_ADDRESS][XIndex], targetList[MY_UWB_ADDRESS][YIndex], targetList[MY_UWB_ADDRESS][ZIndex], 0, gotoPosiTime2, false);
+            vTaskDelay(M2T(gotoPosiTime2));
           }
+
         }
         else
         {
@@ -154,3 +150,7 @@ void formationTask(void *arg)
     }
   }
 }
+
+PARAM_GROUP_START(relative_ctrl)
+PARAM_ADD(PARAM_UINT8, keepFlying, &keepFlying)
+PARAM_GROUP_STOP(relative_ctrl)
