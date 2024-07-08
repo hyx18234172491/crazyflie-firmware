@@ -27,8 +27,8 @@ typedef enum
 
 void formationTask(void *arg)
 {
-  const float initDist = 1;
-  const float doubInitDist = 2;
+  const float initDist = 0.7;
+  const float doubInitDist = initDist*2;
   static const float targetList[25][3] = {
       {0.0f, 0.0f, 0.0f},                   // 0
       {0.0f, -initDist, 0.0f},              // 1
@@ -96,7 +96,7 @@ void formationTask(void *arg)
             vTaskDelay(M2T(takeoff_time2));
           }
         }
-        if (leaderStage == FIRST_STAGE) // 第0个阶段到达目标点,且悬停
+        if (leaderStage == FIRST_STAGE) // 第1个阶段到达目标点,且悬停
         {
           if (MY_UWB_ADDRESS == 0)
           {
@@ -136,7 +136,6 @@ void formationTask(void *arg)
             crtpCommanderHighLevelGoTo(targetList[MY_UWB_ADDRESS][XIndex], targetList[MY_UWB_ADDRESS][YIndex], targetList[MY_UWB_ADDRESS][ZIndex], 0, gotoPosiTime2, false);
             vTaskDelay(M2T(gotoPosiTime2));
           }
-
         }
         else
         {
