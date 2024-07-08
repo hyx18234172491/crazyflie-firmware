@@ -126,9 +126,9 @@ int8_t generateStage()
   {
     // 分阶段控制
     uint32_t tickInterval = xTaskGetTickCount() - leaderStateInfo.keepFlyingTrueTick;
-    uint32_t hoverTick = 15000;                                              // 到达目标点，且悬停时间15s
-    uint32_t maintainTick = 3000;                                            // 每转一次需要的时间
-    uint32_t rotationNums_3Stage = 8;                                        // 第3阶段旋转次数
+    uint32_t hoverTick = 10000;                                              // 到达目标点，且悬停时间15s
+    uint32_t maintainTick = 2000;                                            // 每转一次需要的时间
+    uint32_t rotationNums_3Stage = 8*2;                                        // 第3阶段旋转次数
     uint32_t rotationTick_3Stage = maintainTick * (rotationNums_3Stage + 1); // 旋转总时间
     if (tickInterval < hoverTick)
     {
