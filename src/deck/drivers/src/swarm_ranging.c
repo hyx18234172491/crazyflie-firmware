@@ -1867,6 +1867,14 @@ LOG_GROUP_STOP(Ranging)
 
 LOG_GROUP_START(Statistic)
 
+LOG_ADD(LOG_UINT16, recvSeq0, &statistic[0].recvSeq)
+LOG_ADD(LOG_UINT16, recvNum0, &statistic[0].recvnum)
+LOG_ADD(LOG_UINT16, compute1num0, &statistic[0].compute1num)
+LOG_ADD(LOG_UINT16, compute2num0, &statistic[0].compute2num)
+LOG_ADD(LOG_INT16, dist0, distanceTowards + 0)
+LOG_ADD(LOG_UINT8, distSrc0, distanceSource + 0)
+LOG_ADD(LOG_FLOAT, distReal0, distanceReal + 0)
+
 
 LOG_ADD(LOG_UINT16, recvSeq1, &statistic[1].recvSeq)
 LOG_ADD(LOG_UINT16, recvNum1, &statistic[1].recvnum)
