@@ -1388,7 +1388,7 @@ static void processRangingMessage(Ranging_Message_With_Timestamp_t *rangingMessa
   float posiX = logGetFloat(idX);
   float posiY = logGetFloat(idY);
   float posiZ = logGetFloat(idZ);
-  computeRealDistance(neighborAddress,posiX,posiY,posiZ,rangingMessage->header.posiX,rangingMessage->header.posiY,rangingMessage->header.posiZ);
+  // computeRealDistance(neighborAddress,posiX,posiY,posiZ,rangingMessage->header.posiX,rangingMessage->header.posiY,rangingMessage->header.posiZ);
 
   statistic[neighborAddress].recvnum++;
   statistic[neighborAddress].recvSeq = rangingMessage->header.msgSequence;
@@ -1613,13 +1613,13 @@ static Time_t generateRangingMessage(Ranging_Message_t *rangingMessage)
   float posiY = logGetFloat(idY);
   float posiZ = logGetFloat(idZ);
 
-  rangingMessage->header.posiX = posiX;
-  rangingMessage->header.posiY = posiY;
-  rangingMessage->header.posiZ = posiZ;
+  // rangingMessage->header.posiX = posiX;
+  // rangingMessage->header.posiY = posiY;
+  // rangingMessage->header.posiZ = posiZ;
 
   velocity = sqrt(pow(velocityX, 2) + pow(velocityY, 2) + pow(velocityZ, 2));
   /* velocity in cm/s */
-  rangingMessage->header.velocity = (short)(velocity * 100);
+  // rangingMessage->header.velocity = (short)(velocity * 100);
   //  DEBUG_PRINT("generateRangingMessage: ranging message size = %u with %u body units.\n",
   //              rangingMessage->header.msgLength,
   //              bodyUnitNumber
@@ -1657,7 +1657,7 @@ static void uwbRangingTxTask(void *parameters)
     xSemaphoreTake(neighborSet.mu, portMAX_DELAY);
 
     // Time_t taskDelay = RANGING_PERIOD + rand() % RANGING_PERIOD;
-    Time_t taskDelay = RANGING_PERIOD - 20 + rand()%40;
+    Time_t taskDelay = RANGING_PERIOD/2 + rand()%(RANGING_PERIOD+1);
     // int randNum = rand() % 20;
     generateRangingMessage(rangingMessage);
     txPacketCache.header.length = sizeof(UWB_Packet_Header_t) + rangingMessage->header.msgLength;
@@ -1697,7 +1697,7 @@ static void uwbRangingRxTask(void *parameters)
         xSemaphoreTake(neighborSet.mu, portMAX_DELAY);
 
         processRangingMessage(&rxPacketCache);
-        topologySensing(&rxPacketCache.rangingMessage);
+        // topologySensing(&rxPacketCache.rangingMessage);
 
         xSemaphoreGive(neighborSet.mu);
         xSemaphoreGive(rangingTableSet.mu);
