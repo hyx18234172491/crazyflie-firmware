@@ -106,7 +106,9 @@ static void rxCallback()
     dwt_rxenable(DWT_START_RX_IMMEDIATE);
     return;
   }
-
+  #ifdef ENABLE_SNIFFER
+  listeners[UWB_SNIFFER_MESSAGE].rxCb(packet);
+  #else
   if (listeners[msgType].rxCb)
   {
     listeners[msgType].rxCb(packet);
@@ -116,6 +118,7 @@ static void rxCallback()
   {
     xQueueSendFromISR(listeners[msgType].rxQueue, packet, &xHigherPriorityTaskWoken);
   }
+  #endif
 
   dwt_forcetrxoff();
   dwt_rxenable(DWT_START_RX_IMMEDIATE);
@@ -438,6 +441,9 @@ static void uwbTaskInit()
 #endif
 #ifdef UWB_FLOODING_ENABLE
   floodingInit();
+#endif
+#ifdef ENABLE_SNIFFER
+  snifferInit(); // TODO ugly code
 #endif
 }
 /*********** Deck driver initialization ***************/

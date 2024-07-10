@@ -23,7 +23,7 @@ static setpoint_t setpoint;
 static float_t relaVarInCtrl[RANGING_TABLE_SIZE + 1][STATE_DIM_rl];
 static float_t neighbor_height[RANGING_TABLE_SIZE + 1];
 static currentNeighborAddressInfo_t currentNeighborAddressInfo;
-static float_t set_height = 1;
+static float_t set_height = 0.5;
 static float_t set_height0 = 0.5;
 static paramVarId_t idMultiranger;
 static logVarId_t idUp;
@@ -370,7 +370,6 @@ void relativeControlTask(void *arg)
   // idMultiranger = paramGetVarId("deck", "bcMultiranger");
   // uint8_t multirangerInit = paramGetUint(idMultiranger);
   uint8_t multirangerInit = false;
-  DEBUG_PRINT("multirangerInit is %d\n", multirangerInit);
   while (1)
   {
     vTaskDelay(10);
@@ -378,7 +377,7 @@ void relativeControlTask(void *arg)
     bool is_connect = relativeInfoRead((float_t *)relaVarInCtrl, (float_t *)neighbor_height, &currentNeighborAddressInfo);
     relaVarInCtrl[0][STATE_rlYaw] = 0;
     int8_t leaderStage = getLeaderStage();
-    // DEBUG_PRINT("%d,%d\n",keepFlying,leaderStage);
+    DEBUG_PRINT("%d,%d\n",keepFlying,leaderStage);
     // if(RUNNING_STAGE==0){ // 调试
     //   vTaskDelay(10000);
     //   setMyTakeoff(true);
@@ -386,7 +385,7 @@ void relativeControlTask(void *arg)
 
     if (RUNNING_STAGE == 1) // debug阶段就不能让无人机飞
     {
-      if (is_connect && keepFlying && !isCompleteTaskAndLand)
+      if (keepFlying && !isCompleteTaskAndLand)
       {
         // take off
         if (onGround) // 起飞
@@ -419,11 +418,11 @@ void relativeControlTask(void *arg)
           float_t randomVel = 0.2;
           if (MY_UWB_ADDRESS == 0)
           {
-            flyRandomIn1meter(randomVel, set_height);
+            setHoverSetpoint(&setpoint, 0, 0, set_height, 0);
           }
           else
           {
-            flyRandomIn1meter(randomVel, set_height);
+            setHoverSetpoint(&setpoint, 0, 0, set_height, 0);
           }
           //  targetX = relaVarInCtrl[0][STATE_rlX];
           // targetY = relaVarInCtrl[0][STATE_rlY];

@@ -3,6 +3,7 @@
 
 #include "libdw3000.h"
 #include "mac_802_15_4.h"
+#include "dwTypes.h"
 #include "FreeRTOS.h"
 #include "queue.h"
 
@@ -11,6 +12,7 @@
 #define UWB_ROUTING_ENABLE
 // #define UWB_RAFT_ENABLE
 // #define UWB_FLOODING_ENABLE
+//#define ENABLE_SNIFFER
 
 /* Function Switch */
 // #define UWB_ENABLE_PHR_EXT_MODE
@@ -84,6 +86,7 @@ typedef enum
   UWB_DATA_MESSAGE = 2,
   UWB_AODV_MESSAGE = 3,
   UWB_OLSR_MESSAGE = 4,
+  UWB_SNIFFER_MESSAGE = 5,
   UWB_MESSAGE_TYPE_COUNT, /* only used for counting message types. */
 } UWB_MESSAGE_TYPE;
 
@@ -100,6 +103,11 @@ typedef struct
   UWB_Packet_Header_t header; // Packet header
   uint8_t payload[UWB_PAYLOAD_SIZE_MAX];
 } __attribute__((packed)) UWB_Packet_t;
+
+typedef struct {
+  UWB_Packet_t uwbPacket;
+  dwTime_t rxTime;
+} __attribute__((packed)) UWB_Packet_With_Timestamp_t;
 
 typedef void (*UWBCallback)(void *);
 

@@ -195,7 +195,7 @@ void relativeLocoTask(void *arg)
 
             if (getNeighborStateInfo(neighborAddress, &dij, &vxj_t, &vyj_t, &rj, &hj_t, &isNewAdd))
             {
-               // DEBUG_PRINT("start%d\n", xTaskGetTickCount());
+                DEBUG_PRINT("start%d\n", xTaskGetTickCount());
                 vxj = (vxj_t + 0.0) / 100;
                 vyj = (vyj_t + 0.0) / 100;
                 hj = (hj_t + 0.0) / 100;
@@ -215,7 +215,7 @@ void relativeLocoTask(void *arg)
                     relaVar[neighborAddress].height = hj;
                     relativeEKF(neighborAddress, vxi, vyi, ri, hi, vxj, vyj, rj, hj, dij, dtEKF);
                 }
-                DEBUG_PRINT("addr:%d,X:%f,Y:%f",neighborAddress,relaVar[neighborAddress].S[STATE_rlX],relaVar[neighborAddress].S[STATE_rlY]);
+                DEBUG_PRINT("addr:%d,X:%f,Y:%f\n",neighborAddress,relaVar[neighborAddress].S[STATE_rlX],relaVar[neighborAddress].S[STATE_rlY]);
             }
         }
         // connectCount++;

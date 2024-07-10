@@ -80,7 +80,7 @@ static TimerHandle_t statisticTimer;
 
 static uint16_t MY_UWB_ADDRESS;
 int16_t TX_jitter = 0;
-uint16_t TX_PERIOD_IN_MS = 100;
+uint16_t TX_PERIOD_IN_MS = 60;
 /*--5添加--*/
 static SemaphoreHandle_t rangingTableSetMutex;                 // 用于互斥访问rangingTableSet
 static median_data_t median_data[RANGING_TABLE_SIZE + 1];      // 存储测距的历史值
@@ -125,7 +125,7 @@ int16_t getDistance(UWB_Address_t neighborAddress)
 void setDistance(UWB_Address_t neighborAddress, int16_t distance, uint8_t source)
 {
   ASSERT(neighborAddress <= NEIGHBOR_ADDRESS_MAX);
-  DEBUG_PRINT("setBeforeDistance: neighborAddress = %d\n", neighborAddress);
+  //DEBUG_PRINT("setBeforeDistance: neighborAddress = %d\n", neighborAddress);
   distanceTowards[neighborAddress] = distance;
 
   distanceSource[neighborAddress] = source;
@@ -1452,11 +1452,11 @@ void initLeaderStateInfo()
   leaderStateInfo.keepFlying = false;
   leaderStateInfo.address = 0;
   leaderStateInfo.stage = ZERO_STAGE;
-  // DEBUG_PRINT("--init--%d\n",leaderStateInfo.stage);
+  DEBUG_PRINT("--init--%d\n",leaderStateInfo.stage);
 }
 int8_t getLeaderStage()
 {
-  // DEBUG_PRINT("--get--%d\n",leaderStateInfo.stage);
+  DEBUG_PRINT("--get--%d\n",leaderStateInfo.stage);
   return leaderStateInfo.stage;
 }
 
@@ -1473,20 +1473,21 @@ void setNeighborStateInfo(uint16_t neighborAddress, Ranging_Message_Header_t *ra
   neighborStateInfo.velocityYInWorld[neighborAddress] = rangingMessageHeader->velocityYInWorld;
   neighborStateInfo.gyroZ[neighborAddress] = rangingMessageHeader->gyroZ;
   neighborStateInfo.positionZ[neighborAddress] = rangingMessageHeader->positionZ;
-  neighborStateInfo.refresh[neighborAddress] = true;
    DEBUG_PRINT("set sucess%d\n",leaderStateInfo.stage);
   if (neighborAddress == leaderStateInfo.address)
   { /*无人机的keep_flying都是由0号无人机来设置的*/
     leaderStateInfo.keepFlying = rangingMessageHeader->keep_flying;
     leaderStateInfo.stage = rangingMessageHeader->stage;
-    // DEBUG_PRINT("--before recv--%d\n",leaderStateInfo.stage);
+    DEBUG_PRINT("--before recv--%d\n",leaderStateInfo.stage);
 
   }
 }
 void setNeighborDistance(uint16_t neighborAddress, int16_t distance)
 {
   ASSERT(neighborAddress <= RANGING_TABLE_SIZE);
+  
   neighborStateInfo.distanceTowards[neighborAddress] = distance;
+  neighborStateInfo.refresh[neighborAddress] = true;
 }
 
 bool getOrSetKeepflying(uint16_t uwbAddress, bool keep_flying)
@@ -1530,7 +1531,7 @@ bool getNeighborStateInfo(uint16_t neighborAddress,
                           uint16_t *height,
                           bool *isNewAddNeighbor)
 {
-  if (neighborStateInfo.refresh[neighborAddress] == true)//&& leaderStateInfo.keepFlying == true
+  if (neighborStateInfo.refresh[neighborAddress] == true&&leaderStateInfo.keepFlying == true)
   {
     neighborStateInfo.refresh[neighborAddress] = false;
     *distance = neighborStateInfo.distanceTowards[neighborAddress];
@@ -1811,7 +1812,7 @@ static Time_t generateRangingMessage(Ranging_Message_t *rangingMessage)
     // 分阶段控制
     tickInterval = xTaskGetTickCount() - leaderStateInfo.keepFlyingTrueTick;
     // 所有邻居起飞判断
-    uint32_t convergeTick = 10000; // 收敛时间10s
+    uint32_t convergeTick = 2000; // 收敛时间10s
     uint32_t followTick = 10000;   // 跟随时间10s
     uint32_t converAndFollowTick = convergeTick + followTick;
     uint32_t maintainTick = 5000;                                            // 每转一次需要的时间
@@ -1905,16 +1906,21 @@ static void uwbRangingTxTask(void *parameters)
     //   Timestamp_Tuple_t timestamp = {.timestamp.full = 0, .seqNumber = rangingMessage->header.msgSequence};
     //   updateTfBuffer(timestamp);
     // }
+    
     uwbSendPacketBlock(&txPacketCache);
     //    printRangingTableSet(&rangingTableSet);
     //    printNeighborSet(&neighborSet);
     latest_txTime = xTaskGetTickCount();
-    getCurrentNeighborAddressInfo_t(&currentNeighborAddressInfo);
     uint16_t notget_packet_interval = 0;
 
     xSemaphoreGive(neighborSet.mu);
     xSemaphoreGive(rangingTableSet.mu);
-    vTaskDelay(taskDelay);
+    //vTaskDelay(taskDelay);
+     if (MY_UWB_ADDRESS == 0)
+    {
+      // DEBUG_PRINT("I am 0\n");
+      vTaskDelay(RANGING_PERIOD);
+    }
   }
 }
 
@@ -1947,7 +1953,7 @@ static void uwbRangingRxTask(void *parameters)
 
 void rangingRxCallback(void *parameters)
 {
-  // DEBUG_PRINT("rangingRxCallback \n");
+  DEBUG_PRINT("rangingRxCallback \n");
 
   BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 
@@ -1960,7 +1966,19 @@ void rangingRxCallback(void *parameters)
   Ranging_Message_t *rangingMessage = (Ranging_Message_t *)packet->payload;
   rxMessageWithTimestamp.rangingMessage = *rangingMessage;
 
-  xQueueSendFromISR(rxQueue, &rxMessageWithTimestamp, &xHigherPriorityTaskWoken);
+  // Add by lcy
+  uint16_t neighborAddress = rangingMessage->header.srcAddress;
+  DEBUG_PRINT("fromneighbor:%d\n",neighborAddress);
+  if (neighborAddress == 0) 
+  {
+    xSemaphoreGive(rangingTxTaskBinary);
+  }
+
+  if(MY_UWB_ADDRESS == 0||neighborAddress == 0){
+    xQueueSendFromISR(rxQueue, &rxMessageWithTimestamp, &xHigherPriorityTaskWoken);
+    DEBUG_PRINT("isReceivefrom0:%d",neighborAddress);
+  }
+  
 }
 
 void rangingTxCallback(void *parameters)
