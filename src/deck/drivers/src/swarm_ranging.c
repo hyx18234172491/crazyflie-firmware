@@ -774,58 +774,58 @@ int neighborSetClearExpire(Neighbor_Set_t *set)
   return evictionCount;
 }
 
-static void topologySensing(Ranging_Message_t *rangingMessage)
-{
-  //  DEBUG_PRINT("topologySensing: Received ranging message from neighbor %u.\n", rangingMessage->header.srcAddress);
-  UWB_Address_t neighborAddress = rangingMessage->header.srcAddress;
-  if (!neighborSetHasOneHop(&neighborSet, neighborAddress))
-  {
-    /* Add current neighbor to one-hop neighbor set. */
-    neighborSetAddOneHopNeighbor(&neighborSet, neighborAddress);
-  }
-  neighborSetUpdateExpirationTime(&neighborSet, neighborAddress);
+// static void topologySensing(Ranging_Message_t *rangingMessage)
+// {
+//   //  DEBUG_PRINT("topologySensing: Received ranging message from neighbor %u.\n", rangingMessage->header.srcAddress);
+//   UWB_Address_t neighborAddress = rangingMessage->header.srcAddress;
+//   if (!neighborSetHasOneHop(&neighborSet, neighborAddress))
+//   {
+//     /* Add current neighbor to one-hop neighbor set. */
+//     neighborSetAddOneHopNeighbor(&neighborSet, neighborAddress);
+//   }
+//   neighborSetUpdateExpirationTime(&neighborSet, neighborAddress);
 
-  /* Infer one-hop and tow-hop neighbors from received ranging message. */
-  uint8_t bodyUnitCount = (rangingMessage->header.msgLength - sizeof(Ranging_Message_Header_t)) / sizeof(Body_Unit_t);
-  for (int i = 0; i < bodyUnitCount; i++)
-  {
-#ifdef ROUTING_OLSR_ENABLE
-    if (rangingMessage->bodyUnits[i].address == uwbGetAddress())
-    {
-      /* If been selected as MPR, add neighbor to mpr selector set. */
-      if (rangingMessage->bodyUnits[i].flags.MPR)
-      {
-        if (!mprSelectorSetHas(getGlobalMPRSelectorSet(), neighborAddress))
-        {
-          mprSelectorSetAdd(getGlobalMPRSelectorSet(), neighborAddress);
-        }
-        mprSelectorSetUpdateExpirationTime(getGlobalMPRSelectorSet(), neighborAddress);
-      }
-      else
-      {
-        if (mprSelectorSetHas(getGlobalMPRSelectorSet(), neighborAddress))
-        {
-          mprSelectorSetRemove(getGlobalMPRSelectorSet(), neighborAddress);
-        }
-      }
-    }
-#endif
-    UWB_Address_t twoHopNeighbor = rangingMessage->bodyUnits[i].address;
-    if (twoHopNeighbor != uwbGetAddress() && !neighborSetHasOneHop(&neighborSet, twoHopNeighbor))
-    {
-      /* If it is not one-hop neighbor then it is now my two-hop neighbor, if new add it to neighbor set. */
-      if (!neighborSetHasTwoHop(&neighborSet, twoHopNeighbor))
-      {
-        neighborSetAddTwoHopNeighbor(&neighborSet, twoHopNeighbor);
-      }
-      if (!neighborSetHasRelation(&neighborSet, neighborAddress, twoHopNeighbor))
-      {
-        neighborSetAddRelation(&neighborSet, neighborAddress, twoHopNeighbor);
-      }
-      neighborSetUpdateExpirationTime(&neighborSet, twoHopNeighbor);
-    }
-  }
-}
+//   /* Infer one-hop and tow-hop neighbors from received ranging message. */
+//   uint8_t bodyUnitCount = (rangingMessage->header.msgLength - sizeof(Ranging_Message_Header_t)) / sizeof(Body_Unit_t);
+//   for (int i = 0; i < bodyUnitCount; i++)
+//   {
+// #ifdef ROUTING_OLSR_ENABLE
+//     if (rangingMessage->bodyUnits[i].address == uwbGetAddress())
+//     {
+//       /* If been selected as MPR, add neighbor to mpr selector set. */
+//       if (rangingMessage->bodyUnits[i].flags.MPR)
+//       {
+//         if (!mprSelectorSetHas(getGlobalMPRSelectorSet(), neighborAddress))
+//         {
+//           mprSelectorSetAdd(getGlobalMPRSelectorSet(), neighborAddress);
+//         }
+//         mprSelectorSetUpdateExpirationTime(getGlobalMPRSelectorSet(), neighborAddress);
+//       }
+//       else
+//       {
+//         if (mprSelectorSetHas(getGlobalMPRSelectorSet(), neighborAddress))
+//         {
+//           mprSelectorSetRemove(getGlobalMPRSelectorSet(), neighborAddress);
+//         }
+//       }
+//     }
+// #endif
+//     UWB_Address_t twoHopNeighbor = rangingMessage->bodyUnits[i].address;
+//     if (twoHopNeighbor != uwbGetAddress() && !neighborSetHasOneHop(&neighborSet, twoHopNeighbor))
+//     {
+//       /* If it is not one-hop neighbor then it is now my two-hop neighbor, if new add it to neighbor set. */
+//       if (!neighborSetHasTwoHop(&neighborSet, twoHopNeighbor))
+//       {
+//         neighborSetAddTwoHopNeighbor(&neighborSet, twoHopNeighbor);
+//       }
+//       if (!neighborSetHasRelation(&neighborSet, neighborAddress, twoHopNeighbor))
+//       {
+//         neighborSetAddRelation(&neighborSet, neighborAddress, twoHopNeighbor);
+//       }
+//       neighborSetUpdateExpirationTime(&neighborSet, twoHopNeighbor);
+//     }
+//   }
+// }
 
 static void neighborSetClearExpireTimerCallback(TimerHandle_t timer)
 {
@@ -903,7 +903,7 @@ void printRangingMessage(Ranging_Message_t *rangingMessage)
   {
     DEBUG_PRINT("unitAddress=%u, Seq=%u\n",
                 rangingMessage->bodyUnits[i].address,
-                rangingMessage->bodyUnits[i].timestamp.seqNumber);
+                rangingMessage->bodyUnits[i].seqNumber);
   }
 }
 
@@ -1448,7 +1448,8 @@ static void processRangingMessage(Ranging_Message_With_Timestamp_t *rangingMessa
     {
       if (rangingMessage->bodyUnits[i].address == uwbGetAddress())
       {
-        neighborRf = rangingMessage->bodyUnits[i].timestamp;
+        neighborRf.timestamp = rangingMessage->bodyUnits[i].timestamp;
+        neighborRf.seqNumber = rangingMessage->bodyUnits[i].seqNumber;
         break;
       }
     }
@@ -1557,11 +1558,13 @@ static Time_t generateRangingMessage(Ranging_Message_t *rangingMessage)
       }
       table->nextExpectedDeliveryTime = curTime + M2T(table->period);
       table->lastSendTime = curTime;
-      rangingMessage->bodyUnits[bodyUnitNumber].address = table->neighborAddress;
+      
       /* It is possible that latestReceived is not the newest timestamp, because the newest may be in rxQueue
        * waiting to be handled.
        */
-      rangingMessage->bodyUnits[bodyUnitNumber].timestamp = table->latestReceived;
+      rangingMessage->bodyUnits[bodyUnitNumber].timestamp = table->latestReceived.timestamp;
+      rangingMessage->bodyUnits[bodyUnitNumber].seqNumber = table->latestReceived.seqNumber;
+      rangingMessage->bodyUnits[bodyUnitNumber].address = table->neighborAddress;
       // table->latestReceived.seqNumber = 0;
       // table->latestReceived.timestamp.full = 0;
       // int randnum = rand() % 10;
@@ -1587,14 +1590,14 @@ static Time_t generateRangingMessage(Ranging_Message_t *rangingMessage)
 #endif
 
 #ifdef ROUTING_OLSR_ENABLE
-      if (mprSetHas(getGlobalMPRSet(), table->neighborAddress))
-      {
-        rangingMessage->bodyUnits[bodyUnitNumber].flags.MPR = true;
-      }
-      else
-      {
-        rangingMessage->bodyUnits[bodyUnitNumber].flags.MPR = false;
-      }
+      // if (mprSetHas(getGlobalMPRSet(), table->neighborAddress))
+      // {
+      //   rangingMessage->bodyUnits[bodyUnitNumber].flags.MPR = true;
+      // }
+      // else
+      // {
+      //   rangingMessage->bodyUnits[bodyUnitNumber].flags.MPR = false;
+      // }
 #endif
 
       bodyUnitNumber++;
@@ -1657,7 +1660,7 @@ static void uwbRangingTxTask(void *parameters)
     xSemaphoreTake(neighborSet.mu, portMAX_DELAY);
 
     // Time_t taskDelay = RANGING_PERIOD + rand() % RANGING_PERIOD;
-    Time_t taskDelay = RANGING_PERIOD/2 + rand()%(RANGING_PERIOD+1);
+    Time_t taskDelay = 60;
     // int randNum = rand() % 20;
     generateRangingMessage(rangingMessage);
     txPacketCache.header.length = sizeof(UWB_Packet_Header_t) + rangingMessage->header.msgLength;
