@@ -64,6 +64,36 @@ static Ranging_Table_t EMPTY_RANGING_TABLE = {
 };
 
 int16_t distanceTowards[NEIGHBOR_ADDRESS_MAX + 1] = {[0 ... NEIGHBOR_ADDRESS_MAX] = -1};
+typedef struct Stastistic
+{
+  uint16_t recvSeq;
+  uint16_t recvnum;
+  uint16_t computenum;
+} Stastistic;
+static Stastistic statistic[NEIGHBOR_ADDRESS_MAX + 1];
+static TimerHandle_t statisticTimer;
+
+void printStasticCallback(TimerHandle_t timer)
+{
+  DEBUG_PRINT("recvnum:%d,compute1num:%d\n",
+              statistic[1].recvnum,
+              statistic[1].computenum);
+}
+void statisticInit()
+{
+  for (int i = 0; i <= NEIGHBOR_ADDRESS_MAX; i++)
+  {
+    statistic[i].recvSeq = 0;
+    statistic[i].recvnum = 0;
+    statistic[i].computenum = 0;
+  }
+  statisticTimer = xTimerCreate("statisticTimer",
+                                M2T(NEIGHBOR_SET_HOLD_TIME / 2),
+                                pdTRUE,
+                                (void *)0,
+                                printStasticCallback);
+  xTimerStart(statisticTimer, M2T(0));
+}
 
 int16_t getDistance(UWB_Address_t neighborAddress) {
   ASSERT(neighborAddress <= NEIGHBOR_ADDRESS_MAX);
@@ -960,6 +990,7 @@ static void S4_RX_Rf(Ranging_Table_t *rangingTable) {
   if (distance > 0) {
     rangingTable->distance = distance;
     setDistance(rangingTable->neighborAddress, distance);
+    statistic[rangingTable->neighborAddress].computenum++;  
   } else {
 //    DEBUG_PRINT("distance is not updated since some error occurs\n");
   }
@@ -1026,6 +1057,8 @@ static void processRangingMessage(Ranging_Message_With_Timestamp_t *rangingMessa
   uint16_t neighborAddress = rangingMessage->header.srcAddress;
   int neighborIndex = rangingTableSetSearchTable(&rangingTableSet, neighborAddress);
 
+  statistic[neighborAddress].recvnum++;
+  statistic[neighborAddress].recvSeq = rangingMessage->header.msgSequence;
   /* Handle new neighbor */
   if (neighborIndex == -1) {
     Ranging_Table_t table;
@@ -1203,7 +1236,7 @@ static Time_t generateRangingMessage(Ranging_Message_t *rangingMessage) {
   float velocityZ = logGetFloat(idVelocityZ);
   velocity = sqrt(pow(velocityX, 2) + pow(velocityY, 2) + pow(velocityZ, 2));
   /* velocity in cm/s */
-  rangingMessage->header.velocity = (short) (velocity * 100);
+  // rangingMessage->header.velocity = (short) (velocity * 100);
 //  DEBUG_PRINT("generateRangingMessage: ranging message size = %u with %u body units.\n",
 //              rangingMessage->header.msgLength,
 //              bodyUnitNumber
@@ -1233,8 +1266,8 @@ static void uwbRangingTxTask(void *parameters) {
   while (true) {
     xSemaphoreTake(rangingTableSet.mu, portMAX_DELAY);
     xSemaphoreTake(neighborSet.mu, portMAX_DELAY);
-
-    Time_t taskDelay = generateRangingMessage(rangingMessage);
+    Time_t taskDelay = 50;
+    generateRangingMessage(rangingMessage);
     txPacketCache.header.length = sizeof(UWB_Packet_Header_t) + rangingMessage->header.msgLength;
     uwbSendPacketBlock(&txPacketCache);
 //    printRangingTableSet(&rangingTableSet);
@@ -1257,7 +1290,7 @@ static void uwbRangingRxTask(void *parameters) {
       xSemaphoreTake(neighborSet.mu, portMAX_DELAY);
 
       processRangingMessage(&rxPacketCache);
-      topologySensing(&rxPacketCache.rangingMessage);
+      // topologySensing(&rxPacketCache.rangingMessage);
 
       xSemaphoreGive(neighborSet.mu);
       xSemaphoreGive(rangingTableSet.mu);
@@ -1323,6 +1356,8 @@ void rangingInit() {
   idVelocityY = logGetVarId("stateEstimate", "vy");
   idVelocityZ = logGetVarId("stateEstimate", "vz");
 
+  statisticInit();
+
   xTaskCreate(uwbRangingTxTask, ADHOC_DECK_RANGING_TX_TASK_NAME, UWB_TASK_STACK_SIZE, NULL,
               ADHOC_DECK_TASK_PRI, &uwbRangingTxTaskHandle);
   xTaskCreate(uwbRangingRxTask, ADHOC_DECK_RANGING_RX_TASK_NAME, UWB_TASK_STACK_SIZE, NULL,
@@ -1341,3 +1376,107 @@ LOG_GROUP_START(Ranging)
         LOG_ADD(LOG_INT16, distTo9, distanceTowards + 9)
         LOG_ADD(LOG_INT16, distTo10, distanceTowards + 10)
 LOG_GROUP_STOP(Ranging)
+
+LOG_GROUP_START(Statistic)
+LOG_ADD(LOG_UINT16, recvSeq0, &statistic[0].recvSeq)
+LOG_ADD(LOG_UINT16, recvNum0, &statistic[0].recvnum)
+LOG_ADD(LOG_UINT16, computenum0, &statistic[0].computenum)
+
+LOG_ADD(LOG_UINT16, recvSeq1, &statistic[1].recvSeq)
+LOG_ADD(LOG_UINT16, recvNum1, &statistic[1].recvnum)
+LOG_ADD(LOG_UINT16, computenum1, &statistic[1].computenum)
+
+LOG_ADD(LOG_UINT16, recvSeq2, &statistic[2].recvSeq)
+LOG_ADD(LOG_UINT16, recvNum2, &statistic[2].recvnum)
+LOG_ADD(LOG_UINT16, computenum2, &statistic[2].computenum)
+
+LOG_ADD(LOG_UINT16, recvSeq3, &statistic[3].recvSeq)
+LOG_ADD(LOG_UINT16, recvNum3, &statistic[3].recvnum)
+LOG_ADD(LOG_UINT16, computenum3, &statistic[3].computenum)
+
+LOG_ADD(LOG_UINT16, recvSeq4, &statistic[4].recvSeq)
+LOG_ADD(LOG_UINT16, recvNum4, &statistic[4].recvnum)
+LOG_ADD(LOG_UINT16, computenum4, &statistic[4].computenum)
+
+LOG_ADD(LOG_UINT16, recvSeq5, &statistic[5].recvSeq)
+LOG_ADD(LOG_UINT16, recvNum5, &statistic[5].recvnum)
+LOG_ADD(LOG_UINT16, computenum5, &statistic[5].computenum)
+
+LOG_ADD(LOG_UINT16, recvSeq6, &statistic[6].recvSeq)
+LOG_ADD(LOG_UINT16, recvNum6, &statistic[6].recvnum)
+LOG_ADD(LOG_UINT16, computenum6, &statistic[6].computenum)
+
+LOG_ADD(LOG_UINT16, recvSeq7, &statistic[7].recvSeq)
+LOG_ADD(LOG_UINT16, recvNum7, &statistic[7].recvnum)
+LOG_ADD(LOG_UINT16, computenum7, &statistic[7].computenum)
+
+LOG_ADD(LOG_UINT16, recvSeq8, &statistic[8].recvSeq)
+LOG_ADD(LOG_UINT16, recvNum8, &statistic[8].recvnum)
+LOG_ADD(LOG_UINT16, computenum8, &statistic[8].computenum)
+
+LOG_ADD(LOG_UINT16, recvSeq9, &statistic[9].recvSeq)
+LOG_ADD(LOG_UINT16, recvNum9, &statistic[9].recvnum)
+LOG_ADD(LOG_UINT16, computenum9, &statistic[9].computenum)
+
+LOG_ADD(LOG_UINT16, recvSeq10, &statistic[10].recvSeq)
+LOG_ADD(LOG_UINT16, recvNum10, &statistic[10].recvnum)
+LOG_ADD(LOG_UINT16, computenum10, &statistic[10].computenum)
+
+LOG_ADD(LOG_UINT16, recvSeq11, &statistic[11].recvSeq)
+LOG_ADD(LOG_UINT16, recvNum11, &statistic[11].recvnum)
+LOG_ADD(LOG_UINT16, computenum11, &statistic[11].computenum)
+
+LOG_ADD(LOG_UINT16, recvSeq12, &statistic[12].recvSeq)
+LOG_ADD(LOG_UINT16, recvNum12, &statistic[12].recvnum)
+LOG_ADD(LOG_UINT16, computenum12, &statistic[12].computenum)
+
+LOG_ADD(LOG_UINT16, recvSeq13, &statistic[13].recvSeq)
+LOG_ADD(LOG_UINT16, recvNum13, &statistic[13].recvnum)
+LOG_ADD(LOG_UINT16, computenum13, &statistic[13].computenum)
+
+LOG_ADD(LOG_UINT16, recvSeq14, &statistic[14].recvSeq)
+LOG_ADD(LOG_UINT16, recvNum14, &statistic[14].recvnum)
+LOG_ADD(LOG_UINT16, computenum14, &statistic[14].computenum)
+
+LOG_ADD(LOG_UINT16, recvSeq15, &statistic[15].recvSeq)
+LOG_ADD(LOG_UINT16, recvNum15, &statistic[15].recvnum)
+LOG_ADD(LOG_UINT16, computenum15, &statistic[15].computenum)
+
+LOG_ADD(LOG_UINT16, recvSeq16, &statistic[16].recvSeq)
+LOG_ADD(LOG_UINT16, recvNum16, &statistic[16].recvnum)
+LOG_ADD(LOG_UINT16, computenum16, &statistic[16].computenum)
+
+LOG_ADD(LOG_UINT16, recvSeq17, &statistic[17].recvSeq)
+LOG_ADD(LOG_UINT16, recvNum17, &statistic[17].recvnum)
+LOG_ADD(LOG_UINT16, computenum17, &statistic[17].computenum)
+
+LOG_ADD(LOG_UINT16, recvSeq18, &statistic[18].recvSeq)
+LOG_ADD(LOG_UINT16, recvNum18, &statistic[18].recvnum)
+LOG_ADD(LOG_UINT16, computenum18, &statistic[18].computenum)
+
+LOG_ADD(LOG_UINT16, recvSeq19, &statistic[19].recvSeq)
+LOG_ADD(LOG_UINT16, recvNum19, &statistic[19].recvnum)
+LOG_ADD(LOG_UINT16, computenum19, &statistic[19].computenum)
+
+LOG_ADD(LOG_UINT16, recvSeq20, &statistic[20].recvSeq)
+LOG_ADD(LOG_UINT16, recvNum20, &statistic[20].recvnum)
+LOG_ADD(LOG_UINT16, computenum20, &statistic[20].computenum)
+
+LOG_ADD(LOG_UINT16, recvSeq21, &statistic[21].recvSeq)
+LOG_ADD(LOG_UINT16, recvNum21, &statistic[21].recvnum)
+LOG_ADD(LOG_UINT16, computenum21, &statistic[21].computenum)
+
+LOG_ADD(LOG_UINT16, recvSeq22, &statistic[22].recvSeq)
+LOG_ADD(LOG_UINT16, recvNum22, &statistic[22].recvnum)
+LOG_ADD(LOG_UINT16, computenum22, &statistic[22].computenum)
+
+LOG_ADD(LOG_UINT16, recvSeq23, &statistic[23].recvSeq)
+LOG_ADD(LOG_UINT16, recvNum23, &statistic[23].recvnum)
+LOG_ADD(LOG_UINT16, computenum23, &statistic[23].computenum)
+
+LOG_ADD(LOG_UINT16, recvSeq24, &statistic[24].recvSeq)
+LOG_ADD(LOG_UINT16, recvNum24, &statistic[24].recvnum)
+LOG_ADD(LOG_UINT16, computenum24, &statistic[24].computenum)
+
+
+LOG_GROUP_STOP(Statistic)
