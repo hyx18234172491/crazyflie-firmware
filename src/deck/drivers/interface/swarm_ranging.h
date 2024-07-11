@@ -41,10 +41,18 @@
 typedef short set_index_t;
 
 /* Timestamp Tuple */
-typedef struct {
-  dwTime_t timestamp; // 8 byte
-  uint16_t seqNumber; // 2 byte
-} __attribute__((packed)) Timestamp_Tuple_t; // 10 byte
+// typedef struct {
+//   dwTime_t timestamp; // 8 byte
+//   uint16_t seqNumber; // 2 byte
+// } __attribute__((packed)) Timestamp_Tuple_t; // 10 byte
+typedef union{
+  struct {
+    uint8_t rawtime[5];//低5位字节
+    uint8_t address; //最高1位字节
+    uint16_t seqNumber; //最高2-3位字节
+  }__attribute__((packed));
+  dwTime_t timestamp; // 8 byte, 后5字节有用，高3字节未使用
+} Timestamp_Tuple_t;
 
 /* Body Unit */
 // typedef struct {
