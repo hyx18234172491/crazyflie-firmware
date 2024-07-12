@@ -111,7 +111,7 @@ static void rxCallback() {
     xQueueSendFromISR(listeners[msgType].rxQueue, packet, &xHigherPriorityTaskWoken);
   }
 
-  dwt_forcetrxoff();
+  // dwt_forcetrxoff();
   dwt_rxenable(DWT_START_RX_IMMEDIATE);
 }
 
