@@ -135,10 +135,11 @@ void statisticInit()
 }
 
 void rangingTableBufferUpdate(Ranging_Table_Tr_Rr_Buffer_t *rangingTableBuffer,
-                              Timestamp_Tuple_t Tr,
+                              Timestamp_Tuple_t_2 Tr,
                               Timestamp_Tuple_t Rr)
 {
-  rangingTableBuffer->candidates[rangingTableBuffer->cur].Tr = Tr;
+  rangingTableBuffer->candidates[rangingTableBuffer->cur].Tr.seqNumber = Tr.seqNumber;
+  rangingTableBuffer->candidates[rangingTableBuffer->cur].Tr.timestamp = Tr.timestamp;
   rangingTableBuffer->candidates[rangingTableBuffer->cur].Rr = Rr;
   // shift
   rangingTableBuffer->latest = rangingTableBuffer->cur;
@@ -226,14 +227,15 @@ Timestamp_Tuple_t getLatestTxTimestamp()
   return TfBuffer[TfBufferIndex];
 }
 
-void getLatestNTxTimestamps(Timestamp_Tuple_t *timestamps, int n)
+void getLatestNTxTimestamps(Timestamp_Tuple_t_2 *timestamps, int n)
 {
   ASSERT(n <= Tf_BUFFER_POOL_SIZE);
   xSemaphoreTake(TfBufferMutex, portMAX_DELAY);
   int startIndex = (TfBufferIndex + 1 - n + Tf_BUFFER_POOL_SIZE) % Tf_BUFFER_POOL_SIZE;
   for (int i = n - 1; i >= 0; i--)
   {
-    timestamps[i] = TfBuffer[startIndex];
+    timestamps[i].timestamp = TfBuffer[startIndex].timestamp;
+    timestamps[i].seqNumber = TfBuffer[startIndex].seqNumber;
     startIndex = (startIndex + 1) % Tf_BUFFER_POOL_SIZE;
   }
   xSemaphoreGive(TfBufferMutex);
@@ -881,14 +883,14 @@ void printRangingTableSet(Ranging_Table_Set_t *set)
 
 void printRangingMessage(Ranging_Message_t *rangingMessage)
 {
-  for (int i = 0; i < RANGING_MAX_Tr_UNIT; i++)
-  {
-    DEBUG_PRINT("lastTxTimestamp %d seq=%u, lastTxTimestamp=%2x%8lx\n",
-                i,
-                rangingMessage->header.lastTxTimestamps[i].seqNumber,
-                rangingMessage->header.lastTxTimestamps[i].timestamp.high8,
-                rangingMessage->header.lastTxTimestamps[i].timestamp.low32);
-  }
+  // for (int i = 0; i < RANGING_MAX_Tr_UNIT; i++)
+  // {
+  //   DEBUG_PRINT("lastTxTimestamp %d seq=%u, lastTxTimestamp=%2x%8lx\n",
+  //               i,
+  //               rangingMessage->header.lastTxTimestamps[i].seqNumber,
+  //               rangingMessage->header.lastTxTimestamps[i].timestamp.high8,
+  //               rangingMessage->header.lastTxTimestamps[i].timestamp.low32);
+  // }
   if (rangingMessage->header.msgLength - sizeof(Ranging_Message_Header_t) == 0)
   {
     return;
@@ -1607,7 +1609,20 @@ static Time_t generateRangingMessage(Ranging_Message_t *rangingMessage)
   rangingMessage->header.srcAddress = MY_UWB_ADDRESS;
   rangingMessage->header.msgLength = sizeof(Ranging_Message_Header_t) + sizeof(Body_Unit_t) * bodyUnitNumber;
   rangingMessage->header.msgSequence = curSeqNumber;
-  getLatestNTxTimestamps(rangingMessage->header.lastTxTimestamps, RANGING_MAX_Tr_UNIT);
+  // getLatestNTxTimestamps(rangingMessage->header.lastTxTimestamps, RANGING_MAX_Tr_UNIT);
+  
+
+  xSemaphoreTake(TfBufferMutex, portMAX_DELAY);
+  int startIndex = (TfBufferIndex + 1 - RANGING_MAX_Tr_UNIT + Tf_BUFFER_POOL_SIZE) % Tf_BUFFER_POOL_SIZE;
+  for (int i = RANGING_MAX_Tr_UNIT - 1; i >= 0; i--)
+  {
+    rangingMessage->header.lastTxTimestamps[i].timestamp = TfBuffer[startIndex].timestamp;
+    rangingMessage->header.lastTxTimestamps[i].seqNumber = TfBuffer[startIndex].seqNumber;
+    startIndex = (startIndex + 1) % Tf_BUFFER_POOL_SIZE;
+  }
+  xSemaphoreGive(TfBufferMutex);
+
+
   float velocityX = logGetFloat(idVelocityX);
   float velocityY = logGetFloat(idVelocityY);
   float velocityZ = logGetFloat(idVelocityZ);

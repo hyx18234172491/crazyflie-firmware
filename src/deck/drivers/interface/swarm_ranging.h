@@ -63,11 +63,22 @@ typedef union{
   }__attribute__((packed));
   dwTime_t timestamp; // 8 byte, 后5字节有用，高3字节未使用
 } Body_Unit_t;
+
+
+typedef union{
+  struct {
+    uint8_t rawtime[5];//低5位字节
+    uint8_t address; //最高1位字节
+    uint16_t seqNumber; //最高2-3位字节
+  }__attribute__((packed));
+  dwTime_t timestamp; // 8 byte, 后5字节有用，高3字节未使用
+} Timestamp_Tuple_t_2;
+
 /* Ranging Message Header*/
 typedef struct {
   uint16_t srcAddress; // 2 byte
   uint16_t msgSequence; // 2 byte
-  Timestamp_Tuple_t lastTxTimestamps[RANGING_MAX_Tr_UNIT]; // 10 byte * MAX_Tr_UNIT
+  Timestamp_Tuple_t_2 lastTxTimestamps[RANGING_MAX_Tr_UNIT]; // 10 byte * MAX_Tr_UNIT
   // short velocity; // 2 byte cm/s
   uint16_t msgLength; // 2 byte
   uint16_t filter; // 16 bits bloom filter
@@ -191,7 +202,7 @@ void setDistance(UWB_Address_t neighborAddress, int16_t distance,uint8_t source)
 /* Tr_Rr Buffer Operations */
 void rangingTableBufferInit(Ranging_Table_Tr_Rr_Buffer_t *rangingTableBuffer);
 void rangingTableBufferUpdate(Ranging_Table_Tr_Rr_Buffer_t *rangingTableBuffer,
-                              Timestamp_Tuple_t Tr,
+                              Timestamp_Tuple_t_2 Tr,
                               Timestamp_Tuple_t Rr);
 Ranging_Table_Tr_Rr_Candidate_t rangingTableBufferGetCandidate(Ranging_Table_Tr_Rr_Buffer_t *rangingTableBuffer,
                                                                Timestamp_Tuple_t Tf,Timestamp_Tuple_t Tp);
@@ -200,7 +211,7 @@ Ranging_Table_Tr_Rr_Candidate_t rangingTableBufferGetCandidate(Ranging_Table_Tr_
 void updateTfBuffer(Timestamp_Tuple_t timestamp);
 Timestamp_Tuple_t findTfBySeqNumber(uint16_t seqNumber);
 Timestamp_Tuple_t getLatestTxTimestamp();
-void getLatestNTxTimestamps(Timestamp_Tuple_t *timestamps, int n);
+void getLatestNTxTimestamps(Timestamp_Tuple_t_2 *timestamps, int n);
 
 /* Ranging Table Operations */
 Ranging_Table_Set_t *getGlobalRangingTableSet();
