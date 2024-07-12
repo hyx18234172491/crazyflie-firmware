@@ -89,10 +89,11 @@ void rangingTableBufferInit(Ranging_Table_Tr_Rr_Buffer_t *rangingTableBuffer)
 }
 
 void rangingTableBufferUpdate(Ranging_Table_Tr_Rr_Buffer_t *rangingTableBuffer,
-                              Timestamp_Tuple_t Tr,
+                              Timestamp_Tuple_t_2 Tr,
                               Timestamp_Tuple_t Rr)
 {
-  rangingTableBuffer->candidates[rangingTableBuffer->cur].Tr = Tr;
+  rangingTableBuffer->candidates[rangingTableBuffer->cur].Tr.seqNumber = Tr.seqNumber;
+  rangingTableBuffer->candidates[rangingTableBuffer->cur].Tr.timestamp = Tr.timestamp;
   rangingTableBuffer->candidates[rangingTableBuffer->cur].Rr = Rr;
   // shift
   rangingTableBuffer->latest = rangingTableBuffer->cur;
@@ -838,12 +839,12 @@ void printRangingMessage(Ranging_Message_t *rangingMessage)
     DEBUG_PRINT("printRangingMessage: malformed body unit number.\n");
     return;
   }
-  for (int i = 0; i < body_unit_number; i++)
-  {
-    DEBUG_PRINT("unitAddress=%u, Seq=%u\n",
-                rangingMessage->bodyUnits[i].address,
-                rangingMessage->bodyUnits[i].timestamp.seqNumber);
-  }
+  // for (int i = 0; i < body_unit_number; i++)
+  // {
+  //   DEBUG_PRINT("unitAddress=%u, Seq=%u\n",
+  //               rangingMessage->bodyUnits[i].address,
+  //               rangingMessage->bodyUnits[i].timestamp.seqNumber);
+  // }
 }
 
 void printNeighborBitSet(Neighbor_Bit_Set_t *bitSet)
@@ -1257,7 +1258,8 @@ static void processRangingMessage(Ranging_Message_With_Timestamp_t *rangingMessa
     {
       if (rangingMessage->bodyUnits[i].address == uwbGetAddress())
       {
-        neighborRf = rangingMessage->bodyUnits[i].timestamp;
+        neighborRf.timestamp = rangingMessage->bodyUnits[i].timestamp;
+        neighborRf.seqNumber = rangingMessage->bodyUnits[i].seqNumber;
         break;
       }
     }
@@ -1355,12 +1357,17 @@ static Time_t generateRangingMessage(Ranging_Message_t *rangingMessage)
       }
       table->nextExpectedDeliveryTime = curTime + M2T(table->period);
       table->lastSendTime = curTime;
-      rangingMessage->bodyUnits[bodyUnitNumber].address = table->neighborAddress;
+      // rangingMessage->bodyUnits[bodyUnitNumber].address = table->neighborAddress;
       /* It is possible that latestReceived is not the newest timestamp, because the newest may be in rxQueue
        * waiting to be handled.
        */
       rangingMessage->bodyUnits[bodyUnitNumber].timestamp = table->latestReceived.timestamp;
       rangingMessage->bodyUnits[bodyUnitNumber].seqNumber = table->latestReceived.seqNumber;
+      rangingMessage->bodyUnits[bodyUnitNumber].address = table->neighborAddress;
+
+      table->latestReceived.seqNumber=0;
+      table->latestReceived.timestamp.full=0;
+
       rangingMessage->header.filter |= 1 << (table->neighborAddress % 16);
       rangingTableOnEvent(table, RANGING_EVENT_TX_Tf);
 
@@ -1391,13 +1398,22 @@ static Time_t generateRangingMessage(Ranging_Message_t *rangingMessage)
   rangingMessage->header.srcAddress = MY_UWB_ADDRESS;
   rangingMessage->header.msgLength = sizeof(Ranging_Message_Header_t) + sizeof(Body_Unit_t) * bodyUnitNumber;
   rangingMessage->header.msgSequence = curSeqNumber;
-  getLatestNTxTimestamps(rangingMessage->header.lastTxTimestamps, RANGING_MAX_Tr_UNIT);
+
+  int n=1;
+  int startIndex = (TfBufferIndex + 1 - n + Tf_BUFFER_POOL_SIZE) % Tf_BUFFER_POOL_SIZE;
+  for (int i = n - 1; i >= 0; i--)
+  {
+    rangingMessage->header.lastTxTimestamps[i].timestamp = TfBuffer[startIndex].timestamp;
+    rangingMessage->header.lastTxTimestamps[i].seqNumber = TfBuffer[startIndex].seqNumber;
+    startIndex = (startIndex + 1) % Tf_BUFFER_POOL_SIZE;
+  }
+
   float velocityX = logGetFloat(idVelocityX);
   float velocityY = logGetFloat(idVelocityY);
   float velocityZ = logGetFloat(idVelocityZ);
   velocity = sqrt(pow(velocityX, 2) + pow(velocityY, 2) + pow(velocityZ, 2));
   /* velocity in cm/s */
-  rangingMessage->header.velocity = (short)(velocity * 100);
+  // rangingMessage->header.velocity = (short)(velocity * 100);
   //  DEBUG_PRINT("generateRangingMessage: ranging message size = %u with %u body units.\n",
   //              rangingMessage->header.msgLength,
   //              bodyUnitNumber
