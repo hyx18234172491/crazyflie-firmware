@@ -116,7 +116,7 @@ static void rxCallback()
     xQueueSendFromISR(listeners[msgType].rxQueue, packet, &xHigherPriorityTaskWoken);
   }
 
-  dwt_forcetrxoff();
+  // dwt_forcetrxoff();
   dwt_rxenable(DWT_START_RX_IMMEDIATE);
 }
 
@@ -302,7 +302,7 @@ static void uwbTask(void *parameters)
 
 static uint8_t spiTxBuffer[UWB_FRAME_LEN_MAX];
 static uint8_t spiRxBuffer[UWB_FRAME_LEN_MAX];
-static uint16_t spiSpeed = SPI_BAUDRATE_2MHZ;
+static uint16_t spiSpeed = SPI_BAUDRATE_21MHZ;
 
 static void spiWrite(const void *header, size_t headerLength, const void *data,
                      size_t dataLength)
