@@ -1708,9 +1708,6 @@ static void uwbRangingRxTask(void *parameters)
   {
     if (xQueueReceive(rxQueue, &rxPacketCache, portMAX_DELAY))
     {
-      int randNum = rand() % 20;
-      if (randNum < 50)
-      {
         xSemaphoreTake(rangingTableSet.mu, portMAX_DELAY);
         xSemaphoreTake(neighborSet.mu, portMAX_DELAY);
 
@@ -1719,7 +1716,6 @@ static void uwbRangingRxTask(void *parameters)
 
         xSemaphoreGive(neighborSet.mu);
         xSemaphoreGive(rangingTableSet.mu);
-      }
     }
     vTaskDelay(M2T(1));
   }
@@ -1793,23 +1789,6 @@ void rangingInit()
               ADHOC_DECK_TASK_PRI, &uwbRangingRxTaskHandle);
 }
 
-uint16_t getStatisticIndex = 3;
-static uint16_t getStasticRecvSeq()
-{
-  return statistic[getStatisticIndex].recvSeq;
-}
-static uint16_t getStasticRecvnum()
-{
-  return statistic[getStatisticIndex].recvnum;
-}
-static uint16_t getStasticCompute1num()
-{
-  return statistic[getStatisticIndex].compute1num;
-}
-static uint16_t getStasticCompute2num()
-{
-  return statistic[getStatisticIndex].compute2num;
-}
 
 LOG_GROUP_START(Ranging)
 
