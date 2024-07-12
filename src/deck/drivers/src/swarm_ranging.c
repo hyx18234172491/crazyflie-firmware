@@ -126,12 +126,12 @@ void statisticInit()
     statistic[i].compute1num = 0;
     statistic[i].compute2num = 0;
   }
-  statisticTimer = xTimerCreate("statisticTimer",
-                                M2T(NEIGHBOR_SET_HOLD_TIME / 2),
-                                pdTRUE,
-                                (void *)0,
-                                printStasticCallback);
-  xTimerStart(statisticTimer, M2T(0));
+  // statisticTimer = xTimerCreate("statisticTimer",
+  //                               M2T(NEIGHBOR_SET_HOLD_TIME / 2),
+  //                               pdTRUE,
+  //                               (void *)0,
+  //                               printStasticCallback);
+  // xTimerStart(statisticTimer, M2T(0));
 }
 
 void rangingTableBufferUpdate(Ranging_Table_Tr_Rr_Buffer_t *rangingTableBuffer,
@@ -227,19 +227,19 @@ Timestamp_Tuple_t getLatestTxTimestamp()
   return TfBuffer[TfBufferIndex];
 }
 
-void getLatestNTxTimestamps(Timestamp_Tuple_t_2 *timestamps, int n)
-{
-  ASSERT(n <= Tf_BUFFER_POOL_SIZE);
-  xSemaphoreTake(TfBufferMutex, portMAX_DELAY);
-  int startIndex = (TfBufferIndex + 1 - n + Tf_BUFFER_POOL_SIZE) % Tf_BUFFER_POOL_SIZE;
-  for (int i = n - 1; i >= 0; i--)
-  {
-    timestamps[i].timestamp = TfBuffer[startIndex].timestamp;
-    timestamps[i].seqNumber = TfBuffer[startIndex].seqNumber;
-    startIndex = (startIndex + 1) % Tf_BUFFER_POOL_SIZE;
-  }
-  xSemaphoreGive(TfBufferMutex);
-}
+// void getLatestNTxTimestamps(Timestamp_Tuple_t_2 *timestamps, int n)
+// {
+//   ASSERT(n <= Tf_BUFFER_POOL_SIZE);
+//   xSemaphoreTake(TfBufferMutex, portMAX_DELAY);
+//   int startIndex = (TfBufferIndex + 1 - n + Tf_BUFFER_POOL_SIZE) % Tf_BUFFER_POOL_SIZE;
+//   for (int i = n - 1; i >= 0; i--)
+//   {
+//     timestamps[i].timestamp = TfBuffer[startIndex].timestamp;
+//     timestamps[i].seqNumber = TfBuffer[startIndex].seqNumber;
+//     startIndex = (startIndex + 1) % Tf_BUFFER_POOL_SIZE;
+//   }
+//   xSemaphoreGive(TfBufferMutex);
+// }
 
 Ranging_Table_Set_t *getGlobalRangingTableSet()
 {
@@ -1540,7 +1540,7 @@ static Time_t generateRangingMessage(Ranging_Message_t *rangingMessage)
 #ifdef ENABLE_BUS_BOARDING_SCHEME
   rangingTableSetRearrange(&rangingTableSet, COMPARE_BY_NEXT_EXPECTED_DELIVERY_TIME);
 #else
-  rangingTableSetRearrange(&rangingTableSet, COMPARE_BY_LAST_SEND_TIME);
+  // rangingTableSetRearrange(&rangingTableSet, COMPARE_BY_LAST_SEND_TIME);
 #endif
 
   /* Generate message body */
@@ -1612,7 +1612,7 @@ static Time_t generateRangingMessage(Ranging_Message_t *rangingMessage)
   // getLatestNTxTimestamps(rangingMessage->header.lastTxTimestamps, RANGING_MAX_Tr_UNIT);
   
 
-  xSemaphoreTake(TfBufferMutex, portMAX_DELAY);
+  // xSemaphoreTake(TfBufferMutex, portMAX_DELAY);
   int startIndex = (TfBufferIndex + 1 - RANGING_MAX_Tr_UNIT + Tf_BUFFER_POOL_SIZE) % Tf_BUFFER_POOL_SIZE;
   for (int i = RANGING_MAX_Tr_UNIT - 1; i >= 0; i--)
   {
@@ -1620,7 +1620,7 @@ static Time_t generateRangingMessage(Ranging_Message_t *rangingMessage)
     rangingMessage->header.lastTxTimestamps[i].seqNumber = TfBuffer[startIndex].seqNumber;
     startIndex = (startIndex + 1) % Tf_BUFFER_POOL_SIZE;
   }
-  xSemaphoreGive(TfBufferMutex);
+  // xSemaphoreGive(TfBufferMutex);
 
 
   float velocityX = logGetFloat(idVelocityX);
@@ -1672,7 +1672,7 @@ static void uwbRangingTxTask(void *parameters)
   while (true)
   {
     xSemaphoreTake(rangingTableSet.mu, portMAX_DELAY);
-    xSemaphoreTake(neighborSet.mu, portMAX_DELAY);
+    // xSemaphoreTake(neighborSet.mu, portMAX_DELAY);
 
     // Time_t taskDelay = RANGING_PERIOD + rand() % RANGING_PERIOD;
     Time_t taskDelay = 30+rand()%61;
@@ -1692,7 +1692,7 @@ static void uwbRangingTxTask(void *parameters)
     //    printRangingTableSet(&rangingTableSet);
     //    printNeighborSet(&neighborSet);
 
-    xSemaphoreGive(neighborSet.mu);
+    // xSemaphoreGive(neighborSet.mu);
     xSemaphoreGive(rangingTableSet.mu);
     vTaskDelay(taskDelay);
   }
@@ -1709,12 +1709,12 @@ static void uwbRangingRxTask(void *parameters)
     if (xQueueReceive(rxQueue, &rxPacketCache, portMAX_DELAY))
     {
         xSemaphoreTake(rangingTableSet.mu, portMAX_DELAY);
-        xSemaphoreTake(neighborSet.mu, portMAX_DELAY);
+        // xSemaphoreTake(neighborSet.mu, portMAX_DELAY);
 
         processRangingMessage(&rxPacketCache);
         // topologySensing(&rxPacketCache.rangingMessage);
 
-        xSemaphoreGive(neighborSet.mu);
+        // xSemaphoreGive(neighborSet.mu);
         xSemaphoreGive(rangingTableSet.mu);
     }
     vTaskDelay(M2T(1));
@@ -1755,13 +1755,13 @@ void rangingInit()
 {
   MY_UWB_ADDRESS = uwbGetAddress();
   rxQueue = xQueueCreate(RANGING_RX_QUEUE_SIZE, RANGING_RX_QUEUE_ITEM_SIZE);
-  neighborSetInit(&neighborSet);
-  neighborSetEvictionTimer = xTimerCreate("neighborSetEvictionTimer",
-                                          M2T(NEIGHBOR_SET_HOLD_TIME / 2),
-                                          pdTRUE,
-                                          (void *)0,
-                                          neighborSetClearExpireTimerCallback);
-  xTimerStart(neighborSetEvictionTimer, M2T(0));
+  // neighborSetInit(&neighborSet);
+  // neighborSetEvictionTimer = xTimerCreate("neighborSetEvictionTimer",
+  //                                         M2T(NEIGHBOR_SET_HOLD_TIME / 2),
+  //                                         pdTRUE,
+  //                                         (void *)0,
+  //                                         neighborSetClearExpireTimerCallback);
+  // xTimerStart(neighborSetEvictionTimer, M2T(0));
   rangingTableSetInit(&rangingTableSet);
   rangingTableSetEvictionTimer = xTimerCreate("rangingTableSetEvictionTimer",
                                               M2T(RANGING_TABLE_HOLD_TIME / 2),

@@ -81,10 +81,10 @@ static void txCallback() {
 }
 
 /* Packet dispatcher */
-static void rxCallback() {
+static void rxCallback(dwt_cb_data_t *cbData) {
   BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 
-  uint32_t dataLength = dwt_read32bitreg(RX_FINFO_ID) & RX_FINFO_RXFLEN_BIT_MASK;
+  uint32_t dataLength = cbData->datalength;
 
   ASSERT(dataLength != 0 && dataLength <= UWB_FRAME_LEN_MAX);
 
@@ -116,7 +116,7 @@ static void rxCallback() {
 }
 
 static void rxTimeoutCallback() {
-  dwt_forcetrxoff();
+  // dwt_forcetrxoff();
   dwt_rxenable(DWT_START_RX_IMMEDIATE);
 }
 
