@@ -1359,7 +1359,8 @@ static Time_t generateRangingMessage(Ranging_Message_t *rangingMessage)
       /* It is possible that latestReceived is not the newest timestamp, because the newest may be in rxQueue
        * waiting to be handled.
        */
-      rangingMessage->bodyUnits[bodyUnitNumber].timestamp = table->latestReceived;
+      rangingMessage->bodyUnits[bodyUnitNumber].timestamp = table->latestReceived.timestamp;
+      rangingMessage->bodyUnits[bodyUnitNumber].seqNumber = table->latestReceived.seqNumber;
       rangingMessage->header.filter |= 1 << (table->neighborAddress % 16);
       rangingTableOnEvent(table, RANGING_EVENT_TX_Tf);
 
@@ -1373,14 +1374,14 @@ static Time_t generateRangingMessage(Ranging_Message_t *rangingMessage)
 #endif
 
 #ifdef ROUTING_OLSR_ENABLE
-      if (mprSetHas(getGlobalMPRSet(), table->neighborAddress))
-      {
-        rangingMessage->bodyUnits[bodyUnitNumber].flags.MPR = true;
-      }
-      else
-      {
-        rangingMessage->bodyUnits[bodyUnitNumber].flags.MPR = false;
-      }
+      // if (mprSetHas(getGlobalMPRSet(), table->neighborAddress))
+      // {
+      //   rangingMessage->bodyUnits[bodyUnitNumber].flags.MPR = true;
+      // }
+      // else
+      // {
+      //   rangingMessage->bodyUnits[bodyUnitNumber].flags.MPR = false;
+      // }
 #endif
 
       bodyUnitNumber++;
