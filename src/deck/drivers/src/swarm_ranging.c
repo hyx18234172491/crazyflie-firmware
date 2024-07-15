@@ -92,7 +92,7 @@ void setDistance(UWB_Address_t neighborAddress, int16_t distance, uint8_t source
 
 #ifdef ENABLE_OPTIMAL_RANGING_SCHEDULE
 int rx_buffer_index = 0;
-Timestamp_Tuple_t rx_buffer[NEIGHBOR_ADDRESS_MAX + 1];
+static Timestamp_Tuple_t rx_buffer[NEIGHBOR_ADDRESS_MAX + 1];
 #define SAFETY_DISTANCE_MIN 2
 int8_t temp_delay = 0;
 void predict_period_in_rx(int rx_buffer_index)
@@ -129,6 +129,50 @@ void predict_period_in_rx(int rx_buffer_index)
         }
       }
     }
+  }
+}
+
+void predict_period_in_tx_2(int TfBufferIndex)
+{
+
+  bool temp_control[2] = {0, 0};
+
+  for (int i = 0; i < NEIGHBOR_ADDRESS_MAX; i++)
+  {
+    if (TfBuffer[TfBufferIndex].timestamp.full && rx_buffer[i].timestamp.full)
+    {
+      /*
+      +-------+------+-------+-------+-------+------+
+      |  RX3  |  TX  |  RX1  |  RX2  |  RX3  |  TX  |
+      +-------+------+-------+-------+-------+------+
+                                                ^
+                                                now
+      */
+      if (((TfBuffer[TfBufferIndex].timestamp.full - rx_buffer[i].timestamp.full) % UWB_MAX_TIMESTAMP < (uint64_t)(RANGING_PERIOD / (DWT_TIME_UNITS * 1000))) && (TfBuffer[TfBufferIndex].timestamp.full % UWB_MAX_TIMESTAMP) > (rx_buffer[i].timestamp.full % UWB_MAX_TIMESTAMP))
+      {
+        if ((TfBuffer[TfBufferIndex].timestamp.full - rx_buffer[i].timestamp.full) % UWB_MAX_TIMESTAMP < (uint64_t)(RANGING_PERIOD / rangingTableSet.size / (DWT_TIME_UNITS * 1000)))
+        {
+          temp_control[0] = 1;
+        }
+      }
+
+      if (((TfBuffer[TfBufferIndex].timestamp.full - rx_buffer[i].timestamp.full) % UWB_MAX_TIMESTAMP < (uint64_t)(RANGING_PERIOD / (DWT_TIME_UNITS * 1000))) && (TfBuffer[TfBufferIndex].timestamp.full % UWB_MAX_TIMESTAMP) > (rx_buffer[i].timestamp.full % UWB_MAX_TIMESTAMP))
+      {
+        if ((uint64_t)(RANGING_PERIOD / (DWT_TIME_UNITS * 1000) - TfBuffer[TfBufferIndex].timestamp.full + rx_buffer[i].timestamp.full) % UWB_MAX_TIMESTAMP < (uint64_t)(RANGING_PERIOD / rangingTableSet.size / (DWT_TIME_UNITS * 1000)))
+        {
+          temp_control[1] = 1;
+        }
+      }
+    }
+  }
+
+  if (!temp_control[0] && temp_control[1])
+  {
+    temp_delay = -1;
+  }
+  if (temp_control[0] && !temp_control[1])
+  {
+    temp_delay = +1;
   }
 }
 
@@ -232,6 +276,9 @@ void updateTfBuffer(Timestamp_Tuple_t timestamp)
   TfBufferIndex++;
   TfBufferIndex %= Tf_BUFFER_POOL_SIZE;
   TfBuffer[TfBufferIndex] = timestamp;
+#ifdef ENABLE_OPTIMAL_RANGING_SCHEDULE
+  predict_period_in_tx_2(TfBufferIndex);
+#endif
   //  DEBUG_PRINT("updateTfBuffer: time = %llu, seq = %d\n", TfBuffer[TfBufferIndex].timestamp.full, TfBuffer[TfBufferIndex].seqNumber);
   xSemaphoreGive(TfBufferMutex);
 }
@@ -1726,8 +1773,8 @@ static void uwbRangingTxTask(void *parameters)
     // xSemaphoreGive(neighborSet.mu);
     xSemaphoreGive(rangingTableSet.mu);
 #ifdef ENABLE_OPTIMAL_RANGING_SCHEDULE
-    vTaskDelay(RANGING_PERIOD+temp_delay);
-    temp_delay=0;
+    vTaskDelay(RANGING_PERIOD + temp_delay);
+    temp_delay = 0;
 #else
     vTaskDelay(taskDelay);
 #endif
