@@ -12,6 +12,7 @@
 #include "log.h"
 #include "math.h"
 #include "adhocdeck.h"
+#include "crtp_commander_high_level.h"
 #define RUNNING_STAGE 1// 0代码debug阶段，1代码运行阶段
 
 static uint16_t MY_UWB_ADDRESS;
@@ -24,7 +25,6 @@ static float_t relaVarInCtrl[RANGING_TABLE_SIZE + 1][STATE_DIM_rl];
 static float_t neighbor_height[RANGING_TABLE_SIZE + 1];
 static currentNeighborAddressInfo_t currentNeighborAddressInfo;
 static float_t set_height = 0.5;
-static float_t set_height0 = 0.5;
 static paramVarId_t idMultiranger;
 static logVarId_t idUp;
 static logVarId_t idLeft;
@@ -177,7 +177,7 @@ static void formation0asCenter(float_t tarX, float_t tarY, float_t height)
 
 void take_off(float_t height)
 {
-  for (int i = 0; i < 20; i++)
+  for (int i = 0; i < 30; i++)
   {
     setHoverSetpoint_takeoff(&setpoint, 0, 0, (height * i) / 20, 0);
     vTaskDelay(M2T(25));
@@ -194,6 +194,7 @@ void take_off(float_t height)
   // }
   onGround = false;
 }
+
 
 void land(float_t height)
 {
@@ -377,7 +378,7 @@ void relativeControlTask(void *arg)
     bool is_connect = relativeInfoRead((float_t *)relaVarInCtrl, (float_t *)neighbor_height, &currentNeighborAddressInfo);
     relaVarInCtrl[0][STATE_rlYaw] = 0;
     int8_t leaderStage = getLeaderStage();
-    DEBUG_PRINT("%d,%d\n",keepFlying,leaderStage);
+    //DEBUG_PRINT("%d,%d\n",keepFlying,leaderStage);
     // if(RUNNING_STAGE==0){ // 调试
     //   vTaskDelay(10000);
     //   setMyTakeoff(true);
@@ -393,7 +394,7 @@ void relativeControlTask(void *arg)
           vTaskDelay(5000);        // 设定位置使得其收敛时间
           if (MY_UWB_ADDRESS == 0) // 0号设置到0号高度
           {
-            take_off(set_height);
+           take_off(set_height);
           }
           else
           {
@@ -433,7 +434,7 @@ void relativeControlTask(void *arg)
           if (MY_UWB_ADDRESS == 0)
           {
             float_t randomVel = 0.3;
-            flyRandomIn1meter(randomVel, set_height);
+             flyRandomIn1meter(randomVel, set_height);
           }
           else
           {
@@ -580,6 +581,13 @@ void relativeControlInit(void)
     return;
   MY_UWB_ADDRESS = uwbGetAddress();
   srand(MY_UWB_ADDRESS);
+  if(MY_UWB_ADDRESS==0){
+    set_height = 1.2;
+  }else if(MY_UWB_ADDRESS>8){
+    set_height = 0.4;
+  }else{
+    set_height = 0.8;
+  }
   xTaskCreate(relativeControlTask, "relative_Control", configMINIMAL_STACK_SIZE, NULL, 3, NULL);
   isInit = true;
 }

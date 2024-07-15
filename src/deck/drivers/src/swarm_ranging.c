@@ -38,6 +38,7 @@ static Timestamp_Tuple_t TfBuffer[Tf_BUFFER_POOL_SIZE] = {0};
 static SemaphoreHandle_t TfBufferMutex;
 static int rangingSeqNumber = 1;
 static logVarId_t idVelocityX, idVelocityY, idVelocityZ;
+static logVarId_t idX, idY, idZ;
 static float velocity;
 static Ranging_Table_t EMPTY_RANGING_TABLE = {
     .neighborAddress = UWB_DEST_EMPTY,
@@ -64,6 +65,8 @@ static Ranging_Table_t EMPTY_RANGING_TABLE = {
 
 int16_t distanceTowards[NEIGHBOR_ADDRESS_MAX + 1] = {[0 ... NEIGHBOR_ADDRESS_MAX] = -1};
 uint8_t distanceSource[NEIGHBOR_ADDRESS_MAX + 1] = {[0 ... NEIGHBOR_ADDRESS_MAX] = -1};
+float distanceReal[NEIGHBOR_ADDRESS_MAX + 1] = {[0 ... NEIGHBOR_ADDRESS_MAX] = -1};
+
 // Add by lcy
 static uint16_t txPeriodDelay = 0; // the tx send period delay
 static SemaphoreHandle_t rangingTxTaskBinary; // if it is open, then tx, Semaphore for synchronization
@@ -80,7 +83,7 @@ static TimerHandle_t statisticTimer;
 
 static uint16_t MY_UWB_ADDRESS;
 int16_t TX_jitter = 0;
-uint16_t TX_PERIOD_IN_MS = 60;
+uint16_t TX_PERIOD_IN_MS = 70;
 /*--5添加--*/
 static SemaphoreHandle_t rangingTableSetMutex;                 // 用于互斥访问rangingTableSet
 static median_data_t median_data[RANGING_TABLE_SIZE + 1];      // 存储测距的历史值
@@ -130,6 +133,93 @@ void setDistance(UWB_Address_t neighborAddress, int16_t distance, uint8_t source
 
   distanceSource[neighborAddress] = source;
 }
+#ifdef ENABLE_OPTIMAL_RANGING_SCHEDULE
+int rx_buffer_index = 0;
+static Timestamp_Tuple_t rx_buffer[NEIGHBOR_ADDRESS_MAX + 1];
+#define SAFETY_DISTANCE_MIN 2
+int8_t temp_delay = 0;
+void predict_period_in_rx(int rx_buffer_index)
+{
+
+  for (int i = 0; i < Tf_BUFFER_POOL_SIZE; i++)
+  {
+    if (TfBuffer[i].timestamp.full && rx_buffer[rx_buffer_index].timestamp.full)
+    {
+      /*
+      +-------+------+-------+-------+-------+------+
+      |  RX3  |  TX  |  RX1  |  RX2  |  RX3  |  TX  |
+      +-------+------+-------+-------+-------+------+
+                  ^              ^
+                 Tf             now
+      */
+
+      if (((-TfBuffer[i].timestamp.full + rx_buffer[rx_buffer_index].timestamp.full) % UWB_MAX_TIMESTAMP < (uint64_t)(RANGING_PERIOD / (DWT_TIME_UNITS * 1000))) && (TfBuffer[i].timestamp.full % UWB_MAX_TIMESTAMP) < (rx_buffer[rx_buffer_index].timestamp.full % UWB_MAX_TIMESTAMP))
+      {
+        /*上一次TX时间 到 本次RX时间 太近*/
+        if ((-TfBuffer[i].timestamp.full + rx_buffer[rx_buffer_index].timestamp.full) % UWB_MAX_TIMESTAMP < (uint64_t)(SAFETY_DISTANCE_MIN / (DWT_TIME_UNITS * 1000)))
+        {
+          temp_delay = -1;
+          // keeping_times = 1;
+          return;
+        }
+
+        /*本次RX时间 到 预测的下一次TX 太近*/
+        if ((TfBuffer[i].timestamp.full + (uint64_t)(RANGING_PERIOD / (DWT_TIME_UNITS * 1000)) - rx_buffer[rx_buffer_index].timestamp.full) % UWB_MAX_TIMESTAMP < (uint64_t)(SAFETY_DISTANCE_MIN / (DWT_TIME_UNITS * 1000)))
+        {
+          temp_delay = +1;
+          // keeping_times = 1;
+          return;
+        }
+      }
+    }
+  }
+}
+
+void predict_period_in_tx_2(int TfBufferIndex)
+{
+
+  bool temp_control[2] = {0, 0};
+
+  for (int i = 0; i < NEIGHBOR_ADDRESS_MAX; i++)
+  {
+    if (TfBuffer[TfBufferIndex].timestamp.full && rx_buffer[i].timestamp.full)
+    {
+      /*
+      +-------+------+-------+-------+-------+------+
+      |  RX3  |  TX  |  RX1  |  RX2  |  RX3  |  TX  |
+      +-------+------+-------+-------+-------+------+
+                                                ^
+                                                now
+      */
+      if (((TfBuffer[TfBufferIndex].timestamp.full - rx_buffer[i].timestamp.full) % UWB_MAX_TIMESTAMP < (uint64_t)(RANGING_PERIOD / (DWT_TIME_UNITS * 1000))) && (TfBuffer[TfBufferIndex].timestamp.full % UWB_MAX_TIMESTAMP) > (rx_buffer[i].timestamp.full % UWB_MAX_TIMESTAMP))
+      {
+        if ((TfBuffer[TfBufferIndex].timestamp.full - rx_buffer[i].timestamp.full) % UWB_MAX_TIMESTAMP < (uint64_t)(RANGING_PERIOD / rangingTableSet.size / (DWT_TIME_UNITS * 1000)))
+        {
+          temp_control[0] = 1;
+        }
+      }
+
+      if (((TfBuffer[TfBufferIndex].timestamp.full - rx_buffer[i].timestamp.full) % UWB_MAX_TIMESTAMP < (uint64_t)(RANGING_PERIOD / (DWT_TIME_UNITS * 1000))) && (TfBuffer[TfBufferIndex].timestamp.full % UWB_MAX_TIMESTAMP) > (rx_buffer[i].timestamp.full % UWB_MAX_TIMESTAMP))
+      {
+        if ((uint64_t)(RANGING_PERIOD / (DWT_TIME_UNITS * 1000) - TfBuffer[TfBufferIndex].timestamp.full + rx_buffer[i].timestamp.full) % UWB_MAX_TIMESTAMP < (uint64_t)(RANGING_PERIOD / rangingTableSet.size / (DWT_TIME_UNITS * 1000)))
+        {
+          temp_control[1] = 1;
+        }
+      }
+    }
+  }
+
+  if (!temp_control[0] && temp_control[1])
+  {
+    temp_delay = -1;
+  }
+  if (temp_control[0] && !temp_control[1])
+  {
+    temp_delay = +1;
+  }
+}
+
+#endif
 
 static int16_t median_filter_3(int16_t *data)
 {
@@ -185,20 +275,21 @@ void statisticInit()
     statistic[i].compute1num = 0;
     statistic[i].compute2num = 0;
   }
-  statisticTimer = xTimerCreate("statisticTimer",
-                                M2T(NEIGHBOR_SET_HOLD_TIME / 2),
-                                pdTRUE,
-                                (void *)0,
-                                printStasticCallback);
-  xTimerStart(statisticTimer, M2T(0));
+  // statisticTimer = xTimerCreate("statisticTimer",
+  //                               M2T(NEIGHBOR_SET_HOLD_TIME / 2),
+  //                               pdTRUE,
+  //                               (void *)0,
+  //                               printStasticCallback);
+  // xTimerStart(statisticTimer, M2T(0));
 }
 
 void rangingTableBufferUpdate(Ranging_Table_Tr_Rr_Buffer_t *rangingTableBuffer,
-                              Timestamp_Tuple_t Tr,
+                              Timestamp_Tuple_t_2 Tr,
                               Timestamp_Tuple_t Rr)
 {
-  rangingTableBuffer->candidates[rangingTableBuffer->cur].Tr = Tr;
-  rangingTableBuffer->candidates[rangingTableBuffer->cur].Rr = Rr;
+  rangingTableBuffer->candidates[rangingTableBuffer->cur].Tr.seqNumber = Tr.seqNumber;
+  rangingTableBuffer->candidates[rangingTableBuffer->cur].Tr.timestamp = Tr.timestamp;
+   rangingTableBuffer->candidates[rangingTableBuffer->cur].Rr = Rr;
   // shift
   rangingTableBuffer->latest = rangingTableBuffer->cur;
   rangingTableBuffer->cur = (rangingTableBuffer->cur + 1) % Tr_Rr_BUFFER_POOL_SIZE;
@@ -246,6 +337,9 @@ void updateTfBuffer(Timestamp_Tuple_t timestamp)
   TfBufferIndex++;
   TfBufferIndex %= Tf_BUFFER_POOL_SIZE;
   TfBuffer[TfBufferIndex] = timestamp;
+  #ifdef ENABLE_OPTIMAL_RANGING_SCHEDULE
+  predict_period_in_tx_2(TfBufferIndex);
+#endif
   //  DEBUG_PRINT("updateTfBuffer: time = %llu, seq = %d\n", TfBuffer[TfBufferIndex].timestamp.full, TfBuffer[TfBufferIndex].seqNumber);
   xSemaphoreGive(TfBufferMutex);
 }
@@ -285,18 +379,18 @@ Timestamp_Tuple_t getLatestTxTimestamp()
   return TfBuffer[TfBufferIndex];
 }
 
-void getLatestNTxTimestamps(Timestamp_Tuple_t *timestamps, int n)
-{
-  ASSERT(n <= Tf_BUFFER_POOL_SIZE);
-  xSemaphoreTake(TfBufferMutex, portMAX_DELAY);
-  int startIndex = (TfBufferIndex + 1 - n + Tf_BUFFER_POOL_SIZE) % Tf_BUFFER_POOL_SIZE;
-  for (int i = n - 1; i >= 0; i--)
-  {
-    timestamps[i] = TfBuffer[startIndex];
-    startIndex = (startIndex + 1) % Tf_BUFFER_POOL_SIZE;
-  }
-  xSemaphoreGive(TfBufferMutex);
-}
+// void getLatestNTxTimestamps(Timestamp_Tuple_t *timestamps, int n)
+// {
+//   ASSERT(n <= Tf_BUFFER_POOL_SIZE);
+//   xSemaphoreTake(TfBufferMutex, portMAX_DELAY);
+//   int startIndex = (TfBufferIndex + 1 - n + Tf_BUFFER_POOL_SIZE) % Tf_BUFFER_POOL_SIZE;
+//   for (int i = n - 1; i >= 0; i--)
+//   {
+//     timestamps[i] = TfBuffer[startIndex];
+//     startIndex = (startIndex + 1) % Tf_BUFFER_POOL_SIZE;
+//   }
+//   xSemaphoreGive(TfBufferMutex);
+// }
 
 Ranging_Table_Set_t *getGlobalRangingTableSet()
 {
@@ -833,58 +927,58 @@ int neighborSetClearExpire(Neighbor_Set_t *set)
   return evictionCount;
 }
 
-static void topologySensing(Ranging_Message_t *rangingMessage)
-{
-  //  DEBUG_PRINT("topologySensing: Received ranging message from neighbor %u.\n", rangingMessage->header.srcAddress);
-  UWB_Address_t neighborAddress = rangingMessage->header.srcAddress;
-  if (!neighborSetHasOneHop(&neighborSet, neighborAddress))
-  {
-    /* Add current neighbor to one-hop neighbor set. */
-    neighborSetAddOneHopNeighbor(&neighborSet, neighborAddress);
-  }
-  neighborSetUpdateExpirationTime(&neighborSet, neighborAddress);
+// static void topologySensing(Ranging_Message_t *rangingMessage)
+// {
+//   //  DEBUG_PRINT("topologySensing: Received ranging message from neighbor %u.\n", rangingMessage->header.srcAddress);
+//   UWB_Address_t neighborAddress = rangingMessage->header.srcAddress;
+//   if (!neighborSetHasOneHop(&neighborSet, neighborAddress))
+//   {
+//     /* Add current neighbor to one-hop neighbor set. */
+//     neighborSetAddOneHopNeighbor(&neighborSet, neighborAddress);
+//   }
+//   neighborSetUpdateExpirationTime(&neighborSet, neighborAddress);
 
-  /* Infer one-hop and tow-hop neighbors from received ranging message. */
-  uint8_t bodyUnitCount = (rangingMessage->header.msgLength - sizeof(Ranging_Message_Header_t)) / sizeof(Body_Unit_t);
-  for (int i = 0; i < bodyUnitCount; i++)
-  {
-#ifdef ROUTING_OLSR_ENABLE
-    if (rangingMessage->bodyUnits[i].address == uwbGetAddress())
-    {
-      /* If been selected as MPR, add neighbor to mpr selector set. */
-      if (rangingMessage->bodyUnits[i].flags.MPR)
-      {
-        if (!mprSelectorSetHas(getGlobalMPRSelectorSet(), neighborAddress))
-        {
-          mprSelectorSetAdd(getGlobalMPRSelectorSet(), neighborAddress);
-        }
-        mprSelectorSetUpdateExpirationTime(getGlobalMPRSelectorSet(), neighborAddress);
-      }
-      else
-      {
-        if (mprSelectorSetHas(getGlobalMPRSelectorSet(), neighborAddress))
-        {
-          mprSelectorSetRemove(getGlobalMPRSelectorSet(), neighborAddress);
-        }
-      }
-    }
-#endif
-    UWB_Address_t twoHopNeighbor = rangingMessage->bodyUnits[i].address;
-    if (twoHopNeighbor != uwbGetAddress() && !neighborSetHasOneHop(&neighborSet, twoHopNeighbor))
-    {
-      /* If it is not one-hop neighbor then it is now my two-hop neighbor, if new add it to neighbor set. */
-      if (!neighborSetHasTwoHop(&neighborSet, twoHopNeighbor))
-      {
-        neighborSetAddTwoHopNeighbor(&neighborSet, twoHopNeighbor);
-      }
-      if (!neighborSetHasRelation(&neighborSet, neighborAddress, twoHopNeighbor))
-      {
-        neighborSetAddRelation(&neighborSet, neighborAddress, twoHopNeighbor);
-      }
-      neighborSetUpdateExpirationTime(&neighborSet, twoHopNeighbor);
-    }
-  }
-}
+//   /* Infer one-hop and tow-hop neighbors from received ranging message. */
+//   uint8_t bodyUnitCount = (rangingMessage->header.msgLength - sizeof(Ranging_Message_Header_t)) / sizeof(Body_Unit_t);
+//   for (int i = 0; i < bodyUnitCount; i++)
+//   {
+// #ifdef ROUTING_OLSR_ENABLE
+//     if (rangingMessage->bodyUnits[i].address == uwbGetAddress())
+//     {
+//       /* If been selected as MPR, add neighbor to mpr selector set. */
+//       if (rangingMessage->bodyUnits[i].flags.MPR)
+//       {
+//         if (!mprSelectorSetHas(getGlobalMPRSelectorSet(), neighborAddress))
+//         {
+//           mprSelectorSetAdd(getGlobalMPRSelectorSet(), neighborAddress);
+//         }
+//         mprSelectorSetUpdateExpirationTime(getGlobalMPRSelectorSet(), neighborAddress);
+//       }
+//       else
+//       {
+//         if (mprSelectorSetHas(getGlobalMPRSelectorSet(), neighborAddress))
+//         {
+//           mprSelectorSetRemove(getGlobalMPRSelectorSet(), neighborAddress);
+//         }
+//       }
+//     }
+// #endif
+//     UWB_Address_t twoHopNeighbor = rangingMessage->bodyUnits[i].address;
+//     if (twoHopNeighbor != uwbGetAddress() && !neighborSetHasOneHop(&neighborSet, twoHopNeighbor))
+//     {
+//       /* If it is not one-hop neighbor then it is now my two-hop neighbor, if new add it to neighbor set. */
+//       if (!neighborSetHasTwoHop(&neighborSet, twoHopNeighbor))
+//       {
+//         neighborSetAddTwoHopNeighbor(&neighborSet, twoHopNeighbor);
+//       }
+//       if (!neighborSetHasRelation(&neighborSet, neighborAddress, twoHopNeighbor))
+//       {
+//         neighborSetAddRelation(&neighborSet, neighborAddress, twoHopNeighbor);
+//       }
+//       neighborSetUpdateExpirationTime(&neighborSet, twoHopNeighbor);
+//     }
+//   }
+// }
 
 static void neighborSetClearExpireTimerCallback(TimerHandle_t timer)
 {
@@ -940,14 +1034,14 @@ void printRangingTableSet(Ranging_Table_Set_t *set)
 
 void printRangingMessage(Ranging_Message_t *rangingMessage)
 {
-  for (int i = 0; i < RANGING_MAX_Tr_UNIT; i++)
-  {
-    DEBUG_PRINT("lastTxTimestamp %d seq=%u, lastTxTimestamp=%2x%8lx\n",
-                i,
-                rangingMessage->header.lastTxTimestamps[i].seqNumber,
-                rangingMessage->header.lastTxTimestamps[i].timestamp.high8,
-                rangingMessage->header.lastTxTimestamps[i].timestamp.low32);
-  }
+  // for (int i = 0; i < RANGING_MAX_Tr_UNIT; i++)
+  // {
+  //   DEBUG_PRINT("lastTxTimestamp %d seq=%u, lastTxTimestamp=%2x%8lx\n",
+  //               i,
+  //               rangingMessage->header.lastTxTimestamps[i].seqNumber,
+  //               rangingMessage->header.lastTxTimestamps[i].timestamp.high8,
+  //               rangingMessage->header.lastTxTimestamps[i].timestamp.low32);
+  // }
   if (rangingMessage->header.msgLength - sizeof(Ranging_Message_Header_t) == 0)
   {
     return;
@@ -962,7 +1056,7 @@ void printRangingMessage(Ranging_Message_t *rangingMessage)
   {
     DEBUG_PRINT("unitAddress=%u, Seq=%u\n",
                 rangingMessage->bodyUnits[i].address,
-                rangingMessage->bodyUnits[i].timestamp.seqNumber);
+                rangingMessage->bodyUnits[i].seqNumber);
   }
 }
 
@@ -1433,6 +1527,18 @@ void rangingTableOnEvent(Ranging_Table_t *table, RANGING_TABLE_EVENT event)
   EVENT_HANDLER[table->state][event](table);
 }
 
+void computeRealDistance(uint16_t neighborAddress, float x1, float y1, float z1, float x2, float y2, float z2)
+{
+  // 计算各坐标的差
+  float dx = x2 - x1;
+  float dy = y2 - y1;
+  float dz = z2 - z1;
+
+  // 计算距离的平方和再开方
+  float distance = sqrt(dx * dx + dy * dy + dz * dz);
+
+  distanceReal[neighborAddress] = distance;
+}
 // liujiangpeng add
 
 void initNeighborStateInfoAndMedian_data()
@@ -1571,8 +1677,14 @@ static void processRangingMessage(Ranging_Message_With_Timestamp_t *rangingMessa
 
   DEBUG_PRINT("seq:%d\n", rangingMessage->header.msgSequence);
 
+  float posiX = logGetFloat(idX);
+  float posiY = logGetFloat(idY);
+  float posiZ = logGetFloat(idZ);
+
+
   statistic[neighborAddress].recvnum++;
   statistic[neighborAddress].recvSeq = rangingMessage->header.msgSequence;
+
   bool isNewAddNeighbor = neighborIndex == -1 ? true : false; /*如果是新添加的邻居，则是true*/
   setNeighborStateInfo_isNewAdd(neighborAddress, isNewAddNeighbor);
   DEBUG_PRINT("processRangingMessage: neighborIndex = %d, isNewAddNeighbor = %d\n", neighborIndex, isNewAddNeighbor);
@@ -1631,7 +1743,8 @@ static void processRangingMessage(Ranging_Message_With_Timestamp_t *rangingMessa
     {
       if (rangingMessage->bodyUnits[i].address == uwbGetAddress())
       {
-        neighborRf = rangingMessage->bodyUnits[i].timestamp;
+        neighborRf.timestamp = rangingMessage->bodyUnits[i].timestamp;
+        neighborRf.seqNumber = rangingMessage->bodyUnits[i].seqNumber;
         break;
       }
     }
@@ -1722,7 +1835,7 @@ static Time_t generateRangingMessage(Ranging_Message_t *rangingMessage)
 #ifdef ENABLE_BUS_BOARDING_SCHEME
   rangingTableSetRearrange(&rangingTableSet, COMPARE_BY_NEXT_EXPECTED_DELIVERY_TIME);
 #else
-  rangingTableSetRearrange(&rangingTableSet, COMPARE_BY_LAST_SEND_TIME);
+  //rangingTableSetRearrange(&rangingTableSet, COMPARE_BY_LAST_SEND_TIME);
 #endif
 
   /* Generate message body */
@@ -1742,12 +1855,11 @@ static Time_t generateRangingMessage(Ranging_Message_t *rangingMessage)
       }
       table->nextExpectedDeliveryTime = curTime + M2T(table->period);
       table->lastSendTime = curTime;
+
+      rangingMessage->bodyUnits[bodyUnitNumber].timestamp = table->latestReceived.timestamp;
+      rangingMessage->bodyUnits[bodyUnitNumber].seqNumber = table->latestReceived.seqNumber;
       rangingMessage->bodyUnits[bodyUnitNumber].address = table->neighborAddress;
-      /* It is possible that latestReceived is not the newest timestamp, because the newest may be in rxQueue
-       * waiting to be handled.
-       */
-      rangingMessage->bodyUnits[bodyUnitNumber].timestamp = table->latestReceived;
-      // table->latestReceived.seqNumber = 0;
+            // table->latestReceived.seqNumber = 0;
       // table->latestReceived.timestamp.full = 0;
       // int randnum = rand() % 10;
       // if (randnum < 7)
@@ -1771,16 +1883,16 @@ static Time_t generateRangingMessage(Ranging_Message_t *rangingMessage)
       taskDelay = MAX(RANGING_PERIOD_MIN, taskDelay);
 #endif
 
-#ifdef ROUTING_OLSR_ENABLE
-      if (mprSetHas(getGlobalMPRSet(), table->neighborAddress))
-      {
-        rangingMessage->bodyUnits[bodyUnitNumber].flags.MPR = true;
-      }
-      else
-      {
-        rangingMessage->bodyUnits[bodyUnitNumber].flags.MPR = false;
-      }
-#endif
+// #ifdef ROUTING_OLSR_ENABLE
+//       if (mprSetHas(getGlobalMPRSet(), table->neighborAddress))
+//       {
+//         rangingMessage->bodyUnits[bodyUnitNumber].flags.MPR = true;
+//       }
+//       else
+//       {
+//         rangingMessage->bodyUnits[bodyUnitNumber].flags.MPR = false;
+//       }
+// #endif
 
       bodyUnitNumber++;
     }
@@ -1789,10 +1901,25 @@ static Time_t generateRangingMessage(Ranging_Message_t *rangingMessage)
   rangingMessage->header.srcAddress = MY_UWB_ADDRESS;
   rangingMessage->header.msgLength = sizeof(Ranging_Message_Header_t) + sizeof(Body_Unit_t) * bodyUnitNumber;
   rangingMessage->header.msgSequence = curSeqNumber;
-  getLatestNTxTimestamps(rangingMessage->header.lastTxTimestamps, RANGING_MAX_Tr_UNIT);
+    // getLatestNTxTimestamps(rangingMessage->header.lastTxTimestamps, RANGING_MAX_Tr_UNIT);
+
+  // xSemaphoreTake(TfBufferMutex, portMAX_DELAY);
+  int startIndex = (TfBufferIndex + 1 - RANGING_MAX_Tr_UNIT + Tf_BUFFER_POOL_SIZE) % Tf_BUFFER_POOL_SIZE;
+  for (int i = RANGING_MAX_Tr_UNIT - 1; i >= 0; i--)
+  {
+    rangingMessage->header.lastTxTimestamps[i].timestamp = TfBuffer[startIndex].timestamp;
+    rangingMessage->header.lastTxTimestamps[i].seqNumber = TfBuffer[startIndex].seqNumber;
+    startIndex = (startIndex + 1) % Tf_BUFFER_POOL_SIZE;
+  }
+  // xSemaphoreGive(TfBufferMutex);
+
   float velocityX = logGetFloat(idVelocityX);
   float velocityY = logGetFloat(idVelocityY);
   float velocityZ = logGetFloat(idVelocityZ);
+
+  float posiX = logGetFloat(idX);
+  float posiY = logGetFloat(idY);
+  float posiZ = logGetFloat(idZ);
   velocity = sqrt(pow(velocityX, 2) + pow(velocityY, 2) + pow(velocityZ, 2));
   /* velocity in cm/s */
   rangingMessage->header.velocity = (short)(velocity * 100);
@@ -1863,6 +1990,9 @@ static void uwbRangingTxTask(void *parameters)
   idVelocityY = logGetVarId("stateEstimate", "vy");
   idVelocityZ = logGetVarId("stateEstimate", "vz");
 
+  idX = logGetVarId("stateEstimate", "x");
+  idY = logGetVarId("stateEstimate", "y");
+  idZ = logGetVarId("stateEstimate", "z");
   UWB_Packet_t txPacketCache;
   txPacketCache.header.srcAddress = uwbGetAddress();
   txPacketCache.header.destAddress = UWB_DEST_ANY;
@@ -1889,11 +2019,11 @@ static void uwbRangingTxTask(void *parameters)
       }
     }
     xSemaphoreTake(rangingTableSet.mu, portMAX_DELAY);
-    xSemaphoreTake(neighborSet.mu, portMAX_DELAY);
+     // xSemaphoreTake(neighborSet.mu, portMAX_DELAY);
+    Time_t taskDelay = RANGING_PERIOD;
 
 
     // Time_t taskDelay = RANGING_PERIOD + rand() % RANGING_PERIOD;
-    Time_t taskDelay = RANGING_PERIOD - 6 + rand() % 13;
     // int randNum = rand() % 20;
     generateRangingMessage(rangingMessage);
     txPacketCache.header.length = sizeof(UWB_Packet_Header_t) + rangingMessage->header.msgLength;
@@ -1910,17 +2040,15 @@ static void uwbRangingTxTask(void *parameters)
     uwbSendPacketBlock(&txPacketCache);
     //    printRangingTableSet(&rangingTableSet);
     //    printNeighborSet(&neighborSet);
-    latest_txTime = xTaskGetTickCount();
-    uint16_t notget_packet_interval = 0;
 
-    xSemaphoreGive(neighborSet.mu);
+    // xSemaphoreGive(neighborSet.mu);
     xSemaphoreGive(rangingTableSet.mu);
-    //vTaskDelay(taskDelay);
-     if (MY_UWB_ADDRESS == 0)
-    {
-      // DEBUG_PRINT("I am 0\n");
-      vTaskDelay(RANGING_PERIOD);
-    }
+#ifdef ENABLE_OPTIMAL_RANGING_SCHEDULE
+    vTaskDelay(RANGING_PERIOD + temp_delay);
+    temp_delay = 0;
+#else
+    vTaskDelay(taskDelay);
+#endif
   }
 }
 
@@ -1938,12 +2066,12 @@ static void uwbRangingRxTask(void *parameters)
       if (randNum < 50)
       {
         xSemaphoreTake(rangingTableSet.mu, portMAX_DELAY);
-        xSemaphoreTake(neighborSet.mu, portMAX_DELAY);
+        // xSemaphoreTake(neighborSet.mu, portMAX_DELAY);
 
         processRangingMessage(&rxPacketCache);
-        topologySensing(&rxPacketCache.rangingMessage);
+        // topologySensing(&rxPacketCache.rangingMessage);
 
-        xSemaphoreGive(neighborSet.mu);
+        // xSemaphoreGive(neighborSet.mu);
         xSemaphoreGive(rangingTableSet.mu);
       }
     }
@@ -1961,6 +2089,15 @@ void rangingRxCallback(void *parameters)
 
   dwTime_t rxTime;
   dwt_readrxtimestamp((uint8_t *)&rxTime.raw);
+
+  #ifdef ENABLE_OPTIMAL_RANGING_SCHEDULE
+  rx_buffer_index++;
+  rx_buffer_index %= NEIGHBOR_ADDRESS_MAX;
+  rx_buffer[rx_buffer_index].seqNumber = rangingSeqNumber;
+  rx_buffer[rx_buffer_index].timestamp = rxTime;
+  predict_period_in_rx(rx_buffer_index);
+#endif
+
   Ranging_Message_With_Timestamp_t rxMessageWithTimestamp;
   rxMessageWithTimestamp.rxTime = rxTime;
   Ranging_Message_t *rangingMessage = (Ranging_Message_t *)packet->payload;
@@ -1997,17 +2134,17 @@ void rangingInit()
 {
   MY_UWB_ADDRESS = uwbGetAddress();
   rxQueue = xQueueCreate(RANGING_RX_QUEUE_SIZE, RANGING_RX_QUEUE_ITEM_SIZE);
-  neighborSetInit(&neighborSet);
+ // neighborSetInit(&neighborSet);
   // Add by lcy
   txPeriodDelayset();
   // Add by lcy
   rangingTxTaskBinary = xSemaphoreCreateBinary(); // a binary semaphore 
-  neighborSetEvictionTimer = xTimerCreate("neighborSetEvictionTimer",
-                                          M2T(NEIGHBOR_SET_HOLD_TIME / 2),
-                                          pdTRUE,
-                                          (void *)0,
-                                          neighborSetClearExpireTimerCallback);
-  xTimerStart(neighborSetEvictionTimer, M2T(0));
+  // neighborSetEvictionTimer = xTimerCreate("neighborSetEvictionTimer",
+  //                                         M2T(NEIGHBOR_SET_HOLD_TIME / 2),
+  //                                         pdTRUE,
+  //                                         (void *)0,
+  //                                         neighborSetClearExpireTimerCallback);
+  // xTimerStart(neighborSetEvictionTimer, M2T(0));
   initNeighborStateInfoAndMedian_data();
   initLeaderStateInfo();
   rangingTableSetInit(&rangingTableSet);
