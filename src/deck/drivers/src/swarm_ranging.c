@@ -90,6 +90,50 @@ void setDistance(UWB_Address_t neighborAddress, int16_t distance, uint8_t source
   distanceSource[neighborAddress] = source;
 }
 
+#ifdef ENABLE_OPTIMAL_RANGING_SCHEDULE
+int rx_buffer_index = 0;
+Timestamp_Tuple_t rx_buffer[NEIGHBOR_ADDRESS_MAX + 1];
+#define SAFETY_DISTANCE_MIN 2
+int8_t temp_delay = 0;
+void predict_period_in_rx(int rx_buffer_index)
+{
+
+  for (int i = 0; i < Tf_BUFFER_POOL_SIZE; i++)
+  {
+    if (TfBuffer[i].timestamp.full && rx_buffer[rx_buffer_index].timestamp.full)
+    {
+      /*
+      +-------+------+-------+-------+-------+------+
+      |  RX3  |  TX  |  RX1  |  RX2  |  RX3  |  TX  |
+      +-------+------+-------+-------+-------+------+
+                  ^              ^
+                 Tf             now
+      */
+
+      if (((-TfBuffer[i].timestamp.full + rx_buffer[rx_buffer_index].timestamp.full) % UWB_MAX_TIMESTAMP < (uint64_t)(RANGING_PERIOD / (DWT_TIME_UNITS * 1000))) && (TfBuffer[i].timestamp.full % UWB_MAX_TIMESTAMP) < (rx_buffer[rx_buffer_index].timestamp.full % UWB_MAX_TIMESTAMP))
+      {
+        /*上一次TX时间 到 本次RX时间 太近*/
+        if ((-TfBuffer[i].timestamp.full + rx_buffer[rx_buffer_index].timestamp.full) % UWB_MAX_TIMESTAMP < (uint64_t)(SAFETY_DISTANCE_MIN / (DWT_TIME_UNITS * 1000)))
+        {
+          temp_delay = -1;
+          // keeping_times = 1;
+          return;
+        }
+
+        /*本次RX时间 到 预测的下一次TX 太近*/
+        if ((TfBuffer[i].timestamp.full + (uint64_t)(RANGING_PERIOD / (DWT_TIME_UNITS * 1000)) - rx_buffer[rx_buffer_index].timestamp.full) % UWB_MAX_TIMESTAMP < (uint64_t)(SAFETY_DISTANCE_MIN / (DWT_TIME_UNITS * 1000)))
+        {
+          temp_delay = +1;
+          // keeping_times = 1;
+          return;
+        }
+      }
+    }
+  }
+}
+
+#endif
+
 void rangingTableBufferInit(Ranging_Table_Tr_Rr_Buffer_t *rangingTableBuffer)
 {
   rangingTableBuffer->cur = 0;
@@ -1366,16 +1410,17 @@ void rangingTableOnEvent(Ranging_Table_t *table, RANGING_TABLE_EVENT event)
   EVENT_HANDLER[table->state][event](table);
 }
 
-void computeRealDistance(uint16_t neighborAddress, float x1, float y1, float z1, float x2, float y2, float z2) {
-    // 计算各坐标的差
-    float dx = x2 - x1;
-    float dy = y2 - y1;
-    float dz = z2 - z1;
-    
-    // 计算距离的平方和再开方
-    float distance = sqrt(dx * dx + dy * dy + dz * dz);
-    
-    distanceReal[neighborAddress] = distance;
+void computeRealDistance(uint16_t neighborAddress, float x1, float y1, float z1, float x2, float y2, float z2)
+{
+  // 计算各坐标的差
+  float dx = x2 - x1;
+  float dy = y2 - y1;
+  float dz = z2 - z1;
+
+  // 计算距离的平方和再开方
+  float distance = sqrt(dx * dx + dy * dy + dz * dz);
+
+  distanceReal[neighborAddress] = distance;
 }
 
 /* Swarm Ranging */
@@ -1560,7 +1605,7 @@ static Time_t generateRangingMessage(Ranging_Message_t *rangingMessage)
       }
       table->nextExpectedDeliveryTime = curTime + M2T(table->period);
       table->lastSendTime = curTime;
-      
+
       /* It is possible that latestReceived is not the newest timestamp, because the newest may be in rxQueue
        * waiting to be handled.
        */
@@ -1610,7 +1655,6 @@ static Time_t generateRangingMessage(Ranging_Message_t *rangingMessage)
   rangingMessage->header.msgLength = sizeof(Ranging_Message_Header_t) + sizeof(Body_Unit_t) * bodyUnitNumber;
   rangingMessage->header.msgSequence = curSeqNumber;
   // getLatestNTxTimestamps(rangingMessage->header.lastTxTimestamps, RANGING_MAX_Tr_UNIT);
-  
 
   // xSemaphoreTake(TfBufferMutex, portMAX_DELAY);
   int startIndex = (TfBufferIndex + 1 - RANGING_MAX_Tr_UNIT + Tf_BUFFER_POOL_SIZE) % Tf_BUFFER_POOL_SIZE;
@@ -1621,7 +1665,6 @@ static Time_t generateRangingMessage(Ranging_Message_t *rangingMessage)
     startIndex = (startIndex + 1) % Tf_BUFFER_POOL_SIZE;
   }
   // xSemaphoreGive(TfBufferMutex);
-
 
   float velocityX = logGetFloat(idVelocityX);
   float velocityY = logGetFloat(idVelocityY);
@@ -1673,28 +1716,20 @@ static void uwbRangingTxTask(void *parameters)
   {
     xSemaphoreTake(rangingTableSet.mu, portMAX_DELAY);
     // xSemaphoreTake(neighborSet.mu, portMAX_DELAY);
-
-    // Time_t taskDelay = RANGING_PERIOD + rand() % RANGING_PERIOD;
-    Time_t taskDelay = 30+rand()%61;
-    // int randNum = rand() % 20;
+    Time_t taskDelay = RANGING_PERIOD;
     generateRangingMessage(rangingMessage);
     txPacketCache.header.length = sizeof(UWB_Packet_Header_t) + rangingMessage->header.msgLength;
-    // if (randNum < 17)
-    // {
-    //   uwbSendPacketBlock(&txPacketCache);
-    // }
-    // else
-    // {
-    //   Timestamp_Tuple_t timestamp = {.timestamp.full = 0, .seqNumber = rangingMessage->header.msgSequence};
-    //   updateTfBuffer(timestamp);
-    // }
     uwbSendPacketBlock(&txPacketCache);
     //    printRangingTableSet(&rangingTableSet);
     //    printNeighborSet(&neighborSet);
 
     // xSemaphoreGive(neighborSet.mu);
     xSemaphoreGive(rangingTableSet.mu);
+#ifdef ENABLE_OPTIMAL_RANGING_SCHEDULE
+    vTaskDelay(RANGING_PERIOD+temp_delay);
+#else
     vTaskDelay(taskDelay);
+#endif
   }
 }
 
@@ -1708,14 +1743,14 @@ static void uwbRangingRxTask(void *parameters)
   {
     if (xQueueReceive(rxQueue, &rxPacketCache, portMAX_DELAY))
     {
-        xSemaphoreTake(rangingTableSet.mu, portMAX_DELAY);
-        // xSemaphoreTake(neighborSet.mu, portMAX_DELAY);
+      xSemaphoreTake(rangingTableSet.mu, portMAX_DELAY);
+      // xSemaphoreTake(neighborSet.mu, portMAX_DELAY);
 
-        processRangingMessage(&rxPacketCache);
-        // topologySensing(&rxPacketCache.rangingMessage);
+      processRangingMessage(&rxPacketCache);
+      // topologySensing(&rxPacketCache.rangingMessage);
 
-        // xSemaphoreGive(neighborSet.mu);
-        xSemaphoreGive(rangingTableSet.mu);
+      // xSemaphoreGive(neighborSet.mu);
+      xSemaphoreGive(rangingTableSet.mu);
     }
     vTaskDelay(M2T(1));
   }
@@ -1731,6 +1766,15 @@ void rangingRxCallback(void *parameters)
 
   dwTime_t rxTime;
   dwt_readrxtimestamp((uint8_t *)&rxTime.raw);
+
+#ifdef ENABLE_OPTIMAL_RANGING_SCHEDULE
+  rx_buffer_index++;
+  rx_buffer_index %= NEIGHBOR_ADDRESS_MAX;
+  rx_buffer[rx_buffer_index].seqNumber = rangingSeqNumber;
+  rx_buffer[rx_buffer_index].timestamp = rxTime;
+  predict_period_in_rx(rx_buffer_index);
+#endif
+
   Ranging_Message_With_Timestamp_t rxMessageWithTimestamp;
   rxMessageWithTimestamp.rxTime = rxTime;
   Ranging_Message_t *rangingMessage = (Ranging_Message_t *)packet->payload;
@@ -1789,7 +1833,6 @@ void rangingInit()
               ADHOC_DECK_TASK_PRI, &uwbRangingRxTaskHandle);
 }
 
-
 LOG_GROUP_START(Ranging)
 
 LOG_ADD(LOG_INT16, distTo1, distanceTowards + 1)
@@ -1823,7 +1866,6 @@ LOG_ADD(LOG_INT16, distTo28, distanceTowards + 28)
 LOG_ADD(LOG_INT16, distTo29, distanceTowards + 29)
 LOG_ADD(LOG_INT16, distTo30, distanceTowards + 30)
 
-
 LOG_GROUP_STOP(Ranging)
 
 LOG_GROUP_START(Statistic)
@@ -1834,7 +1876,6 @@ LOG_ADD(LOG_UINT16, compute2num0, &statistic[0].compute2num)
 LOG_ADD(LOG_INT16, dist0, distanceTowards + 0)
 LOG_ADD(LOG_UINT8, distSrc0, distanceSource + 0)
 LOG_ADD(LOG_FLOAT, distReal0, distanceReal + 0)
-
 
 LOG_ADD(LOG_UINT16, recvSeq1, &statistic[1].recvSeq)
 LOG_ADD(LOG_UINT16, recvNum1, &statistic[1].recvnum)
