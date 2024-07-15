@@ -1727,6 +1727,7 @@ static void uwbRangingTxTask(void *parameters)
     xSemaphoreGive(rangingTableSet.mu);
 #ifdef ENABLE_OPTIMAL_RANGING_SCHEDULE
     vTaskDelay(RANGING_PERIOD+temp_delay);
+    temp_delay=0;
 #else
     vTaskDelay(taskDelay);
 #endif
