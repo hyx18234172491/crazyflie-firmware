@@ -1482,7 +1482,7 @@ static void processRangingMessage(Ranging_Message_With_Timestamp_t *rangingMessa
   float posiX = logGetFloat(idX);
   float posiY = logGetFloat(idY);
   float posiZ = logGetFloat(idZ);
-  // computeRealDistance(neighborAddress,posiX,posiY,posiZ,rangingMessage->header.posiX,rangingMessage->header.posiY,rangingMessage->header.posiZ);
+  computeRealDistance(neighborAddress,posiX,posiY,posiZ,rangingMessage->header.posiX,rangingMessage->header.posiY,rangingMessage->header.posiZ);
 
   statistic[neighborAddress].recvnum++;
   statistic[neighborAddress].recvSeq = rangingMessage->header.msgSequence;
@@ -1721,9 +1721,9 @@ static Time_t generateRangingMessage(Ranging_Message_t *rangingMessage)
   float posiY = logGetFloat(idY);
   float posiZ = logGetFloat(idZ);
 
-  // rangingMessage->header.posiX = posiX;
-  // rangingMessage->header.posiY = posiY;
-  // rangingMessage->header.posiZ = posiZ;
+  rangingMessage->header.posiX = posiX;
+  rangingMessage->header.posiY = posiY;
+  rangingMessage->header.posiZ = posiZ;
 
   velocity = sqrt(pow(velocityX, 2) + pow(velocityY, 2) + pow(velocityZ, 2));
   /* velocity in cm/s */
