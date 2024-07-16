@@ -1748,9 +1748,9 @@ static void uwbRangingTxTask(void *parameters)
   idVelocityY = logGetVarId("stateEstimate", "vy");
   idVelocityZ = logGetVarId("stateEstimate", "vz");
 
-  idX = logGetVarId("stateEstimate", "x");
-  idY = logGetVarId("stateEstimate", "y");
-  idZ = logGetVarId("stateEstimate", "z");
+  idX = logGetVarId("lighthouse", "x");
+  idY = logGetVarId("lighthouse", "y");
+  idZ = logGetVarId("lighthouse", "z");
 
   UWB_Packet_t txPacketCache;
   txPacketCache.header.srcAddress = uwbGetAddress();
