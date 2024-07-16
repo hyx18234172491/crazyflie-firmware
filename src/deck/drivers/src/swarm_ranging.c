@@ -65,8 +65,7 @@ static Ranging_Table_t EMPTY_RANGING_TABLE = {
 
 int16_t distanceTowards[NEIGHBOR_ADDRESS_MAX + 1] = {[0 ... NEIGHBOR_ADDRESS_MAX] = -1};
 uint8_t distanceSource[NEIGHBOR_ADDRESS_MAX + 1] = {[0 ... NEIGHBOR_ADDRESS_MAX] = -1};
-float distanceReal[NEIGHBOR_ADDRESS_MAX + 1] = {[0 ... NEIGHBOR_ADDRESS_MAX] = -1};
-
+float truthDistance[RANGING_TABLE_SIZE + 1] = {[0 ... RANGING_TABLE_SIZE] = -1};
 // Add by lcy
 static uint16_t txPeriodDelay = 0; // the tx send period delay
 static SemaphoreHandle_t rangingTxTaskBinary; // if it is open, then tx, Semaphore for synchronization
@@ -102,7 +101,7 @@ static uint8_t tx_rv_interval[RANGING_TABLE_SIZE + 1] = {0};                    
 static SemaphoreHandle_t rangingTableSetMutex;            // 用于互斥访问rangingTableSet
 static median_data_t median_data[RANGING_TABLE_SIZE + 1]; // 存储测距的历史值
 /*--5添加--*/
-
+static logVarId_t idtruthpositionX, idtruthpositionY, idtruthpositionZ;
 static logVarId_t idVelocityX, idVelocityY, idVelocityZ; // 从日志获取速度
 static float velocity;
 static bool MYisAlreadyTakeoff = false;
@@ -1537,7 +1536,7 @@ void computeRealDistance(uint16_t neighborAddress, float x1, float y1, float z1,
   // 计算距离的平方和再开方
   float distance = sqrt(dx * dx + dy * dy + dz * dz);
 
-  distanceReal[neighborAddress] = distance;
+  //distanceReal[neighborAddress] = distance;
 }
 // liujiangpeng add
 
@@ -1579,6 +1578,15 @@ void setNeighborStateInfo(uint16_t neighborAddress, Ranging_Message_Header_t *ra
   neighborStateInfo.velocityYInWorld[neighborAddress] = rangingMessageHeader->velocityYInWorld;
   neighborStateInfo.gyroZ[neighborAddress] = rangingMessageHeader->gyroZ;
   neighborStateInfo.positionZ[neighborAddress] = rangingMessageHeader->positionZ;
+  float myPositionX = logGetFloat(idtruthpositionX);
+  DEBUG_PRINT("myPositionX:%f\n",myPositionX);
+  float myPositionY = logGetFloat(idtruthpositionY);
+  float myPositionZ = logGetFloat(idtruthpositionZ);
+  float relativePositionX = rangingMessageHeader->truthpositionX - myPositionX;
+  float relativePositionY = rangingMessageHeader->truthpositionY - myPositionY;
+  float relativePositionZ = rangingMessageHeader->truthpositionZ - myPositionZ;
+  truthDistance[neighborAddress] =  sqrt(pow(relativePositionX, 2) + pow(relativePositionY, 2) + pow(relativePositionZ, 2))*100;
+  DEBUG_PRINT("truthDistance:%f\n",truthDistance[neighborAddress]);
    DEBUG_PRINT("set sucess%d\n",leaderStateInfo.stage);
   if (neighborAddress == leaderStateInfo.address)
   { /*无人机的keep_flying都是由0号无人机来设置的*/
@@ -1672,14 +1680,16 @@ static void processRangingMessage(Ranging_Message_With_Timestamp_t *rangingMessa
 {
   Ranging_Message_t *rangingMessage = &rangingMessageWithTimestamp->rangingMessage;
   uint16_t neighborAddress = rangingMessage->header.srcAddress;
-  DEBUG_PRINT("processRangingMessage: neighborAddress = %d\n", neighborAddress);
+  //DEBUG_PRINT("processRangingMessage: neighborAddress = %d\n", neighborAddress);
   int neighborIndex = rangingTableSetSearchTable(&rangingTableSet, neighborAddress);
 
   DEBUG_PRINT("seq:%d\n", rangingMessage->header.msgSequence);
 
-  float posiX = logGetFloat(idX);
-  float posiY = logGetFloat(idY);
-  float posiZ = logGetFloat(idZ);
+  float myPositionX = logGetFloat(idtruthpositionX);
+  float myPositionY = logGetFloat(idtruthpositionY);
+  float myPositionZ = logGetFloat(idtruthpositionZ);
+  //computeRealDistance(neighborAddress,myPositionX,myPositionY,myPositionZ,rangingMessage->header.truthpositionX,rangingMessage->header.truthpositionY,rangingMessage->header.truthpositionZ);
+
 
 
   statistic[neighborAddress].recvnum++;
@@ -1917,9 +1927,9 @@ static Time_t generateRangingMessage(Ranging_Message_t *rangingMessage)
   float velocityY = logGetFloat(idVelocityY);
   float velocityZ = logGetFloat(idVelocityZ);
 
-  float posiX = logGetFloat(idX);
-  float posiY = logGetFloat(idY);
-  float posiZ = logGetFloat(idZ);
+  rangingMessage->header.truthpositionX = logGetFloat(idtruthpositionX);
+  rangingMessage->header.truthpositionY = logGetFloat(idtruthpositionY);
+  rangingMessage->header.truthpositionZ = logGetFloat(idtruthpositionZ);
   velocity = sqrt(pow(velocityX, 2) + pow(velocityY, 2) + pow(velocityZ, 2));
   /* velocity in cm/s */
   rangingMessage->header.velocity = (short)(velocity * 100);
@@ -1989,10 +1999,9 @@ static void uwbRangingTxTask(void *parameters)
   idVelocityX = logGetVarId("stateEstimate", "vx");
   idVelocityY = logGetVarId("stateEstimate", "vy");
   idVelocityZ = logGetVarId("stateEstimate", "vz");
-
-  idX = logGetVarId("stateEstimate", "x");
-  idY = logGetVarId("stateEstimate", "y");
-  idZ = logGetVarId("stateEstimate", "z");
+  idtruthpositionX = logGetVarId("lighthouse", "x");
+  idtruthpositionY = logGetVarId("lighthouse","y");
+  idtruthpositionZ = logGetVarId("lighthouse","z");
   UWB_Packet_t txPacketCache;
   txPacketCache.header.srcAddress = uwbGetAddress();
   txPacketCache.header.destAddress = UWB_DEST_ANY;
@@ -2204,9 +2213,13 @@ static uint16_t getStasticCompute2num()
 
 LOG_GROUP_START(Ranging)
 LOG_ADD(LOG_INT16, distTo0, distanceTowards )
+LOG_ADD(LOG_INT16, truthDistTo0, truthDistance )
 LOG_ADD(LOG_INT16, distTo1, distanceTowards + 1)
+LOG_ADD(LOG_INT16, truthDistTo1, truthDistance+1 )
 LOG_ADD(LOG_INT16, distTo2, distanceTowards + 2)
+LOG_ADD(LOG_INT16, truthDistTo2, truthDistance+2 )
 LOG_ADD(LOG_INT16, distTo3, distanceTowards + 3)
+LOG_ADD(LOG_INT16, truthDistTo3, truthDistance+3 )
 LOG_ADD(LOG_INT16, distTo4, distanceTowards + 4)
 LOG_ADD(LOG_INT16, distTo5, distanceTowards + 5)
 LOG_ADD(LOG_INT16, distTo6, distanceTowards + 6)
