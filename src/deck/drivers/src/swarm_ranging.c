@@ -2000,9 +2000,13 @@ static void uwbRangingTxTask(void *parameters)
   txPacketCache.header.length = 0;
   Ranging_Message_t *rangingMessage = (Ranging_Message_t *)&txPacketCache.payload;
   // Add by lcy
+  #ifdef ENABLE_SLOT_RANGING_SCHEDULE
   BaseType_t xReturn = pdPASS;
+  #endif
   while (true)
   {
+
+    #ifdef ENABLE_SLOT_RANGING_SCHEDULE
     if (MY_UWB_ADDRESS != 0)
     {
       // DEBUG_PRINT("I am not 0\n");
@@ -2018,6 +2022,7 @@ static void uwbRangingTxTask(void *parameters)
         // DEBUG_PRINT("Delay: Overtime!\n");
       }
     }
+    #endif
     xSemaphoreTake(rangingTableSet.mu, portMAX_DELAY);
      // xSemaphoreTake(neighborSet.mu, portMAX_DELAY);
     Time_t taskDelay = RANGING_PERIOD;
@@ -2046,8 +2051,6 @@ static void uwbRangingTxTask(void *parameters)
 #ifdef ENABLE_OPTIMAL_RANGING_SCHEDULE
     vTaskDelay(RANGING_PERIOD + temp_delay);
     temp_delay = 0;
-#else
-    vTaskDelay(taskDelay);
 #endif
   }
 }
@@ -2102,7 +2105,8 @@ void rangingRxCallback(void *parameters)
   rxMessageWithTimestamp.rxTime = rxTime;
   Ranging_Message_t *rangingMessage = (Ranging_Message_t *)packet->payload;
   rxMessageWithTimestamp.rangingMessage = *rangingMessage;
-
+  
+  #ifdef ENABLE_SLOT_RANGING_SCHEDULE
   // Add by lcy
   uint16_t neighborAddress = rangingMessage->header.srcAddress;
   DEBUG_PRINT("fromneighbor:%d\n",neighborAddress);
@@ -2110,11 +2114,12 @@ void rangingRxCallback(void *parameters)
   {
     xSemaphoreGive(rangingTxTaskBinary);
   }
+  #endif
 
-  if(MY_UWB_ADDRESS == 0||neighborAddress == 0){
+  //if(MY_UWB_ADDRESS == 0||neighborAddress == 0){
     xQueueSendFromISR(rxQueue, &rxMessageWithTimestamp, &xHigherPriorityTaskWoken);
-    DEBUG_PRINT("isReceivefrom0:%d",neighborAddress);
-  }
+    //DEBUG_PRINT("isReceivefrom0:%d",neighborAddress);
+//}
   
 }
 
@@ -2135,10 +2140,12 @@ void rangingInit()
   MY_UWB_ADDRESS = uwbGetAddress();
   rxQueue = xQueueCreate(RANGING_RX_QUEUE_SIZE, RANGING_RX_QUEUE_ITEM_SIZE);
  // neighborSetInit(&neighborSet);
+ #ifdef ENABLE_SLOT_RANGING_SCHEDULE
   // Add by lcy
   txPeriodDelayset();
   // Add by lcy
   rangingTxTaskBinary = xSemaphoreCreateBinary(); // a binary semaphore 
+  #endif
   // neighborSetEvictionTimer = xTimerCreate("neighborSetEvictionTimer",
   //                                         M2T(NEIGHBOR_SET_HOLD_TIME / 2),
   //                                         pdTRUE,
