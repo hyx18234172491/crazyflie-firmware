@@ -83,7 +83,7 @@ static TimerHandle_t statisticTimer;
 
 static uint16_t MY_UWB_ADDRESS;
 int16_t TX_jitter = 0;
-uint16_t TX_PERIOD_IN_MS = 70;
+uint16_t TX_PERIOD_IN_MS = 60;
 /*--5添加--*/
 static SemaphoreHandle_t rangingTableSetMutex;                 // 用于互斥访问rangingTableSet
 static median_data_t median_data[RANGING_TABLE_SIZE + 1];      // 存储测距的历史值
@@ -136,7 +136,7 @@ void setDistance(UWB_Address_t neighborAddress, int16_t distance, uint8_t source
 #ifdef ENABLE_OPTIMAL_RANGING_SCHEDULE
 int rx_buffer_index = 0;
 static Timestamp_Tuple_t rx_buffer[NEIGHBOR_ADDRESS_MAX + 1];
-#define SAFETY_DISTANCE_MIN 2
+#define SAFETY_DISTANCE_MIN 1
 int8_t temp_delay = 0;
 void predict_period_in_rx(int rx_buffer_index)
 {
@@ -2022,10 +2022,11 @@ static void uwbRangingTxTask(void *parameters)
         // DEBUG_PRINT("Delay: Overtime!\n");
       }
     }
+
     #endif
     xSemaphoreTake(rangingTableSet.mu, portMAX_DELAY);
      // xSemaphoreTake(neighborSet.mu, portMAX_DELAY);
-    Time_t taskDelay = RANGING_PERIOD;
+    //Time_t taskDelay = RANGING_PERIOD;
 
 
     // Time_t taskDelay = RANGING_PERIOD + rand() % RANGING_PERIOD;
@@ -2049,8 +2050,13 @@ static void uwbRangingTxTask(void *parameters)
     // xSemaphoreGive(neighborSet.mu);
     xSemaphoreGive(rangingTableSet.mu);
 #ifdef ENABLE_OPTIMAL_RANGING_SCHEDULE
-    vTaskDelay(RANGING_PERIOD + temp_delay);
+    int8_t time_Delay = temp_delay;
     temp_delay = 0;
+    vTaskDelay(RANGING_PERIOD + time_Delay);
+#endif
+#ifdef ENABLE_SLOT_RANGING_SCHEDULE
+    if(MY_UWB_ADDRESS == 0)
+    vTaskDelay(RANGING_PERIOD);
 #endif
   }
 }
@@ -2065,9 +2071,6 @@ static void uwbRangingRxTask(void *parameters)
   {
     if (xQueueReceive(rxQueue, &rxPacketCache, portMAX_DELAY))
     {
-      int randNum = rand() % 20;
-      if (randNum < 50)
-      {
         xSemaphoreTake(rangingTableSet.mu, portMAX_DELAY);
         // xSemaphoreTake(neighborSet.mu, portMAX_DELAY);
 
@@ -2076,7 +2079,7 @@ static void uwbRangingRxTask(void *parameters)
 
         // xSemaphoreGive(neighborSet.mu);
         xSemaphoreGive(rangingTableSet.mu);
-      }
+      
     }
     vTaskDelay(M2T(1));
   }
@@ -2200,6 +2203,7 @@ static uint16_t getStasticCompute2num()
 }
 
 LOG_GROUP_START(Ranging)
+LOG_ADD(LOG_INT16, distTo0, distanceTowards )
 LOG_ADD(LOG_INT16, distTo1, distanceTowards + 1)
 LOG_ADD(LOG_INT16, distTo2, distanceTowards + 2)
 LOG_ADD(LOG_INT16, distTo3, distanceTowards + 3)

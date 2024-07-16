@@ -153,8 +153,8 @@ static void formation0asCenter(float_t tarX, float_t tarY, float_t height)
   IntErr_y += err_y * dt;
   pid_vx += relaCtrl_i * constrain(IntErr_x, -0.5, 0.5); // += (+-)0.00005
   pid_vy += relaCtrl_i * constrain(IntErr_y, -0.5, 0.5);
-  pid_vx = constrain(pid_vx, -0.5f, 0.5f);
-  pid_vy = constrain(pid_vy, -0.5f, 0.5f);
+  pid_vx = constrain(pid_vx, -0.3f, 0.3f);
+  pid_vy = constrain(pid_vy, -0.3f, 0.3f);
 
   // float rep_x = 0.0f;
   // float rep_y = 0.0f;
@@ -582,11 +582,11 @@ void relativeControlInit(void)
   MY_UWB_ADDRESS = uwbGetAddress();
   srand(MY_UWB_ADDRESS);
   if(MY_UWB_ADDRESS==0){
-    set_height = 1.2;
+    set_height = 0.6;
   }else if(MY_UWB_ADDRESS>8){
-    set_height = 0.4;
+    set_height = 0.5;
   }else{
-    set_height = 0.8;
+    set_height = 0.4;
   }
   xTaskCreate(relativeControlTask, "relative_Control", configMINIMAL_STACK_SIZE, NULL, 3, NULL);
   isInit = true;

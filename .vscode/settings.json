@@ -73,7 +73,8 @@
     "__mutex_base": "c",
     "condition_variable": "c",
     "typeinfo": "c",
-    "estimator_kalman.h": "c"
+    "estimator_kalman.h": "c",
+    "cstdint": "cpp"
   },
   "C_Cpp_Runner.cCompilerPath": "clang",
   "C_Cpp_Runner.cppCompilerPath": "clang++",
