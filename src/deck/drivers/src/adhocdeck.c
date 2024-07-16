@@ -386,6 +386,9 @@ static void uwbTaskInit() {
               ADHOC_DECK_TASK_PRI, &uwbTxTaskHandle);
 #ifdef UWB_RANGING_ENABLE
   rangingInit();
+  relativeLocoInit();
+  relativeControlInit();
+
 #endif
 #ifdef UWB_ROUTING_ENABLE
   routingInit();
@@ -395,6 +398,9 @@ static void uwbTaskInit() {
 #endif
 #ifdef UWB_FLOODING_ENABLE
   floodingInit();
+#endif
+#ifdef ENABLE_SNIFFER
+  snifferInit(); // TODO ugly code
 #endif
 }
 /*********** Deck driver initialization ***************/
