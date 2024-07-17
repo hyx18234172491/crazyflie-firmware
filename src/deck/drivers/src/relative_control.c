@@ -153,8 +153,8 @@ static void formation0asCenter(float_t tarX, float_t tarY, float_t height)
   IntErr_y += err_y * dt;
   pid_vx += relaCtrl_i * constrain(IntErr_x, -0.5, 0.5); // += (+-)0.00005
   pid_vy += relaCtrl_i * constrain(IntErr_y, -0.5, 0.5);
-  pid_vx = constrain(pid_vx, -0.3f, 0.3f);
-  pid_vy = constrain(pid_vy, -0.3f, 0.3f);
+  pid_vx = constrain(pid_vx, -0.5f, 0.5f);
+  pid_vy = constrain(pid_vy, -0.5f, 0.5f);
 
   // float rep_x = 0.0f;
   // float rep_y = 0.0f;
