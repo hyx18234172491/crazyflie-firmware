@@ -1482,7 +1482,7 @@ static void processRangingMessage(Ranging_Message_With_Timestamp_t *rangingMessa
   float posiX = logGetFloat(idX);
   float posiY = logGetFloat(idY);
   float posiZ = logGetFloat(idZ);
-  computeRealDistance(neighborAddress,posiX,posiY,posiZ,rangingMessage->header.posiX,rangingMessage->header.posiY,rangingMessage->header.posiZ);
+  computeRealDistance(neighborAddress, posiX, posiY, posiZ, rangingMessage->header.posiX, rangingMessage->header.posiY, rangingMessage->header.posiZ);
 
   statistic[neighborAddress].recvnum++;
   statistic[neighborAddress].recvSeq = rangingMessage->header.msgSequence;
@@ -1720,6 +1720,7 @@ static Time_t generateRangingMessage(Ranging_Message_t *rangingMessage)
   float posiX = logGetFloat(idX);
   float posiY = logGetFloat(idY);
   float posiZ = logGetFloat(idZ);
+  DEBUG_PRINT("%f\n", posiX);
 
   rangingMessage->header.posiX = posiX;
   rangingMessage->header.posiY = posiY;
@@ -1773,8 +1774,9 @@ static void uwbRangingTxTask(void *parameters)
     // xSemaphoreGive(neighborSet.mu);
     xSemaphoreGive(rangingTableSet.mu);
 #ifdef ENABLE_OPTIMAL_RANGING_SCHEDULE
-    vTaskDelay(RANGING_PERIOD + temp_delay);
+    int8_t time_Delay = temp_delay;
     temp_delay = 0;
+    vTaskDelay(RANGING_PERIOD + time_Delay);
 #else
     vTaskDelay(taskDelay);
 #endif
