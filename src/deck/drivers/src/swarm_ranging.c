@@ -38,6 +38,7 @@ static Timestamp_Tuple_t TfBuffer[Tf_BUFFER_POOL_SIZE] = {0};
 static SemaphoreHandle_t TfBufferMutex;
 static int rangingSeqNumber = 1;
 static logVarId_t idVelocityX, idVelocityY, idVelocityZ;
+static logVarId_t idX, idY, idZ;
 static float velocity;
 static Ranging_Table_t EMPTY_RANGING_TABLE = {
     .neighborAddress = UWB_DEST_EMPTY,
@@ -64,6 +65,7 @@ static Ranging_Table_t EMPTY_RANGING_TABLE = {
 
 int16_t distanceTowards[NEIGHBOR_ADDRESS_MAX + 1] = {[0 ... NEIGHBOR_ADDRESS_MAX] = -1};
 uint8_t distanceSource[NEIGHBOR_ADDRESS_MAX + 1] = {[0 ... NEIGHBOR_ADDRESS_MAX] = -1};
+float distanceReal[NEIGHBOR_ADDRESS_MAX + 1] = {[0 ... NEIGHBOR_ADDRESS_MAX] = -1};
 // Add by lcy
 static uint16_t txPeriodDelay = 0;            // the tx send period delay
 static SemaphoreHandle_t rangingTxTaskBinary; // if it is open, then tx, Semaphore for synchronization
@@ -1559,15 +1561,33 @@ void getCurrentNeighborAddressInfo_t(currentNeighborAddressInfo_t *currentNeighb
   /*--11添加--*/
 }
 
+void computeRealDistance(uint16_t neighborAddress, float x1, float y1, float z1, float x2, float y2, float z2)
+{
+  // 计算各坐标的差
+  float dx = x2 - x1;
+  float dy = y2 - y1;
+  float dz = z2 - z1;
+
+  // 计算距离的平方和再开方
+  float distance = sqrt(dx * dx + dy * dy + dz * dz) * 100;
+  DEBUG_PRINT("distance:%f\n", distance);
+  distanceReal[neighborAddress] = distance;
+}
 /* Swarm Ranging */
 static void processRangingMessage(Ranging_Message_With_Timestamp_t *rangingMessageWithTimestamp)
 {
   Ranging_Message_t *rangingMessage = &rangingMessageWithTimestamp->rangingMessage;
   uint16_t neighborAddress = rangingMessage->header.srcAddress;
-  DEBUG_PRINT("processRangingMessage: neighborAddress = %d\n", neighborAddress);
+  // DEBUG_PRINT("processRangingMessage: neighborAddress = %d\n", neighborAddress);
   int neighborIndex = rangingTableSetSearchTable(&rangingTableSet, neighborAddress);
 
-  DEBUG_PRINT("seq:%d\n", rangingMessage->header.msgSequence);
+  // DEBUG_PRINT("seq:%d\n", rangingMessage->header.msgSequence);
+
+  float posiX = logGetFloat(idX);
+  // DEBUG_PRINT("posiX:%f", posiX);
+  float posiY = logGetFloat(idY);
+  float posiZ = logGetFloat(idZ);
+  computeRealDistance(neighborAddress, posiX, posiY, posiZ, rangingMessage->header.posiX, rangingMessage->header.posiY, rangingMessage->header.posiZ);
 
   statistic[neighborAddress].recvnum++;
   statistic[neighborAddress].recvSeq = rangingMessage->header.msgSequence;
@@ -1792,6 +1812,14 @@ static Time_t generateRangingMessage(Ranging_Message_t *rangingMessage)
   float velocityY = logGetFloat(idVelocityY);
   float velocityZ = logGetFloat(idVelocityZ);
   velocity = sqrt(pow(velocityX, 2) + pow(velocityY, 2) + pow(velocityZ, 2));
+
+  float posiX = logGetFloat(idX);
+  float posiY = logGetFloat(idY);
+  float posiZ = logGetFloat(idZ);
+
+  rangingMessage->header.posiX = posiX;
+  rangingMessage->header.posiY = posiY;
+  rangingMessage->header.posiZ = posiZ;
   /* velocity in cm/s */
   rangingMessage->header.velocity = (short)(velocity * 100);
   //  DEBUG_PRINT("generateRangingMessage: ranging message size = %u with %u body units.\n",
@@ -2052,16 +2080,26 @@ static uint16_t getStasticCompute2num()
 }
 
 LOG_GROUP_START(Ranging)
+LOG_ADD(LOG_INT16, distTo0, distanceTowards)
+LOG_ADD(LOG_FLOAT, truthDistTo0, distanceReal)
 LOG_ADD(LOG_INT16, distTo1, distanceTowards + 1)
+LOG_ADD(LOG_FLOAT, truthDistTo1, distanceReal+ 1)
 LOG_ADD(LOG_INT16, distTo2, distanceTowards + 2)
+LOG_ADD(LOG_FLOAT, truthDistTo2, distanceReal+ 2)
 LOG_ADD(LOG_INT16, distTo3, distanceTowards + 3)
+LOG_ADD(LOG_FLOAT, truthDistTo3, distanceReal+ 3)
 LOG_ADD(LOG_INT16, distTo4, distanceTowards + 4)
+LOG_ADD(LOG_FLOAT, truthDistTo4, distanceReal+ 4)
 LOG_ADD(LOG_INT16, distTo5, distanceTowards + 5)
+LOG_ADD(LOG_FLOAT, truthDistTo5, distanceReal+ 5)
 LOG_ADD(LOG_INT16, distTo6, distanceTowards + 6)
+LOG_ADD(LOG_FLOAT, truthDistTo6, distanceReal+ 6)
 LOG_ADD(LOG_INT16, distTo7, distanceTowards + 7)
+LOG_ADD(LOG_FLOAT, truthDistTo7, distanceReal+ 7)
 LOG_ADD(LOG_INT16, distTo8, distanceTowards + 8)
-LOG_ADD(LOG_INT16, distTo9, distanceTowards + 9)
-LOG_ADD(LOG_INT16, distTo10, distanceTowards + 10)
+LOG_ADD(LOG_FLOAT, truthDistTo8, distanceReal+ 8)
+
+
 LOG_GROUP_STOP(Ranging)
 
 LOG_GROUP_START(Statistic)
