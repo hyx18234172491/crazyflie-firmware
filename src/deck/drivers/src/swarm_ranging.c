@@ -1788,7 +1788,7 @@ static void uwbRangingTxTask(void *parameters)
     temp_delay = 0;
     vTaskDelay(RANGING_PERIOD + time_Delay);
 #else
-    vTaskDelay(taskDelay);
+    vTaskDelay(30+rand()%61);
 #endif
   }
 }
@@ -1803,8 +1803,8 @@ static void uwbRangingRxTask(void *parameters)
   {
     if (xQueueReceive(rxQueue, &rxPacketCache, portMAX_DELAY))
     {
-      int randnum = rand() % 20;
-      // if (randnum < 17)
+      // int randnum = rand() % 20;
+      // if (randnum < 14)
       {
         xSemaphoreTake(rangingTableSet.mu, portMAX_DELAY);
         // xSemaphoreTake(neighborSet.mu, portMAX_DELAY);
