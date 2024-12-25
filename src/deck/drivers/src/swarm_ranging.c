@@ -66,7 +66,7 @@ static Ranging_Table_t EMPTY_RANGING_TABLE = {
 int16_t distanceTowards[NEIGHBOR_ADDRESS_MAX + 1] = {[0 ... NEIGHBOR_ADDRESS_MAX] = -1};
 uint8_t distanceSource[NEIGHBOR_ADDRESS_MAX + 1] = {[0 ... NEIGHBOR_ADDRESS_MAX] = -1};
 float distanceReal[NEIGHBOR_ADDRESS_MAX + 1] = {[0 ... NEIGHBOR_ADDRESS_MAX] = -1};
-
+SemaphoreHandle_t READ_SEND_PACKET_MUTEX;
 typedef struct Stastistic
 {
   uint16_t recvSeq;
@@ -1064,7 +1064,7 @@ static int16_t computeDistance(Timestamp_Tuple_t Tp, Timestamp_Tuple_t Rp,
 
   bool isErrorOccurred = false;
 
-  DEBUG_PRINT("Tp:%d,Rp:%d,Tr:%d,Rr:%d,Tf:%d,Rf:%d\n", Tp.seqNumber, Rp.seqNumber, Tr.seqNumber, Rr.seqNumber, Tf.seqNumber, Rf.seqNumber);
+  // DEBUG_PRINT("Tp:%d,Rp:%d,Tr:%d,Rr:%d,Tf:%d,Rf:%d\n", Tp.seqNumber, Rp.seqNumber, Tr.seqNumber, Rr.seqNumber, Tf.seqNumber, Rf.seqNumber);
   if (Tp.seqNumber != Rp.seqNumber || Tr.seqNumber != Rr.seqNumber || Tf.seqNumber != Rf.seqNumber)
   {
     // DEBUG_PRINT("Tp:%d,Rp:%d,Tr:%d,Rr:%d,Tf:%d,Rf:%d\n", Tp.seqNumber, Rp.seqNumber, Tr.seqNumber, Rr.seqNumber, Tf.seqNumber, Rf.seqNumber);
@@ -1072,8 +1072,9 @@ static int16_t computeDistance(Timestamp_Tuple_t Tp, Timestamp_Tuple_t Rp,
     isErrorOccurred = true;
     return -1;
   }
-  
-  if(Tr.timestamp.full==0 || Rr.timestamp.full==0){
+
+  if (Tr.timestamp.full == 0 || Rr.timestamp.full == 0)
+  {
     isErrorOccurred = true;
     DEBUG_PRINT("------------------------------");
     return -1;
@@ -1118,14 +1119,15 @@ static int16_t computeDistance(Timestamp_Tuple_t Tp, Timestamp_Tuple_t Rp,
 
 static int16_t computeDistance2(Timestamp_Tuple_t Tx, Timestamp_Tuple_t Rx,
                                 Timestamp_Tuple_t Tp, Timestamp_Tuple_t Rp,
-                                Timestamp_Tuple_t Tr, Timestamp_Tuple_t Rr,Ranging_Table_t * rangingTable)
+                                Timestamp_Tuple_t Tr, Timestamp_Tuple_t Rr, Ranging_Table_t *rangingTable)
 {
 
   statistic[rangingTable->neighborAddress].compute3num++;
   bool isErrorOccurred = false;
-  DEBUG_PRINT("Tx:%d,Rx:%d,Tp:%d,Rp:%d,Tr:%d,Rr:%d\n", Tx.seqNumber, Rx.seqNumber, Tp.seqNumber, Rp.seqNumber, Tr.seqNumber, Rr.seqNumber);
+  // DEBUG_PRINT("Tx:%d,Rx:%d,Tp:%d,Rp:%d,Tr:%d,Rr:%d\n", Tx.seqNumber, Rx.seqNumber, Tp.seqNumber, Rp.seqNumber, Tr.seqNumber, Rr.seqNumber);
 
-  if(Tx.seqNumber==0 || Rx.seqNumber==0){
+  if (Tx.seqNumber == 0 || Rx.seqNumber == 0)
+  {
     return -1;
   }
 
@@ -1275,7 +1277,7 @@ static void S3_RX_NO_Rf(Ranging_Table_t *rangingTable)
   Ranging_Table_Tr_Rr_Candidate_t Tr_Rr_Candidate = rangingTableBufferGetLatest(&rangingTable->TrRrBuffer);
   int16_t distance = computeDistance2(rangingTable->TxRxHistory.Tx, rangingTable->TxRxHistory.Rx,
                                       rangingTable->Tp, rangingTable->Rp,
-                                      Tr_Rr_Candidate.Tr, Tr_Rr_Candidate.Rr,rangingTable);
+                                      Tr_Rr_Candidate.Tr, Tr_Rr_Candidate.Rr, rangingTable);
   if (distance > 0)
   {
     statistic[rangingTable->neighborAddress].compute2num++;
@@ -1310,7 +1312,7 @@ static void S3_RX_Rf(Ranging_Table_t *rangingTable)
   Ranging_Table_Tr_Rr_Candidate_t Tr_Rr_Candidate = rangingTableBufferGetLatest(&rangingTable->TrRrBuffer);
   int16_t distance = computeDistance2(rangingTable->TxRxHistory.Tx, rangingTable->TxRxHistory.Rx,
                                       rangingTable->Tp, rangingTable->Rp,
-                                      Tr_Rr_Candidate.Tr, Tr_Rr_Candidate.Rr,rangingTable);
+                                      Tr_Rr_Candidate.Tr, Tr_Rr_Candidate.Rr, rangingTable);
   if (distance > 0)
   {
     statistic[rangingTable->neighborAddress].compute2num++;
@@ -1357,7 +1359,7 @@ static void S4_RX_NO_Rf(Ranging_Table_t *rangingTable)
   Ranging_Table_Tr_Rr_Candidate_t Tr_Rr_Candidate = rangingTableBufferGetLatest(&rangingTable->TrRrBuffer);
   int16_t distance = computeDistance2(rangingTable->TxRxHistory.Tx, rangingTable->TxRxHistory.Rx,
                                       rangingTable->Tp, rangingTable->Rp,
-                                      Tr_Rr_Candidate.Tr, Tr_Rr_Candidate.Rr,rangingTable);
+                                      Tr_Rr_Candidate.Tr, Tr_Rr_Candidate.Rr, rangingTable);
   if (distance > 0)
   {
     statistic[rangingTable->neighborAddress].compute2num++;
@@ -1646,7 +1648,7 @@ static Time_t generateRangingMessage(Ranging_Message_t *rangingMessage)
   int8_t bodyUnitNumber = 0;
   rangingSeqNumber++;
   int curSeqNumber = rangingSeqNumber;
-  DEBUG_PRINT("TX:%d\n",curSeqNumber);
+  DEBUG_PRINT("TX:%d\n", curSeqNumber);
   rangingMessage->header.filter = 0;
   Time_t curTime = xTaskGetTickCount();
   /* Using the default RANGING_PERIOD when DYNAMIC_RANGING_PERIOD is not enabled. */
@@ -1782,24 +1784,34 @@ static void uwbRangingTxTask(void *parameters)
   txPacketCache.header.length = 0;
   Ranging_Message_t *rangingMessage = (Ranging_Message_t *)&txPacketCache.payload;
 
+  Time_t taskDelay = RANGING_PERIOD;
+#ifdef ENABLE_TEST_DS_TWR_LIMIT_PERIOD:
+  READ_SEND_PACKET_MUTEX = xSemaphoreCreateBinary();
+#endif
   while (true)
   {
     xSemaphoreTake(rangingTableSet.mu, portMAX_DELAY);
     // xSemaphoreTake(neighborSet.mu, portMAX_DELAY);
-    Time_t taskDelay = RANGING_PERIOD;
+
     generateRangingMessage(rangingMessage);
     txPacketCache.header.length = sizeof(UWB_Packet_Header_t) + rangingMessage->header.msgLength;
     uwbSendPacketBlock(&txPacketCache);
+    DEBUG_PRINT("send:%d\n",xTaskGetTickCount());
     //    printRangingTableSet(&rangingTableSet);
     //    printNeighborSet(&neighborSet);
 
     // xSemaphoreGive(neighborSet.mu);
     xSemaphoreGive(rangingTableSet.mu);
-#ifdef ENABLE_OPTIMAL_RANGING_SCHEDULE
-    int8_t time_Delay = temp_delay;
-    temp_delay = 0;
-    vTaskDelay(RANGING_PERIOD + time_Delay);
+#ifdef ENABLE_TEST_DS_TWR_LIMIT_PERIOD
+    if (xSemaphoreTake(READ_SEND_PACKET_MUTEX, taskDelay) == pdPASS)
+    {
+        // 成功获取到信号量，可以安全地执行临界区操作,代表有人释放了
+        vTaskDelay(RANGING_PERIOD / 2); // 如果听到了别人发来的，我就延迟一半的周期
+    }else{
+    }
+    taskDelay = RANGING_PERIOD; // 不管有没有听到，下次再等一个周期进行判断
 #else
+    taskDelay = RANGING_PERIOD;
     vTaskDelay(RANGING_PERIOD);
 #endif
   }
@@ -1818,9 +1830,13 @@ static void uwbRangingRxTask(void *parameters)
       // int randnum = rand() % 20;
       // if (randnum < 14)
       {
+        #ifdef ENABLE_TEST_DS_TWR_LIMIT_PERIOD
+          xSemaphoreGive(READ_SEND_PACKET_MUTEX);
+        #endif
+
         xSemaphoreTake(rangingTableSet.mu, portMAX_DELAY);
         // xSemaphoreTake(neighborSet.mu, portMAX_DELAY);
-
+        DEBUG_PRINT("recv:%d\n",xTaskGetTickCount());
         processRangingMessage(&rxPacketCache);
         // topologySensing(&rxPacketCache.rangingMessage);
 
