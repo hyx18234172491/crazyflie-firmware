@@ -1830,10 +1830,6 @@ static void uwbRangingRxTask(void *parameters)
       // int randnum = rand() % 20;
       // if (randnum < 14)
       {
-        #ifdef ENABLE_TEST_DS_TWR_LIMIT_PERIOD
-          xSemaphoreGive(READ_SEND_PACKET_MUTEX);
-        #endif
-
         xSemaphoreTake(rangingTableSet.mu, portMAX_DELAY);
         // xSemaphoreTake(neighborSet.mu, portMAX_DELAY);
         DEBUG_PRINT("recv:%d\n",xTaskGetTickCount());
@@ -1842,6 +1838,10 @@ static void uwbRangingRxTask(void *parameters)
 
         // xSemaphoreGive(neighborSet.mu);
         xSemaphoreGive(rangingTableSet.mu);
+
+        #ifdef ENABLE_TEST_DS_TWR_LIMIT_PERIOD
+          xSemaphoreGive(READ_SEND_PACKET_MUTEX);
+        #endif
       }
     }
     vTaskDelay(M2T(1));

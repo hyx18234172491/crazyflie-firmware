@@ -5,7 +5,7 @@
 #include "adhocdeck.h"
 #include "semphr.h"
 
-#define RANGING_DEBUG_ENABLE
+// #define RANGING_DEBUG_ENABLE
 
 /* Function Switch */
 //#define ENABLE_BUS_BOARDING_SCHEME
@@ -18,9 +18,9 @@
 
 
 /* Ranging Constants */
-#define RANGING_PERIOD 100 // default in 200ms
+#define RANGING_PERIOD 50 // default in 200ms
 
-// #define ENABLE_TEST_DS_TWR_LIMIT_PERIOD
+#define ENABLE_TEST_DS_TWR_LIMIT_PERIOD
 
 #define RANGING_PERIOD_MIN 50 // default 50ms
 #define RANGING_PERIOD_MAX 500 // default 500ms
