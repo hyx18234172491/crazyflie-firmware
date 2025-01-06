@@ -1557,14 +1557,17 @@ static void processRangingMessage(Ranging_Message_With_Timestamp_t *rangingMessa
 
   /* Try to find corresponding Rf for MY_UWB_ADDRESS. */
   Timestamp_Tuple_t neighborRf = {.timestamp.full = 0, .seqNumber = 0};
+  DEBUG_PRINT("filter:%d\n",rangingMessage->header.filter);
   if (rangingMessage->header.filter & (1 << (uwbGetAddress() % 16)))
   {
     /* Retrieve body unit from received ranging message. */
     uint8_t bodyUnitCount = (rangingMessage->header.msgLength - sizeof(Ranging_Message_Header_t)) / sizeof(Body_Unit_t);
+    DEBUG_PRINT("body count:%d\n",bodyUnitCount);
     for (int i = 0; i < bodyUnitCount; i++)
     {
       if (rangingMessage->bodyUnits[i].address == uwbGetAddress())
       {
+        DEBUG_PRINT("find\n");
         neighborRf.timestamp = rangingMessage->bodyUnits[i].timestamp;
         neighborRf.seqNumber = rangingMessage->bodyUnits[i].seqNumber;
         break;
@@ -1573,6 +1576,7 @@ static void processRangingMessage(Ranging_Message_With_Timestamp_t *rangingMessa
   }
   Timestamp_Tuple_t Tf = findTfBySeqNumber(neighborRf.seqNumber);
 
+  DEBUG_PRINT("nRFseq:%d\n",neighborRf.seqNumber);
   if (neighborRf.seqNumber != neighborRangingTable->Tp.seqNumber && Tf.timestamp.full)
   {
     neighborRangingTable->Rf = neighborRf;
@@ -1658,7 +1662,7 @@ static Time_t generateRangingMessage(Ranging_Message_t *rangingMessage)
 #else
   // rangingTableSetRearrange(&rangingTableSet, COMPARE_BY_LAST_SEND_TIME);
 #endif
-
+  DEBUG_PRINT("size:%d\n",rangingTableSet.size);
   /* Generate message body */
   for (int index = 0; index < rangingTableSet.size; index++)
   {
@@ -1670,10 +1674,10 @@ static Time_t generateRangingMessage(Ranging_Message_t *rangingMessage)
     if (table->latestReceived.timestamp.full)
     {
       /* Only include timestamps with expected delivery time less or equal than current time. */
-      if (table->nextExpectedDeliveryTime > curTime)
-      {
-        continue;
-      }
+      // if (table->nextExpectedDeliveryTime > curTime)
+      // {
+      //   continue;
+      // }
       table->nextExpectedDeliveryTime = curTime + M2T(table->period);
       table->lastSendTime = curTime;
 
@@ -1744,7 +1748,6 @@ static Time_t generateRangingMessage(Ranging_Message_t *rangingMessage)
   float posiX = logGetFloat(idX);
   float posiY = logGetFloat(idY);
   float posiZ = logGetFloat(idZ);
-  DEBUG_PRINT("%f\n", posiX);
 
   rangingMessage->header.posiX = posiX;
   rangingMessage->header.posiY = posiY;
@@ -1790,6 +1793,15 @@ static void uwbRangingTxTask(void *parameters)
 #endif
   while (true)
   {
+    #ifdef ENABLE_TEST_DS_TWR_LIMIT_PERIOD
+    if (xSemaphoreTake(READ_SEND_PACKET_MUTEX, taskDelay) == pdPASS)
+    {
+        // 成功获取到信号量，可以安全地执行临界区操作,代表有人释放了
+        vTaskDelay(RANGING_PERIOD / 2); // 如果听到了别人发来的，我就延迟一半的周期
+    }else{
+    }
+    taskDelay = RANGING_PERIOD; // 不管有没有听到，下次再等一个周期进行判断
+    #endif
     xSemaphoreTake(rangingTableSet.mu, portMAX_DELAY);
     // xSemaphoreTake(neighborSet.mu, portMAX_DELAY);
 
@@ -1803,16 +1815,16 @@ static void uwbRangingTxTask(void *parameters)
     // xSemaphoreGive(neighborSet.mu);
     xSemaphoreGive(rangingTableSet.mu);
 #ifdef ENABLE_TEST_DS_TWR_LIMIT_PERIOD
-    if (xSemaphoreTake(READ_SEND_PACKET_MUTEX, taskDelay) == pdPASS)
-    {
-        // 成功获取到信号量，可以安全地执行临界区操作,代表有人释放了
-        vTaskDelay(RANGING_PERIOD / 2); // 如果听到了别人发来的，我就延迟一半的周期
-    }else{
-    }
-    taskDelay = RANGING_PERIOD; // 不管有没有听到，下次再等一个周期进行判断
+    // if (xSemaphoreTake(READ_SEND_PACKET_MUTEX, taskDelay) == pdPASS)
+    // {
+    //     // 成功获取到信号量，可以安全地执行临界区操作,代表有人释放了
+    //     vTaskDelay(RANGING_PERIOD / 2); // 如果听到了别人发来的，我就延迟一半的周期
+    // }else{
+    // }
+    // taskDelay = RANGING_PERIOD; // 不管有没有听到，下次再等一个周期进行判断
 #else
     taskDelay = RANGING_PERIOD;
-    vTaskDelay(RANGING_PERIOD);
+    vTaskDelay(taskDelay);
 #endif
   }
 }
