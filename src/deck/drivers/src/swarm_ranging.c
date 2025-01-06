@@ -1424,17 +1424,22 @@ static void S4_RX_Rf(Ranging_Table_t *rangingTable)
    * Rp <- Rf
    * Tp <- Tf  Rr <- Re
    */
-  rangingTable->Rp = rangingTable->Rf;
-  rangingTable->Tp = rangingTable->Tf;
-  rangingTable->TrRrBuffer.candidates[rangingTable->TrRrBuffer.cur].Rr = rangingTable->Re;
+  
 
   Timestamp_Tuple_t empty = {.timestamp.full = 0, .seqNumber = 0};
   rangingTable->Rf = empty;
   rangingTable->Tf = empty;
   rangingTable->Re = empty;
+  rangingTable->Rp = empty;
+  rangingTable->Tp = empty;
+  rangingTable->TrRrBuffer.candidates[rangingTable->TrRrBuffer.cur].Rr = empty;
+  rangingTable->TrRrBuffer.candidates[rangingTable->TrRrBuffer.cur].Tr = empty;
+  rangingTable->TxRxHistory.Tx = empty;
+  rangingTable->TxRxHistory.Rx = empty;
 
-  // TODO: check if valid
-  rangingTable->state = RANGING_STATE_S3;
+  // 成功测距后转到状态S1
+
+  rangingTable->state = RANGING_STATE_S1;
 
   RANGING_TABLE_STATE curState = rangingTable->state;
   //  DEBUG_PRINT("S4_RX_Rf: S%d -> S%d\n", prevState, curState);
@@ -1497,6 +1502,7 @@ void computeRealDistance(uint16_t neighborAddress, float x1, float y1, float z1,
 static void processRangingMessage(Ranging_Message_With_Timestamp_t *rangingMessageWithTimestamp)
 {
   Ranging_Message_t *rangingMessage = &rangingMessageWithTimestamp->rangingMessage;
+
   uint16_t neighborAddress = rangingMessage->header.srcAddress;
   int neighborIndex = rangingTableSetSearchTable(&rangingTableSet, neighborAddress);
 
@@ -1797,7 +1803,7 @@ static void uwbRangingTxTask(void *parameters)
     if (xSemaphoreTake(READ_SEND_PACKET_MUTEX, taskDelay) == pdPASS)
     {
         // 成功获取到信号量，可以安全地执行临界区操作,代表有人释放了
-        vTaskDelay(RANGING_PERIOD / 2); // 如果听到了别人发来的，我就延迟一半的周期
+        vTaskDelay(MY_UWB_ADDRESS * 4); // 如果听到了别人发来的，我就延迟一半的周期
     }else{
     }
     taskDelay = RANGING_PERIOD; // 不管有没有听到，下次再等一个周期进行判断
@@ -1814,18 +1820,6 @@ static void uwbRangingTxTask(void *parameters)
 
     // xSemaphoreGive(neighborSet.mu);
     xSemaphoreGive(rangingTableSet.mu);
-#ifdef ENABLE_TEST_DS_TWR_LIMIT_PERIOD
-    // if (xSemaphoreTake(READ_SEND_PACKET_MUTEX, taskDelay) == pdPASS)
-    // {
-    //     // 成功获取到信号量，可以安全地执行临界区操作,代表有人释放了
-    //     vTaskDelay(RANGING_PERIOD / 2); // 如果听到了别人发来的，我就延迟一半的周期
-    // }else{
-    // }
-    // taskDelay = RANGING_PERIOD; // 不管有没有听到，下次再等一个周期进行判断
-#else
-    taskDelay = RANGING_PERIOD;
-    vTaskDelay(taskDelay);
-#endif
   }
 }
 
@@ -1852,7 +1846,12 @@ static void uwbRangingRxTask(void *parameters)
         xSemaphoreGive(rangingTableSet.mu);
 
         #ifdef ENABLE_TEST_DS_TWR_LIMIT_PERIOD
-          xSemaphoreGive(READ_SEND_PACKET_MUTEX);
+          
+          Ranging_Message_With_Timestamp_t *rangingMessageWithTimestamp = (Ranging_Message_With_Timestamp_t *)(&rxPacketCache);
+          Ranging_Message_t *rangingMessage = &rangingMessageWithTimestamp->rangingMessage;
+          if(rangingMessage->header.srcAddress==0){
+            xSemaphoreGive(READ_SEND_PACKET_MUTEX);
+          }
         #endif
       }
     }

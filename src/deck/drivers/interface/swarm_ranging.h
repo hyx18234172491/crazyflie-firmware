@@ -20,7 +20,7 @@
 /* Ranging Constants */
 #define RANGING_PERIOD 100// default in 200ms
 
-// #define ENABLE_TEST_DS_TWR_LIMIT_PERIOD
+#define ENABLE_TEST_DS_TWR_LIMIT_PERIOD
 
 #define RANGING_PERIOD_MIN 50 // default 50ms
 #define RANGING_PERIOD_MAX 500 // default 500ms
@@ -36,9 +36,9 @@
 #define RANGING_MAX_BODY_UNIT (RANGING_MESSAGE_PAYLOAD_SIZE_MAX / sizeof(Body_Unit_t))
 #define RANGING_TABLE_SIZE_MAX 32 // default up to 20 one-hop neighbors
 #define RANGING_TABLE_HOLD_TIME (6 * RANGING_PERIOD_MAX)
-#define Tr_Rr_BUFFER_POOL_SIZE 5
+#define Tr_Rr_BUFFER_POOL_SIZE 1
 // #define Tf_BUFFER_POOL_SIZE (2 * RANGING_PERIOD_MAX / RANGING_PERIOD_MIN)
-#define Tf_BUFFER_POOL_SIZE 5
+#define Tf_BUFFER_POOL_SIZE 1
 
 /* Topology Sensing */
 #define NEIGHBOR_ADDRESS_MAX 32
