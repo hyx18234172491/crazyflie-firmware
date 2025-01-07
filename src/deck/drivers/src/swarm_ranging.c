@@ -1627,7 +1627,7 @@ void getCurrentNeighborAddressInfo_t(currentNeighborAddressInfo_t *currentNeighb
 }
 
 /* Swarm Ranging */
-static void processRangingMessage(Ranging_Message_With_Timestamp_t *rangingMessageWithTimestamp)
+static int processRangingMessage(Ranging_Message_With_Timestamp_t *rangingMessageWithTimestamp)
 {
   Ranging_Message_t *rangingMessage = &rangingMessageWithTimestamp->rangingMessage;
   uint16_t neighborAddress = rangingMessage->header.srcAddress;
@@ -1636,11 +1636,10 @@ static void processRangingMessage(Ranging_Message_With_Timestamp_t *rangingMessa
 
   DEBUG_PRINT("seq:%d\n", rangingMessage->header.msgSequence);
 
-   float posiX = logGetFloat(idX);
-   DEBUG_PRINT("posiX:%f",posiX);
-    float posiY = logGetFloat(idY);
-    float posiZ = logGetFloat(idZ);
-   computeRealDistance(neighborAddress, posiX, posiY, posiZ, rangingMessage->header.posiX, rangingMessage->header.posiY, rangingMessage->header.posiZ);
+  float posiX = logGetFloat(idX);
+  float posiY = logGetFloat(idY);
+  float posiZ = logGetFloat(idZ);
+  computeRealDistance(neighborAddress, posiX, posiY, posiZ, rangingMessage->header.posiX, rangingMessage->header.posiY, rangingMessage->header.posiZ);
 
   statistic[neighborAddress].recvnum++;
   statistic[neighborAddress].recvSeq = rangingMessage->header.msgSequence;
@@ -1659,7 +1658,7 @@ static void processRangingMessage(Ranging_Message_With_Timestamp_t *rangingMessa
       DEBUG_PRINT("processRangingMessage: Ranging table is full = %d, cannot handle new neighbor %d.\n",
                   rangingTableSet.size,
                   neighborAddress);
-      return;
+      return -1;
     }
     else
     {
@@ -1722,17 +1721,6 @@ static void processRangingMessage(Ranging_Message_With_Timestamp_t *rangingMessa
   {
     rangingTableOnEvent(neighborRangingTable, RANGING_EVENT_RX_NO_Rf);
   }
-  // /* Trigger event handler according to Rf */
-  // if (neighborRf.timestamp.full)
-  // {
-  //   neighborRangingTable->Rf = neighborRf;
-  //   rangingTableOnEvent(neighborRangingTable, RANGING_EVENT_RX_Rf);
-  // }
-  // else
-  // {
-  //   DEBUG_PRINT("------");
-  //   rangingTableOnEvent(neighborRangingTable, RANGING_EVENT_RX_NO_Rf);
-  // }
 
 #ifdef ENABLE_DYNAMIC_RANGING_PERIOD
   /* update period according to distance and velocity */
@@ -1741,6 +1729,7 @@ static void processRangingMessage(Ranging_Message_With_Timestamp_t *rangingMessa
   neighborRangingTable->period = MAX(neighborRangingTable->period, M2T(RANGING_PERIOD_MIN));
   neighborRangingTable->period = MIN(neighborRangingTable->period, M2T(RANGING_PERIOD_MAX));
 #endif
+  return neighborAddress;
 }
 
 /* By default, we include each neighbor's latest rx timestamp to body unit in index order of ranging table, which
