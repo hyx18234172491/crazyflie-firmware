@@ -1548,6 +1548,9 @@ void setNeighborDistance(uint16_t neighborAddress, int16_t distance)
   ASSERT(neighborAddress <= RANGING_TABLE_SIZE);
 
   neighborStateInfo.distanceTowards[neighborAddress] = distance;
+
+  BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+  xQueueSendFromISR(queueDistUpdatedAddress, &neighborAddress, &xHigherPriorityTaskWoken);
 }
 
 bool getOrSetKeepflying(uint16_t uwbAddress, bool keep_flying)
@@ -2005,12 +2008,6 @@ static void uwbRangingRxTask(void *parameters)
 
       // xSemaphoreGive(neighborSet.mu);
       xSemaphoreGive(rangingTableSet.mu);
-
-      if (neighborAddress >= 0)
-      {
-        BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-        xQueueSendFromISR(queueDistUpdatedAddress, &neighborAddress, &xHigherPriorityTaskWoken);
-      }
     }
     vTaskDelay(M2T(1));
   }
