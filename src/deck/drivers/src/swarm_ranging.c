@@ -1853,10 +1853,10 @@ static Time_t generateRangingMessage(Ranging_Message_t *rangingMessage)
     if (table->latestReceived.timestamp.full)
     {
       /* Only include timestamps with expected delivery time less or equal than current time. */
-      if (table->nextExpectedDeliveryTime > curTime)
-      {
-        continue;
-      }
+      // if (table->nextExpectedDeliveryTime > curTime)
+      // {
+      //   continue;
+      // }
       table->nextExpectedDeliveryTime = curTime + M2T(table->period);
       table->lastSendTime = curTime;
 
