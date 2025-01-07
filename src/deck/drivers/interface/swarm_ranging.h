@@ -92,7 +92,7 @@ typedef struct {
   short velocityXInWorld; // 2 byte cm/s 在世界坐标系下的速度（不是基于机体坐标系的速度）
   short velocityYInWorld; // 2 byte cm/s 在世界坐标系下的速度（不是基于机体坐标系的速度）
   float gyroZ;      
-   float posiX;
+  float posiX;
   float posiY;
   float posiZ;     // 4 byte rad/s
   uint16_t positionZ;     // 2 byte cm/s

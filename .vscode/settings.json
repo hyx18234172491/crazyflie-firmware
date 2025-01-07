@@ -74,7 +74,9 @@
     "condition_variable": "c",
     "typeinfo": "c",
     "estimator_kalman.h": "c",
-    "cstdint": "cpp"
+    "cstdint": "cpp",
+    "imu_state.h": "c",
+    "freertosconfig.h": "c"
   },
   "C_Cpp_Runner.cCompilerPath": "clang",
   "C_Cpp_Runner.cppCompilerPath": "clang++",

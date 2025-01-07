@@ -1864,10 +1864,10 @@ static Time_t generateRangingMessage(Ranging_Message_t *rangingMessage)
   //              bodyUnitNumber
   //  );
 
-  estimatorKalmanGetSwarmInfo(&rangingMessage->header.velocityXInWorld,
-                              &rangingMessage->header.velocityYInWorld,
-                              &rangingMessage->header.gyroZ,
-                              &rangingMessage->header.positionZ);
+  // estimatorKalmanGetSwarmInfo(&rangingMessage->header.velocityXInWorld,
+  //                             &rangingMessage->header.velocityYInWorld,
+  //                             &rangingMessage->header.gyroZ,
+  //                             &rangingMessage->header.positionZ);
   rangingMessage->header.keep_flying = leaderStateInfo.keepFlying;
   // 如果是leader则进行阶段控制
   stage = ZERO_STAGE;
