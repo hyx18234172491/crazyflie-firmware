@@ -181,16 +181,11 @@ void relativeLocoTask(void *arg)
     while (1)
     {
         vTaskDelay(10);
-
-        getCurrentNeighborAddressInfo_t(&currentNeighborAddressInfo); // TODO
-    
-        for (int index = 0; index < currentNeighborAddressInfo.size; index++)
+        UWB_Address_t neighborAddress;
+        if (xQueueReceive(queueDistUpdatedAddress, &neighborAddress, portMAX_DELAY))
         {
-            //DEBUG_PRINT("%d\n",index);
+            DEBUG_PRINT("location:%d\n",neighborAddress);
             connectCount = 0;
-            address_t neighborAddress = currentNeighborAddressInfo.address[index];
-        
-
             bool isNewAdd; // 邻居是否是新加入的
 
             if (getNeighborStateInfo(neighborAddress, &dij, &vxj_t, &vyj_t, &rj, &hj_t, &isNewAdd))

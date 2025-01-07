@@ -84,10 +84,10 @@ static uint16_t MY_UWB_ADDRESS;
 int16_t TX_jitter = 0;
 uint16_t TX_PERIOD_IN_MS = 60;
 /*--5添加--*/
-static SemaphoreHandle_t rangingTableSetMutex;                 // 用于互斥访问rangingTableSet
+static SemaphoreHandle_t rangingTableSetMutex; // 用于互斥访问rangingTableSet
 static currentNeighborAddressInfo_t currentNeighborAddressInfo;
 
-static SemaphoreHandle_t rangingTableSetMutex;            // 用于互斥访问rangingTableSet
+static SemaphoreHandle_t rangingTableSetMutex; // 用于互斥访问rangingTableSet
 /*--5添加--*/
 static float velocity;
 static bool MYisAlreadyTakeoff = false;
@@ -205,7 +205,6 @@ void predict_period_in_tx_2(int TfBufferIndex)
 
 #endif
 
-
 void rangingTableBufferInit(Ranging_Table_Tr_Rr_Buffer_t *rangingTableBuffer)
 {
   rangingTableBuffer->cur = 0;
@@ -254,9 +253,9 @@ void rangingTableBufferUpdate(Ranging_Table_Tr_Rr_Buffer_t *rangingTableBuffer,
                               Timestamp_Tuple_t_2 Tr,
                               Timestamp_Tuple_t Rr)
 {
-    rangingTableBuffer->candidates[rangingTableBuffer->cur].Tr.seqNumber = Tr.seqNumber;
-    rangingTableBuffer->candidates[rangingTableBuffer->cur].Tr.timestamp = Tr.timestamp;
-    rangingTableBuffer->candidates[rangingTableBuffer->cur].Rr = Rr;
+  rangingTableBuffer->candidates[rangingTableBuffer->cur].Tr.seqNumber = Tr.seqNumber;
+  rangingTableBuffer->candidates[rangingTableBuffer->cur].Tr.timestamp = Tr.timestamp;
+  rangingTableBuffer->candidates[rangingTableBuffer->cur].Rr = Rr;
   // shift
   rangingTableBuffer->latest = rangingTableBuffer->cur;
   rangingTableBuffer->cur = (rangingTableBuffer->cur + 1) % Tr_Rr_BUFFER_POOL_SIZE;
@@ -272,15 +271,15 @@ Ranging_Table_Tr_Rr_Candidate_t rangingTableBufferGetCandidate(Ranging_Table_Tr_
 
   for (int count = 0; count < Tr_Rr_BUFFER_POOL_SIZE; count++)
   {
-     if (rangingTableBuffer->candidates[index].Rr.timestamp.full &&
-            rangingTableBuffer->candidates[index].Rr.timestamp.full % UWB_MAX_TIMESTAMP < rightBound &&
-            rangingTableBuffer->candidates[index].Rr.timestamp.full % UWB_MAX_TIMESTAMP > leftBound &&
-            rangingTableBuffer->candidates[index].Rr.seqNumber == rangingTableBuffer->candidates[index].Tr.seqNumber)
-        {
-            candidate.Tr = rangingTableBuffer->candidates[index].Tr;
-            candidate.Rr = rangingTableBuffer->candidates[index].Rr;
-            break;
-        }
+    if (rangingTableBuffer->candidates[index].Rr.timestamp.full &&
+        rangingTableBuffer->candidates[index].Rr.timestamp.full % UWB_MAX_TIMESTAMP < rightBound &&
+        rangingTableBuffer->candidates[index].Rr.timestamp.full % UWB_MAX_TIMESTAMP > leftBound &&
+        rangingTableBuffer->candidates[index].Rr.seqNumber == rangingTableBuffer->candidates[index].Tr.seqNumber)
+    {
+      candidate.Tr = rangingTableBuffer->candidates[index].Tr;
+      candidate.Rr = rangingTableBuffer->candidates[index].Rr;
+      break;
+    }
     index = (index - 1 + Tr_Rr_BUFFER_POOL_SIZE) % Tr_Rr_BUFFER_POOL_SIZE;
   }
 
@@ -1281,7 +1280,6 @@ static void S3_RX_NO_Rf(Ranging_Table_t *rangingTable)
     statistic[rangingTable->neighborAddress].compute2num++;
     rangingTable->distance = distance;
     setDistance(rangingTable->neighborAddress, distance, 2);
-
     setNeighborDistance(rangingTable->neighborAddress, distance);
   }
   else
@@ -1489,8 +1487,7 @@ void computeRealDistance(uint16_t neighborAddress, float x1, float y1, float z1,
   float dz = z2 - z1;
 
   // 计算距离的平方和再开方
-  float distance = sqrt(dx * dx + dy * dy + dz * dz)*100;
-  DEBUG_PRINT("distance:%f\n", distance);
+  float distance = sqrt(dx * dx + dy * dy + dz * dz) * 100;
   distanceReal[neighborAddress] = distance;
 }
 // liujiangpeng add
@@ -1499,7 +1496,6 @@ void initNeighborStateInfoAndMedian_data()
 {
   for (int i = 0; i < RANGING_TABLE_SIZE + 1; i++)
   {
-    neighborStateInfo.refresh[i] = false;
     neighborStateInfo.isAlreadyTakeoff[i] = false;
   }
 }
@@ -1552,7 +1548,6 @@ void setNeighborDistance(uint16_t neighborAddress, int16_t distance)
   ASSERT(neighborAddress <= RANGING_TABLE_SIZE);
 
   neighborStateInfo.distanceTowards[neighborAddress] = distance;
-  neighborStateInfo.refresh[neighborAddress] = true;
 }
 
 bool getOrSetKeepflying(uint16_t uwbAddress, bool keep_flying)
@@ -1596,9 +1591,9 @@ bool getNeighborStateInfo(uint16_t neighborAddress,
                           uint16_t *height,
                           bool *isNewAddNeighbor)
 {
-  if (neighborStateInfo.refresh[neighborAddress] == true && leaderStateInfo.keepFlying == true)
+  // if (leaderStateInfo.keepFlying == true)
+  if (true)
   {
-    neighborStateInfo.refresh[neighborAddress] = false;
     *distance = neighborStateInfo.distanceTowards[neighborAddress];
     *vx = neighborStateInfo.velocityXInWorld[neighborAddress];
     *vy = neighborStateInfo.velocityYInWorld[neighborAddress];
@@ -1709,9 +1704,7 @@ static int processRangingMessage(Ranging_Message_With_Timestamp_t *rangingMessag
     }
   }
   Timestamp_Tuple_t Tf = findTfBySeqNumber(neighborRf.seqNumber);
-  // DEBUG_PRINT("setNeightborStateInfo: neighborAddress = %d\n", neighborAddress);
   setNeighborStateInfo(neighborAddress, &rangingMessage->header);
-  // DEBUG_PRINT("afterSetNeightborStateInfo: neighborAddress = %d\n", neighborAddress);
   if (neighborRf.seqNumber != neighborRangingTable->Tp.seqNumber && Tf.timestamp.full)
   {
     neighborRangingTable->Rf = neighborRf;
@@ -1854,12 +1847,12 @@ static Time_t generateRangingMessage(Ranging_Message_t *rangingMessage)
   float velocityZ = logGetFloat(idVelocityZ);
 
   float posiX = logGetFloat(idX);
-    float posiY = logGetFloat(idY);
-    float posiZ = logGetFloat(idZ);
+  float posiY = logGetFloat(idY);
+  float posiZ = logGetFloat(idZ);
 
-    rangingMessage->header.posiX = posiX;
-    rangingMessage->header.posiY = posiY;
-    rangingMessage->header.posiZ = posiZ;
+  rangingMessage->header.posiX = posiX;
+  rangingMessage->header.posiY = posiY;
+  rangingMessage->header.posiZ = posiZ;
   velocity = sqrt(pow(velocityX, 2) + pow(velocityY, 2) + pow(velocityZ, 2));
   /* velocity in cm/s */
   rangingMessage->header.velocity = (short)(velocity * 100);
@@ -1867,7 +1860,7 @@ static Time_t generateRangingMessage(Ranging_Message_t *rangingMessage)
   //              rangingMessage->header.msgLength,
   //              bodyUnitNumber
   //  );
-  
+
   estimatorKalmanGetSwarmInfo(&rangingMessage->header.velocityXInWorld,
                               &rangingMessage->header.velocityYInWorld,
                               &rangingMessage->header.gyroZ,
@@ -2007,11 +2000,17 @@ static void uwbRangingRxTask(void *parameters)
       xSemaphoreTake(rangingTableSet.mu, portMAX_DELAY);
       // xSemaphoreTake(neighborSet.mu, portMAX_DELAY);
 
-      processRangingMessage(&rxPacketCache);
+      UWB_Address_t neighborAddress = processRangingMessage(&rxPacketCache);
       // topologySensing(&rxPacketCache.rangingMessage);
 
       // xSemaphoreGive(neighborSet.mu);
       xSemaphoreGive(rangingTableSet.mu);
+
+      if (neighborAddress >= 0)
+      {
+        BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+        xQueueSendFromISR(queueDistUpdatedAddress, &neighborAddress, &xHigherPriorityTaskWoken);
+      }
     }
     vTaskDelay(M2T(1));
   }
@@ -2073,6 +2072,7 @@ void rangingInit()
 {
   MY_UWB_ADDRESS = uwbGetAddress();
   rxQueue = xQueueCreate(RANGING_RX_QUEUE_SIZE, RANGING_RX_QUEUE_ITEM_SIZE);
+  queueDistUpdatedAddress = xQueueCreate(RANGING_RX_QUEUE_SIZE, sizeof(UWB_Address_t));
 // neighborSetInit(&neighborSet);
 #ifdef ENABLE_SLOT_RANGING_SCHEDULE
   // Add by lcy
@@ -2106,9 +2106,9 @@ void rangingInit()
   idVelocityX = logGetVarId("stateEstimate", "vx");
   idVelocityY = logGetVarId("stateEstimate", "vy");
   idVelocityZ = logGetVarId("stateEstimate", "vz");
-  idX= logGetVarId("lighthouse", "x");
-  idY= logGetVarId("lighthouse", "y");
-  idZ= logGetVarId("lighthouse", "z");
+  idX = logGetVarId("lighthouse", "x");
+  idY = logGetVarId("lighthouse", "y");
+  idZ = logGetVarId("lighthouse", "z");
 
   statisticInit();
 
@@ -2140,11 +2140,11 @@ LOG_GROUP_START(Ranging)
 LOG_ADD(LOG_INT16, distTo0, distanceTowards)
 LOG_ADD(LOG_FLOAT, truthDistTo0, distanceReal)
 LOG_ADD(LOG_INT16, distTo1, distanceTowards + 1)
-LOG_ADD(LOG_FLOAT, truthDistTo1, distanceReal+ 1)
+LOG_ADD(LOG_FLOAT, truthDistTo1, distanceReal + 1)
 LOG_ADD(LOG_INT16, distTo2, distanceTowards + 2)
-LOG_ADD(LOG_FLOAT, truthDistTo2, distanceReal+ 2)
+LOG_ADD(LOG_FLOAT, truthDistTo2, distanceReal + 2)
 LOG_ADD(LOG_INT16, distTo3, distanceTowards + 3)
-LOG_ADD(LOG_FLOAT, truthDistTo3, distanceReal+ 3)
+LOG_ADD(LOG_FLOAT, truthDistTo3, distanceReal + 3)
 LOG_ADD(LOG_INT16, distTo4, distanceTowards + 4)
 LOG_ADD(LOG_INT16, distTo5, distanceTowards + 5)
 LOG_ADD(LOG_INT16, distTo6, distanceTowards + 6)

@@ -5,7 +5,7 @@
 #include "adhocdeck.h"
 #include "semphr.h"
 
-//#define RANGING_DEBUG_ENABLE
+#define RANGING_DEBUG_ENABLE
 
 /* Function Switch */
 //#define ENABLE_BUS_BOARDING_SCHEME
@@ -17,7 +17,7 @@
 #endif
 
 /* Ranging Constants */
-#define RANGING_PERIOD 60// default in 200ms
+#define RANGING_PERIOD 100// default in 200ms
 #define RANGING_PERIOD_MIN 50 // default 50ms
 #define RANGING_PERIOD_MAX 500 // default 500ms
 
@@ -236,7 +236,6 @@ typedef struct
     float gyroZ[RANGING_TABLE_SIZE + 1];   
              // 4 byte rad/s
     uint16_t positionZ[RANGING_TABLE_SIZE + 1];       // 2 byte cm/s
-    bool refresh[RANGING_TABLE_SIZE + 1];             // 当前信息从上次EKF获取，到现在是否更新
     bool isNewAdd[RANGING_TABLE_SIZE + 1];            // 这个邻居是否是新加入的
     bool isNewAddUsed[RANGING_TABLE_SIZE + 1];
     bool isAlreadyTakeoff[RANGING_TABLE_SIZE_MAX+ 1];
@@ -344,6 +343,8 @@ bool getOrSetKeepflying(uint16_t RobIDfromControl, bool keep_flying);
 
 /*get正在和本无人机进行通信的邻居地址信息，供外部调用*/
 void getCurrentNeighborAddressInfo_t(currentNeighborAddressInfo_t *currentNeighborAddressInfo);
+
+QueueHandle_t queueDistUpdatedAddress;
 
 
 #endif
