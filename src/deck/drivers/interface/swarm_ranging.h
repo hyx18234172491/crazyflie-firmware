@@ -213,11 +213,11 @@ typedef struct {
 
 
 
-typedef struct
-{
-    uint16_t interval[TX_RV_INTERVAL_HISTORY_SIZE]; // 近似两次数据包的发送间隔.存5次历史值
-    uint8_t latest_data_index;                      // 存储最新数据的index;
-} tx_rv_interval_history_t;
+// typedef struct
+// {
+//     uint16_t interval[TX_RV_INTERVAL_HISTORY_SIZE]; // 近似两次数据包的发送间隔.存5次历史值
+//     uint8_t latest_data_index;                      // 存储最新数据的index;
+// } tx_rv_interval_history_t;
 
 typedef struct
 {

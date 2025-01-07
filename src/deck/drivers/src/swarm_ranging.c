@@ -85,21 +85,9 @@ int16_t TX_jitter = 0;
 uint16_t TX_PERIOD_IN_MS = 60;
 /*--5添加--*/
 static SemaphoreHandle_t rangingTableSetMutex;                 // 用于互斥访问rangingTableSet
-static median_data_t median_data[RANGING_TABLE_SIZE + 1];      // 存储测距的历史值
-static uint16_t rv_data_interval[RANGING_TABLE_SIZE + 1];      // 两次接收到数据包的时间间隔
-static uint8_t rv_data_interval_index[RANGING_TABLE_SIZE + 1]; // 两次接收到数据包的时间间隔下标
-static uint8_t rv_any_index = 0;
 static currentNeighborAddressInfo_t currentNeighborAddressInfo;
-static uint32_t latest_txTime;                                                  // 最新的发送数据包时间，用于日志
-static uint32_t neighbor_latest_rvTime[RANGING_TABLE_SIZE + 1];                 // 最新的接收数据包时间，用于日志
-static uint32_t last_swapPeriod_Time;                                           // 上一次变化周期的时间，如果距离上一次变换周期的时间>固定的传输周期，则恢复至固定传输周期
-static uint32_t last_swapPeriod_period;                                         // 上一次变化的周期值
-static tx_rv_interval_history_t tx_rv_interval_history[RANGING_TABLE_SIZE + 1]; //  两次的漂移差
-static uint8_t tx_rv_interval[RANGING_TABLE_SIZE + 1] = {0};                    // 两次漂移时间差
-// static uint8_t nextTransportPeriod = TX_PERIOD_IN_MS;                           // 发送数据包周期
 
 static SemaphoreHandle_t rangingTableSetMutex;            // 用于互斥访问rangingTableSet
-static median_data_t median_data[RANGING_TABLE_SIZE + 1]; // 存储测距的历史值
 /*--5添加--*/
 static float velocity;
 static bool MYisAlreadyTakeoff = false;
@@ -217,23 +205,6 @@ void predict_period_in_tx_2(int TfBufferIndex)
 
 #endif
 
-static int16_t median_filter_3(int16_t *data)
-{
-  int16_t middle;
-  if ((data[0] <= data[1]) && (data[0] <= data[2]))
-  {
-    middle = (data[1] <= data[2]) ? data[1] : data[2];
-  }
-  else if ((data[1] <= data[0]) && (data[1] <= data[2]))
-  {
-    middle = (data[0] <= data[2]) ? data[0] : data[2];
-  }
-  else
-  {
-    middle = (data[0] <= data[1]) ? data[0] : data[1];
-  }
-  return middle;
-}
 
 void rangingTableBufferInit(Ranging_Table_Tr_Rr_Buffer_t *rangingTableBuffer)
 {
@@ -375,18 +346,6 @@ Timestamp_Tuple_t getLatestTxTimestamp()
   return TfBuffer[TfBufferIndex];
 }
 
-// void getLatestNTxTimestamps(Timestamp_Tuple_t *timestamps, int n)
-// {
-//     ASSERT(n <= Tf_BUFFER_POOL_SIZE);
-//     xSemaphoreTake(TfBufferMutex, portMAX_DELAY);
-//     int startIndex = (TfBufferIndex + 1 - n + Tf_BUFFER_POOL_SIZE) % Tf_BUFFER_POOL_SIZE;
-//     for (int i = n - 1; i >= 0; i--)
-//     {
-//         timestamps[i] = TfBuffer[startIndex];
-//         startIndex = (startIndex + 1) % Tf_BUFFER_POOL_SIZE;
-//     }
-//     xSemaphoreGive(TfBufferMutex);
-// }
 Ranging_Table_Set_t *getGlobalRangingTableSet()
 {
   return &rangingTableSet;
@@ -1540,9 +1499,6 @@ void initNeighborStateInfoAndMedian_data()
 {
   for (int i = 0; i < RANGING_TABLE_SIZE + 1; i++)
   {
-    tx_rv_interval_history[i].latest_data_index = 0;
-    tx_rv_interval_history[i].interval[0] = 1000;
-    median_data[i].index_inserting = 0;
     neighborStateInfo.refresh[i] = false;
     neighborStateInfo.isAlreadyTakeoff[i] = false;
   }
@@ -1893,7 +1849,6 @@ static Time_t generateRangingMessage(Ranging_Message_t *rangingMessage)
   rangingMessage->header.srcAddress = MY_UWB_ADDRESS;
   rangingMessage->header.msgLength = sizeof(Ranging_Message_Header_t) + sizeof(Body_Unit_t) * bodyUnitNumber;
   rangingMessage->header.msgSequence = curSeqNumber;
-  // getLatestNTxTimestamps(rangingMessage->header.lastTxTimestamps, RANGING_MAX_Tr_UNIT);
 
   // xSemaphoreTake(TfBufferMutex, portMAX_DELAY);
   int startIndex = (TfBufferIndex + 1 - RANGING_MAX_Tr_UNIT + Tf_BUFFER_POOL_SIZE) % Tf_BUFFER_POOL_SIZE;
@@ -1923,6 +1878,7 @@ static Time_t generateRangingMessage(Ranging_Message_t *rangingMessage)
   //              rangingMessage->header.msgLength,
   //              bodyUnitNumber
   //  );
+  
   estimatorKalmanGetSwarmInfo(&rangingMessage->header.velocityXInWorld,
                               &rangingMessage->header.velocityYInWorld,
                               &rangingMessage->header.gyroZ,
