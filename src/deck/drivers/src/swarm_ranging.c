@@ -1803,7 +1803,7 @@ static void uwbRangingTxTask(void *parameters)
     if (xSemaphoreTake(READ_SEND_PACKET_MUTEX, taskDelay) == pdPASS)
     {
         // 成功获取到信号量，可以安全地执行临界区操作,代表有人释放了
-        vTaskDelay(MY_UWB_ADDRESS * 4); // 如果听到了别人发来的，我就延迟一半的周期
+        vTaskDelay(MY_UWB_ADDRESS * SLOT_TIME); // 如果听到了别人发来的，我就延迟一半的周期
     }else{
     }
     taskDelay = RANGING_PERIOD; // 不管有没有听到，下次再等一个周期进行判断
@@ -1820,6 +1820,7 @@ static void uwbRangingTxTask(void *parameters)
 
     // xSemaphoreGive(neighborSet.mu);
     xSemaphoreGive(rangingTableSet.mu);
+    vTaskDelay(31+rand()%60);
   }
 }
 

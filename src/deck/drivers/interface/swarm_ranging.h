@@ -18,9 +18,10 @@
 
 
 /* Ranging Constants */
-#define RANGING_PERIOD 100// default in 200ms
+#define RANGING_PERIOD 60// default in 200ms
+#define SLOT_TIME 3
 
-#define ENABLE_TEST_DS_TWR_LIMIT_PERIOD
+// #define ENABLE_TEST_DS_TWR_LIMIT_PERIOD
 
 #define RANGING_PERIOD_MIN 50 // default 50ms
 #define RANGING_PERIOD_MAX 500 // default 500ms
