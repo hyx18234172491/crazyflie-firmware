@@ -1863,18 +1863,6 @@ static Time_t generateRangingMessage(Ranging_Message_t *rangingMessage)
       rangingMessage->bodyUnits[bodyUnitNumber].timestamp = table->latestReceived.timestamp;
       rangingMessage->bodyUnits[bodyUnitNumber].seqNumber = table->latestReceived.seqNumber;
       rangingMessage->bodyUnits[bodyUnitNumber].address = table->neighborAddress;
-      // table->latestReceived.seqNumber = 0;
-      // table->latestReceived.timestamp.full = 0;
-      // int randnum = rand() % 10;
-      // if (randnum < 7)
-      // {
-      //   rangingMessage->bodyUnits[bodyUnitNumber].timestamp = table->latestReceived;
-      // }
-      // else
-      // {
-      //   Timestamp_Tuple_t empty = {.seqNumber = 0, .timestamp.full = 0};
-      //   rangingMessage->bodyUnits[bodyUnitNumber].timestamp = empty;
-      // }
       rangingMessage->header.filter |= 1 << (table->neighborAddress % 16);
       rangingTableOnEvent(table, RANGING_EVENT_TX_Tf);
 
