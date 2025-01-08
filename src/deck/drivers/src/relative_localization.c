@@ -137,6 +137,7 @@ static void updateLocationTimerCallback(TimerHandle_t timer)
     xSemaphoreTake(currentNeighborAddressInfo->mu, portMAX_DELAY);
     for (int i = 0; i < currentNeighborAddressInfo->size; i++)
     {
+        
         UWB_Address_t neighborAddress = currentNeighborAddressInfo[i].address;
         uint32_t dt = (float)(xTaskGetTickCount() - realtimeRelativeLocation[neighborAddress].oldTimetick) / configTICK_RATE_HZ;
         // 获取自己的
@@ -144,6 +145,7 @@ static void updateLocationTimerCallback(TimerHandle_t timer)
         updateRealtimeLocationImuInfo(neighborAddress,vxi,vyi,ri,hi,xTaskGetTickCount());
         vxi = vxi / 100;
         vyi = vyi / 100;
+        DEBUG_PRINT("locVx:%f\n",vxi);
         // 获取邻居的
         getLatestNeighborStateInfo(neighborAddress, &vxj, &vyj, &rj);
         vxj /= 100;
@@ -185,7 +187,7 @@ void relativeLocoInit(void)
         vTaskDelay(100);
     }
     MY_UWB_ADDRESS = uwbGetAddress();
-    // initUpdateLocationTimer();
+    initUpdateLocationTimer();
     xTaskCreate(relativeLocoTask, "relative_Localization", ZRANGER_TASK_STACKSIZE, NULL, ZRANGER_TASK_PRI, NULL);
     isInit = true;
 }
