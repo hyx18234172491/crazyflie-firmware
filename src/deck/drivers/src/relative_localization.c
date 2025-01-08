@@ -50,8 +50,8 @@ static arm_matrix_instance_f32 PHTm = {STATE_DIM_rl, 1, PHTd};
 static bool fullConnect = false;  // a flag for control (fly or not)
 static uint32_t connectCount = 0; // watchdog for detecting the connection
 
-static short vxj_t, vyj_t;
-static short vxi_t, vyi_t;
+static float vxj_t, vyj_t;
+static float vxi_t, vyi_t;
 static uint16_t hi_t, hj_t; // height of robot i and j
 
 static float vxj, vyj, rj; // receive vx, vy, gz and distance
@@ -59,7 +59,6 @@ static float vxi, vyi, ri; // self vx, vy, gz
 static uint16_t dij;       // distance between self i and other j
 static float hi, hj;       // height of robot i and j
 
-static currentNeighborAddressInfo_t currentNeighborAddressInfo;
 // static int16_t initRelativePosition[RANGING_TABLE_SIZE][RANGING_TABLE_SIZE][STATE_DIM_rl - 1];/*用于在指定无人机的初始位置时使用,由于在同一水平面，为了节省内存就不用Z轴了*/
 
 // 初始时，所有无人机基于0号无人机的相对位置
@@ -188,7 +187,7 @@ void relativeLocoTask(void *arg)
             connectCount = 0;
             bool isNewAdd; // 邻居是否是新加入的
 
-            if (getNeighborStateInfo(neighborAddress, &dij, &vxj_t, &vyj_t, &rj, &hj_t, &isNewAdd))
+            if (getNeighborStateInfo(neighborAddress,10, &dij, &vxj_t, &vyj_t, &rj, &hj_t, &isNewAdd))
             {
                 //DEBUG_PRINT("start%d\n", xTaskGetTickCount());
                 vxj = (vxj_t + 0.0) / 100;
@@ -304,27 +303,25 @@ void relativeEKF(int n, float vxi, float vyi, float ri, float hi, float vxj, flo
     // DEBUG_PRINT("dis:%d\n", dij);
 }
 
-bool relativeInfoRead(float *relaVarParam, float *neighbor_height, currentNeighborAddressInfo_t *dest)
-{
-    if (fullConnect)
-    {
-        for (int index = 0; index < currentNeighborAddressInfo.size; index++)
-        {
-            address_t neighborAddress = currentNeighborAddressInfo.address[index];
-            *(relaVarParam + neighborAddress * STATE_DIM_rl + 0) = relaVar[neighborAddress].S[STATE_rlX];
-            *(relaVarParam + neighborAddress * STATE_DIM_rl + 1) = relaVar[neighborAddress].S[STATE_rlY];
-            *(relaVarParam + neighborAddress * STATE_DIM_rl + 2) = relaVar[neighborAddress].S[STATE_rlYaw];
-            *(neighbor_height + neighborAddress) = relaVar[neighborAddress].height;
-        }
-        memcpy(dest->address, currentNeighborAddressInfo.address, sizeof(currentNeighborAddressInfo.address));
-        dest->size = currentNeighborAddressInfo.size;
-        return true;
-    }
-    else
-    {
-        return false;
-    }
-}
+// bool relativeInfoRead(float *relaVarParam, float *neighbor_height)
+// {
+//     if (fullConnect)
+//     {
+//         for (int index = 0; index < currentNeighborAddressInfo.size; index++)
+//         {
+//             address_t neighborAddress = currentNeighborAddressInfo.address[index];
+//             *(relaVarParam + neighborAddress * STATE_DIM_rl + 0) = relaVar[neighborAddress].S[STATE_rlX];
+//             *(relaVarParam + neighborAddress * STATE_DIM_rl + 1) = relaVar[neighborAddress].S[STATE_rlY];
+//             *(relaVarParam + neighborAddress * STATE_DIM_rl + 2) = relaVar[neighborAddress].S[STATE_rlYaw];
+//             *(neighbor_height + neighborAddress) = relaVar[neighborAddress].height;
+//         }
+//         return true;
+//     }
+//     else
+//     {
+//         return false;
+//     }
+// }
 void copyTargetList(float_t *dest, float_t *src)
 {
     for (int i = 0; i < ARRAY_LENGTH; i++)

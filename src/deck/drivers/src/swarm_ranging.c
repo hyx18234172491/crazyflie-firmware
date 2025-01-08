@@ -14,6 +14,7 @@
 #include "olsr.h"
 #include "timers.h"
 #include "static_mem.h"
+#include "imu_state.h"
 
 #ifndef RANGING_DEBUG_ENABLE
 #undef DEBUG_PRINT
@@ -83,12 +84,7 @@ static TimerHandle_t statisticTimer;
 static uint16_t MY_UWB_ADDRESS;
 int16_t TX_jitter = 0;
 uint16_t TX_PERIOD_IN_MS = 60;
-/*--5添加--*/
 static SemaphoreHandle_t rangingTableSetMutex; // 用于互斥访问rangingTableSet
-static currentNeighborAddressInfo_t currentNeighborAddressInfo;
-
-static SemaphoreHandle_t rangingTableSetMutex; // 用于互斥访问rangingTableSet
-/*--5添加--*/
 static float velocity;
 static bool MYisAlreadyTakeoff = false;
 static bool allIsTakeoff = false; // 判断是否所有的邻居无人机都起飞了
@@ -96,7 +92,7 @@ static uint32_t tickInterval = 0; // 记录控制飞行的时间
 static int8_t stage = ZERO_STAGE; // 编队控制阶段
 // static bool allIsTakeoff = true; // 测试时，设置为true
 static leaderStateInfo_t leaderStateInfo;
-static neighborStateInfo_t neighborStateInfo; // 邻居的状态信息
+static neighborStateInfo_t neighborStateInfo[RANGING_TABLE_SIZE_MAX + 1]; // 邻居的状态信息
 
 // Add by lcy
 inline static void txPeriodDelayset()
@@ -1076,18 +1072,27 @@ static int16_t computeDistance(Timestamp_Tuple_t Tp, Timestamp_Tuple_t Rp,
 
   bool isErrorOccurred = false;
 
-  DEBUG_PRINT("Tp:%d,Rp:%d,Tr:%d,Rr:%d,Tf:%d,Rf:%d\n", Tp.seqNumber, Rp.seqNumber, Tr.seqNumber, Rr.seqNumber, Tf.seqNumber, Rf.seqNumber);
+  // DEBUG_PRINT("Tp:%d,Rp:%d,Tr:%d,Rr:%d,Tf:%d,Rf:%d\n", Tp.seqNumber, Rp.seqNumber, Tr.seqNumber, Rr.seqNumber, Tf.seqNumber, Rf.seqNumber);
   if (Tp.seqNumber != Rp.seqNumber || Tr.seqNumber != Rr.seqNumber || Tf.seqNumber != Rf.seqNumber)
   {
     // DEBUG_PRINT("Tp:%d,Rp:%d,Tr:%d,Rr:%d,Tf:%d,Rf:%d\n", Tp.seqNumber, Rp.seqNumber, Tr.seqNumber, Rr.seqNumber, Tf.seqNumber, Rf.seqNumber);
     DEBUG_PRINT("Ranging Error: sequence number mismatch\n");
     isErrorOccurred = true;
+    return -1;
+  }
+
+  if (Tr.timestamp.full == 0 || Rr.timestamp.full == 0)
+  {
+    isErrorOccurred = true;
+    DEBUG_PRINT("------------------------------");
+    return -1;
   }
 
   if (Tp.seqNumber >= Tf.seqNumber || Rp.seqNumber >= Rf.seqNumber)
   {
     DEBUG_PRINT("Ranging Error: sequence number out of order\n");
     isErrorOccurred = true;
+    return -1;
   }
 
   int64_t tRound1, tReply1, tRound2, tReply2, diff1, diff2, t;
@@ -1120,12 +1125,18 @@ static int16_t computeDistance(Timestamp_Tuple_t Tp, Timestamp_Tuple_t Rp,
   return distance;
 }
 
+
 static int16_t computeDistance2(Timestamp_Tuple_t Tx, Timestamp_Tuple_t Rx,
                                 Timestamp_Tuple_t Tp, Timestamp_Tuple_t Rp,
                                 Timestamp_Tuple_t Tr, Timestamp_Tuple_t Rr)
 {
   bool isErrorOccurred = false;
-  DEBUG_PRINT("Tx:%d,Rx:%d,Tp:%d,Rp:%d,Tr:%d,Rr:%d\n", Tx.seqNumber, Rx.seqNumber, Tp.seqNumber, Rp.seqNumber, Tr.seqNumber, Rr.seqNumber);
+  // DEBUG_PRINT("Tx:%d,Rx:%d,Tp:%d,Rp:%d,Tr:%d,Rr:%d\n", Tx.seqNumber, Rx.seqNumber, Tp.seqNumber, Rp.seqNumber, Tr.seqNumber, Rr.seqNumber);
+
+  if (Tx.seqNumber == 0 || Rx.seqNumber == 0)
+  {
+    return -1;
+  }
 
   if (Tp.seqNumber != Rp.seqNumber || Tr.seqNumber != Rr.seqNumber || Tx.seqNumber != Rx.seqNumber)
   {
@@ -1169,6 +1180,7 @@ static int16_t computeDistance2(Timestamp_Tuple_t Tx, Timestamp_Tuple_t Rx,
 
   return distance;
 }
+
 
 static void S1_Tf(Ranging_Table_t *rangingTable)
 {
@@ -1496,7 +1508,7 @@ void initNeighborStateInfoAndMedian_data()
 {
   for (int i = 0; i < RANGING_TABLE_SIZE + 1; i++)
   {
-    neighborStateInfo.isAlreadyTakeoff[i] = false;
+    neighborStateInfo[i].isAlreadyTakeoff = false;
   }
 }
 
@@ -1509,7 +1521,7 @@ void initLeaderStateInfo()
 }
 int8_t getLeaderStage()
 {
-  DEBUG_PRINT("--get--%d\n", leaderStateInfo.stage);
+  // DEBUG_PRINT("--get--%d\n", leaderStateInfo.stage);
   return leaderStateInfo.stage;
 }
 
@@ -1522,10 +1534,18 @@ void setNeighborStateInfo(uint16_t neighborAddress, Ranging_Message_Header_t *ra
 {
   ASSERT(neighborAddress <= RANGING_TABLE_SIZE);
 
-  neighborStateInfo.velocityXInWorld[neighborAddress] = rangingMessageHeader->velocityXInWorld;
-  neighborStateInfo.velocityYInWorld[neighborAddress] = rangingMessageHeader->velocityYInWorld;
-  neighborStateInfo.gyroZ[neighborAddress] = rangingMessageHeader->gyroZ;
-  neighborStateInfo.positionZ[neighborAddress] = rangingMessageHeader->positionZ;
+  for (int i = 0; i < RANGING_MAX_Tr_UNIT; i++)
+  {
+    neighborStateInfo[neighborAddress].velocityXInWorld[i] = rangingMessageHeader->locationInfo[i].velocityXInWorld;
+    neighborStateInfo[neighborAddress].velocityYInWorld[i] = rangingMessageHeader->locationInfo[i].velocityYInWorld;
+    neighborStateInfo[neighborAddress].gyroZ[i] = rangingMessageHeader->locationInfo[i].gyroZ;
+    neighborStateInfo[neighborAddress].allTick[i] = rangingMessageHeader->locationInfo[i].allTick;
+    neighborStateInfo[neighborAddress].msgSequence[i] = rangingMessageHeader->msgSequence;
+    DEBUG_PRINT("---");
+    DEBUG_PRINT("vx:%d\n",neighborStateInfo[neighborAddress].velocityYInWorld[i]);
+    neighborStateInfo[neighborAddress].positionZ = rangingMessageHeader->positionZ;
+  }
+
   // float myPositionX = logGetFloat(idtruthpositionX);
   // DEBUG_PRINT("myPositionX:%f\n", myPositionX);
   // float myPositionY = logGetFloat(idtruthpositionY);
@@ -1547,7 +1567,7 @@ void setNeighborDistance(uint16_t neighborAddress, int16_t distance)
 {
   ASSERT(neighborAddress <= RANGING_TABLE_SIZE);
 
-  neighborStateInfo.distanceTowards[neighborAddress] = distance;
+  neighborStateInfo[neighborAddress].distanceTowards = distance;
 
   BaseType_t xHigherPriorityTaskWoken = pdFALSE;
   xQueueSendFromISR(queueDistUpdatedAddress, &neighborAddress, &xHigherPriorityTaskWoken);
@@ -1574,22 +1594,23 @@ void setNeighborStateInfo_isNewAdd(uint16_t neighborAddress, bool isNewAddNeighb
 {
   if (isNewAddNeighbor == true)
   {
-    neighborStateInfo.isNewAdd[neighborAddress] = true;
-    neighborStateInfo.isNewAddUsed[neighborAddress] = false;
+    neighborStateInfo[neighborAddress].isNewAdd = true;
+    neighborStateInfo[neighborAddress].isNewAddUsed = false;
   }
   else
   {
-    if (neighborStateInfo.isNewAddUsed[neighborAddress] == true)
+    if (neighborStateInfo[neighborAddress].isNewAddUsed == true)
     {
-      neighborStateInfo.isNewAdd[neighborAddress] = false;
+      neighborStateInfo[neighborAddress].isNewAdd = false;
     }
   }
 }
 
 bool getNeighborStateInfo(uint16_t neighborAddress,
+                          int lastMsgSequence,
                           uint16_t *distance,
-                          short *vx,
-                          short *vy,
+                          float *vx,
+                          float *vy,
                           float *gyroZ,
                           uint16_t *height,
                           bool *isNewAddNeighbor)
@@ -1597,31 +1618,30 @@ bool getNeighborStateInfo(uint16_t neighborAddress,
   // if (leaderStateInfo.keepFlying == true)
   if (true)
   {
-    *distance = neighborStateInfo.distanceTowards[neighborAddress];
-    *vx = neighborStateInfo.velocityXInWorld[neighborAddress];
-    *vy = neighborStateInfo.velocityYInWorld[neighborAddress];
-    *gyroZ = neighborStateInfo.gyroZ[neighborAddress];
-    *height = neighborStateInfo.positionZ[neighborAddress];
-    *isNewAddNeighbor = neighborStateInfo.isNewAdd[neighborAddress];
-    neighborStateInfo.isNewAddUsed[neighborAddress] = true;
+    *vx = 0;
+    *vy = 0;
+    *gyroZ = 0;
+    uint32_t holdTick = 0;
+    for (int i = 0; i < RANGING_MAX_Tr_UNIT; i++)
+    {
+      if (lastMsgSequence == neighborStateInfo[neighborAddress].msgSequence[i])
+      {
+        break;
+      }
+      *vx = ((*vx * holdTick) + (neighborStateInfo[neighborAddress].velocityXInWorld[i] * neighborStateInfo[neighborAddress].allTick[i])) / (holdTick + neighborStateInfo[neighborAddress].allTick[i]);
+      *vy = ((*vy * holdTick) + (neighborStateInfo[neighborAddress].velocityYInWorld[i] * neighborStateInfo[neighborAddress].allTick[i])) / (holdTick + neighborStateInfo[neighborAddress].allTick[i]);
+      *gyroZ = ((*gyroZ * holdTick) + (neighborStateInfo[neighborAddress].gyroZ[i] * neighborStateInfo[neighborAddress].allTick[i])) / (holdTick + neighborStateInfo[neighborAddress].allTick[i]);
+    }
+    *distance = neighborStateInfo[neighborAddress].distanceTowards;
+    *height = neighborStateInfo[neighborAddress].positionZ;
+    *isNewAddNeighbor = neighborStateInfo[neighborAddress].isNewAdd;
+    neighborStateInfo[neighborAddress].isNewAddUsed = true;
     return true;
   }
   else
   {
     return false;
   }
-}
-
-void getCurrentNeighborAddressInfo_t(currentNeighborAddressInfo_t *currentNeighborAddressInfo)
-{
-  /*--11添加--*/
-  currentNeighborAddressInfo->size = rangingTableSet.size;
-  for (set_index_t iter = 0; iter < rangingTableSet.size; iter++)
-  {
-    currentNeighborAddressInfo->address[iter] = rangingTableSet.tables[iter].neighborAddress;
-  }
-
-  /*--11添加--*/
 }
 
 /* Swarm Ranging */
@@ -1644,7 +1664,7 @@ static int processRangingMessage(Ranging_Message_With_Timestamp_t *rangingMessag
 
   bool isNewAddNeighbor = neighborIndex == -1 ? true : false; /*如果是新添加的邻居，则是true*/
   setNeighborStateInfo_isNewAdd(neighborAddress, isNewAddNeighbor);
-  DEBUG_PRINT("processRangingMessage: neighborIndex = %d, isNewAddNeighbor = %d\n", neighborIndex, isNewAddNeighbor);
+  // DEBUG_PRINT("processRangingMessage: neighborIndex = %d, isNewAddNeighbor = %d\n", neighborIndex, isNewAddNeighbor);
   /* Handle new neighbor */
   if (neighborIndex == -1)
   {
@@ -1728,6 +1748,32 @@ static int processRangingMessage(Ranging_Message_With_Timestamp_t *rangingMessag
   return neighborAddress;
 }
 
+void getImuStateInfo(Ranging_Message_Header_t *rangingMessageHeader)
+{
+  ImuStateList_t *imuStateList = getGlobalImuState();
+  
+  xSemaphoreTake(imuStateList->mu, portMAX_DELAY);
+  int i = 0,curr = imuStateList->curr;
+  int n = MIN(RANGING_MAX_Tr_UNIT, imuStateList->size);
+  // for (i = 0; i < n; i++)
+  // {
+  //   rangingMessageHeader->locationInfo[i].allTick = imuStateList->imuStateList[curr].allTickCount;
+  //   rangingMessageHeader->locationInfo[i].velocityXInWorld = imuStateList->imuStateList[curr].velocityXInWorld;
+  //   rangingMessageHeader->locationInfo[i].velocityYInWorld = imuStateList->imuStateList[curr].velocityYInWorld;
+  //   rangingMessageHeader->locationInfo[i].gyroZ = imuStateList->imuStateList[curr].gyroZ;
+  //   curr = (curr - 1 + IMU_STATE_LIST_LENGTH) % IMU_STATE_LIST_LENGTH;
+  // }
+  xSemaphoreGive(imuStateList->mu);
+  return ;
+  ImuState_t newImuState;
+  newImuState.allTickCount = 0;
+  addImuState(imuStateList,newImuState);
+  for (; i < RANGING_MAX_Tr_UNIT; i++)
+  {
+    rangingMessageHeader->locationInfo[i].allTick=0;
+  }
+}
+
 /* By default, we include each neighbor's latest rx timestamp to body unit in index order of ranging table, which
  * may cause ranging starvation, i.e. node 1 has many one-hop neighbors [2, 3, 4, 5, 6, 7, 8, 9, ..., 30], since
  * RANGING_MAX_BODY_UNIT < rangingTable.size, so each ranging message can only include a subset of it's one-hop
@@ -1768,6 +1814,7 @@ static int processRangingMessage(Ranging_Message_With_Timestamp_t *rangingMessag
  * nextExpectedDeliveryTime (only include timestamp with expected next delivery time less or equal than current
  * time) by sort the ranging table set by each timestamp's last send time.
  */
+
 static Time_t generateRangingMessage(Ranging_Message_t *rangingMessage)
 {
   int8_t bodyUnitNumber = 0;
@@ -1864,10 +1911,8 @@ static Time_t generateRangingMessage(Ranging_Message_t *rangingMessage)
   //              bodyUnitNumber
   //  );
 
-  // estimatorKalmanGetSwarmInfo(&rangingMessage->header.velocityXInWorld,
-  //                             &rangingMessage->header.velocityYInWorld,
-  //                             &rangingMessage->header.gyroZ,
-  //                             &rangingMessage->header.positionZ);
+  // getImuStateInfo(&rangingMessage->header);
+
   rangingMessage->header.keep_flying = leaderStateInfo.keepFlying;
   // 如果是leader则进行阶段控制
   stage = ZERO_STAGE;
@@ -2015,7 +2060,6 @@ static void uwbRangingRxTask(void *parameters)
 
 void rangingRxCallback(void *parameters)
 {
-  DEBUG_PRINT("rangingRxCallback \n");
 
   BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 
@@ -2070,6 +2114,8 @@ void rangingInit()
   MY_UWB_ADDRESS = uwbGetAddress();
   rxQueue = xQueueCreate(RANGING_RX_QUEUE_SIZE, RANGING_RX_QUEUE_ITEM_SIZE);
   queueDistUpdatedAddress = xQueueCreate(RANGING_RX_QUEUE_SIZE, sizeof(UWB_Address_t));
+  DEBUG_PRINT("ranging init\n");
+  initImuStateTimer();
 // neighborSetInit(&neighborSet);
 #ifdef ENABLE_SLOT_RANGING_SCHEDULE
   // Add by lcy
@@ -2083,7 +2129,6 @@ void rangingInit()
   //                                         (void *)0,
   //                                         neighborSetClearExpireTimerCallback);
   // xTimerStart(neighborSetEvictionTimer, M2T(0));
-  initNeighborStateInfoAndMedian_data();
   initLeaderStateInfo();
   rangingTableSetInit(&rangingTableSet);
   rangingTableSetEvictionTimer = xTimerCreate("rangingTableSetEvictionTimer",
@@ -2108,6 +2153,7 @@ void rangingInit()
   idZ = logGetVarId("lighthouse", "z");
 
   statisticInit();
+  DEBUG_PRINT("ranging init");
 
   xTaskCreate(uwbRangingTxTask, ADHOC_DECK_RANGING_TX_TASK_NAME, UWB_TASK_STACK_SIZE, NULL,
               ADHOC_DECK_TASK_PRI, &uwbRangingTxTaskHandle);

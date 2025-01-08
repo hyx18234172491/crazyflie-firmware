@@ -30,7 +30,7 @@
 #define RANGING_MESSAGE_PAYLOAD_SIZE_MAX (RANGING_MESSAGE_SIZE_MAX - sizeof(Ranging_Message_Header_t))
 #define RANGING_MAX_Tr_UNIT 3
 #define RANGING_MAX_BODY_UNIT (RANGING_MESSAGE_PAYLOAD_SIZE_MAX / sizeof(Body_Unit_t))
-#define RANGING_TABLE_SIZE_MAX 32 // default up to 20 one-hop neighbors
+#define RANGING_TABLE_SIZE_MAX 25 // default up to 20 one-hop neighbors
 #define TX_RV_INTERVAL_HISTORY_SIZE 5
 #define RANGING_TABLE_SIZE 25
 #define RESET_INIT_STAGE 123 
@@ -83,15 +83,22 @@ typedef union{
   dwTime_t timestamp; // 8 byte, 后5字节有用，高3字节未使用
 } Timestamp_Tuple_t_2;
 
+typedef struct Relative_Location_Info_t
+{
+  short velocityXInWorld; // 2 byte cm/s 在世界坐标系下的速度（不是基于机体坐标系的速度）
+  short velocityYInWorld; // 2 byte cm/s 在世界坐标系下的速度（不是基于机体坐标系的速度）
+  float gyroZ;
+  uint32_t allTick;
+}Relative_Location_Info_t;
+
+
 /* Ranging Message Header*/
 typedef struct {
   uint16_t srcAddress; // 2 byte
   uint16_t msgSequence; // 2 byte
   Timestamp_Tuple_t_2 lastTxTimestamps[RANGING_MAX_Tr_UNIT]; // 10 byte * MAX_Tr_UNIT
   short velocity; // 2 byte cm/s
-  short velocityXInWorld; // 2 byte cm/s 在世界坐标系下的速度（不是基于机体坐标系的速度）
-  short velocityYInWorld; // 2 byte cm/s 在世界坐标系下的速度（不是基于机体坐标系的速度）
-  float gyroZ;      
+  Relative_Location_Info_t locationInfo[RANGING_MAX_Tr_UNIT];
   float posiX;
   float posiY;
   float posiZ;     // 4 byte rad/s
@@ -212,13 +219,6 @@ typedef struct {
 } Neighbor_Set_t;
 
 
-
-// typedef struct
-// {
-//     uint16_t interval[TX_RV_INTERVAL_HISTORY_SIZE]; // 近似两次数据包的发送间隔.存5次历史值
-//     uint8_t latest_data_index;                      // 存储最新数据的index;
-// } tx_rv_interval_history_t;
-
 typedef struct
 {
     uint16_t address;
@@ -230,30 +230,20 @@ typedef struct
 } leaderStateInfo_t;
 typedef struct
 {
-    uint16_t distanceTowards[RANGING_TABLE_SIZE + 1]; // cm
-    short velocityXInWorld[RANGING_TABLE_SIZE + 1];   // 2byte m/s 在世界坐标系下的速度（不是机体坐标系）
-    short velocityYInWorld[RANGING_TABLE_SIZE + 1];   // 2byte cm/s 在世界坐标系下的速度（不是机体坐标系）
-    float gyroZ[RANGING_TABLE_SIZE + 1];   
-             // 4 byte rad/s
-    uint16_t positionZ[RANGING_TABLE_SIZE + 1];       // 2 byte cm/s
-    bool isNewAdd[RANGING_TABLE_SIZE + 1];            // 这个邻居是否是新加入的
-    bool isNewAddUsed[RANGING_TABLE_SIZE + 1];
-    bool isAlreadyTakeoff[RANGING_TABLE_SIZE_MAX+ 1];
+    uint16_t distanceTowards; // cm
+    short velocityXInWorld[RANGING_MAX_Tr_UNIT];   // 2byte m/s 在世界坐标系下的速度（不是机体坐标系）
+    short velocityYInWorld[RANGING_MAX_Tr_UNIT];   // 2byte cm/s 在世界坐标系下的速度（不是机体坐标系）
+    float gyroZ[RANGING_MAX_Tr_UNIT];              // 4 byte rad/s
+    uint32_t allTick[RANGING_MAX_Tr_UNIT];         // 当前均值持续时间
+    int msgSequence[RANGING_MAX_Tr_UNIT];
+    uint16_t positionZ;                            // 2 byte cm/s
+    bool isNewAdd;                                 // 这个邻居是否是新加入的
+    bool isNewAddUsed;
+    bool isAlreadyTakeoff;
     /* 用于辅助判断这个邻居是否是新加入的（注意：这里的'新加入'指的是，
     是相对于EKF来说的，主要用于在EKF中判断是否需要执行初始化工作）*/
 } neighborStateInfo_t; /*存储正在和本无人机进行通信的邻居的所有信息（用于EKF）*/
 
-typedef struct
-{
-    address_t address[RANGING_TABLE_SIZE + 1];
-    int size;
-} currentNeighborAddressInfo_t; /*当前正在和本无人机进行通信的邻居地址信息*/
-
-typedef struct
-{
-    int16_t distance_history[3];
-    uint8_t index_inserting;
-} median_data_t;
 
 /* Ranging Operations */
 void rangingInit();
@@ -336,13 +326,11 @@ void setNeighborDistance(uint16_t neighborAddress, int16_t distance);
 void setNeighborStateInfo_isNewAdd(uint16_t neighborAddress, bool isNewAddNeighbor);
 
 /*get邻居的状态信息*/
-bool getNeighborStateInfo(uint16_t neighborAddress, uint16_t *distance, short *vx, short *vy, float *gyroZ, uint16_t *height, bool *isNewAddNeighbor);
+bool getNeighborStateInfo(uint16_t neighborAddress, int lastMsgSequence,uint16_t *distance, float *vx, float *vy, float *gyroZ, uint16_t *height, bool *isNewAddNeighbor);
 
 /*getOrSetKeepflying*/
 bool getOrSetKeepflying(uint16_t RobIDfromControl, bool keep_flying);
 
-/*get正在和本无人机进行通信的邻居地址信息，供外部调用*/
-void getCurrentNeighborAddressInfo_t(currentNeighborAddressInfo_t *currentNeighborAddressInfo);
 
 QueueHandle_t queueDistUpdatedAddress;
 

@@ -23,7 +23,6 @@ bool keepFlying = false;
 static setpoint_t setpoint;
 static float_t relaVarInCtrl[RANGING_TABLE_SIZE + 1][STATE_DIM_rl];
 static float_t neighbor_height[RANGING_TABLE_SIZE + 1];
-static currentNeighborAddressInfo_t currentNeighborAddressInfo;
 static float_t set_height = 0.5;
 static paramVarId_t idMultiranger;
 static logVarId_t idUp;
@@ -375,7 +374,7 @@ void relativeControlTask(void *arg)
   {
     vTaskDelay(10);
     keepFlying = getOrSetKeepflying(MY_UWB_ADDRESS, keepFlying);
-    bool is_connect = relativeInfoRead((float_t *)relaVarInCtrl, (float_t *)neighbor_height, &currentNeighborAddressInfo);
+    // bool is_connect = relativeInfoRead((float_t *)relaVarInCtrl, (float_t *)neighbor_height, &currentNeighborAddressInfo);
     relaVarInCtrl[0][STATE_rlYaw] = 0;
     int8_t leaderStage = getLeaderStage();
     //DEBUG_PRINT("%d,%d\n",keepFlying,leaderStage);

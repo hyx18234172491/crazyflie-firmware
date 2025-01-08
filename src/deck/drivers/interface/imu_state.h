@@ -6,10 +6,11 @@
 #include "FreeRTOSConfig.h"
 #include "estimator_kalman.h"
 #include "task.h"
+#include "semphr.h"
 
 #define IMU_STATE_LIST_LENGTH 10
 TimerHandle_t collectHistoryImuStateTimer;
-int COLLECT_FREQUENCY_TICK = 10;
+#define COLLECT_FREQUENCY_TICK 100
 
 
 typedef struct ImuState_t
@@ -23,14 +24,13 @@ typedef struct ImuState_t
 }ImuState_t;
 
 typedef struct ImuStateList_t {
-    ImuState_t ImuStateList[IMU_STATE_LIST_LENGTH];
+    ImuState_t imuStateList[IMU_STATE_LIST_LENGTH];
     int head;  // Points to the next slot for insertion
-    int tail;  // Points to the next slot for retrieval
     int curr;  // 当前正在处理的位置
     int size;  // Tracks the number of elements in the buffer
+    SemaphoreHandle_t mu;
 } ImuStateList_t;
 
-ImuStateList_t imuStateList;
 
 // Initialize the circular buffer
 void initImuStateList(ImuStateList_t *list);
@@ -45,6 +45,8 @@ int isBufferEmpty(ImuStateList_t *list);
 void addImuState(ImuStateList_t *list, ImuState_t state);
 
 void updateImuState(ImuStateList_t *list, ImuState_t state, bool isFirstAdd);
+
+ImuStateList_t* getGlobalImuState();
 
 // 下面和timer有关系
 void initImuStateTimer();
