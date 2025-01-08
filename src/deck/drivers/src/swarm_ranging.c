@@ -93,7 +93,7 @@ static int8_t stage = ZERO_STAGE; // 编队控制阶段
 // static bool allIsTakeoff = true; // 测试时，设置为true
 static leaderStateInfo_t leaderStateInfo;
 static neighborStateInfo_t neighborStateInfo[RANGING_TABLE_SIZE_MAX + 1]; // 邻居的状态信息
-
+static currentNeighborAddressInfo_t currentNeighborAddressInfo;
 // Add by lcy
 inline static void txPeriodDelayset()
 {
@@ -243,6 +243,11 @@ void statisticInit()
   //                               (void *)0,
   //                               printStasticCallback);
   // xTimerStart(statisticTimer, M2T(0));
+}
+
+void initCurrentNeighborAddressInfo(){
+  currentNeighborAddressInfo.size = 0;
+  currentNeighborAddressInfo.mu = xSemaphoreCreateMutex();
 }
 
 void rangingTableBufferUpdate(Ranging_Table_Tr_Rr_Buffer_t *rangingTableBuffer,
@@ -491,11 +496,15 @@ static void rangingTableSetRearrange(Ranging_Table_Set_t *set, rangingTableCompa
   }
 }
 
+
+
 static int rangingTableSetClearExpire(Ranging_Table_Set_t *set)
 {
   Time_t curTime = xTaskGetTickCount();
   int evictionCount = 0;
-
+  
+  xSemaphoreTake(currentNeighborAddressInfo.mu, portMAX_DELAY);
+  currentNeighborAddressInfo.size = 0;
   for (int i = 0; i < rangingTableSet.size; i++)
   {
     if (rangingTableSet.tables[i].expirationTime <= curTime)
@@ -506,8 +515,12 @@ static int rangingTableSetClearExpire(Ranging_Table_Set_t *set)
       setDistance(rangingTableSet.tables[i].neighborAddress, -1, -1);
       rangingTableSet.tables[i] = EMPTY_RANGING_TABLE;
       evictionCount++;
+    }else{
+      currentNeighborAddressInfo.address[currentNeighborAddressInfo.size] = rangingTableSet.tables[i].neighborAddress;
+      currentNeighborAddressInfo.size++;
     }
   }
+  xSemaphoreGive(currentNeighborAddressInfo.mu);
   /* Keeps ranging table set in order. */
   rangingTableSetRearrange(&rangingTableSet, COMPARE_BY_ADDRESS);
   rangingTableSet.size -= evictionCount;
@@ -560,6 +573,10 @@ bool rangingTableSetAddTable(Ranging_Table_Set_t *set, Ranging_Table_t table)
   /* Sort the ranging table, keep it in order. */
   rangingTableSetRearrange(set, COMPARE_BY_ADDRESS);
   DEBUG_PRINT("rangingTableSetAddTable: Add new neighbor %u to ranging table.\n", table.neighborAddress);
+  xSemaphoreTake(currentNeighborAddressInfo.mu, portMAX_DELAY);
+  currentNeighborAddressInfo.address[currentNeighborAddressInfo.size] = table.neighborAddress;
+  currentNeighborAddressInfo.size++;
+  xSemaphoreGive(currentNeighborAddressInfo.mu);
   return true;
 }
 
@@ -2141,6 +2158,7 @@ void rangingInit()
   queueDistUpdatedAddress = xQueueCreate(RANGING_RX_QUEUE_SIZE, sizeof(UWB_Address_t));
   DEBUG_PRINT("ranging init\n");
   initImuStateTimer();
+  initCurrentNeighborAddressInfo();
 // neighborSetInit(&neighborSet);
 #ifdef ENABLE_SLOT_RANGING_SCHEDULE
   // Add by lcy

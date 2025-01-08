@@ -19,6 +19,7 @@
 
 static uint16_t MY_UWB_ADDRESS;
 static bool isInit;
+#define UPDATE_LOCATION_TICK 10
 
 static float Qv = 0.2f;         // velocity deviation,初始值为1.0    -0.25
 static float Qr = 0.1f;         // yaw rate deviation
@@ -129,6 +130,33 @@ static inline float arm_sqrt(float32_t in)
     return pOut;
 }
 
+
+static void updateLocationTimerCallback(TimerHandle_t timer){
+    // 遍历rangingTable中所有的成员进行位置更新
+    // Ranging_Table_Set_t * rangingTableSet = getGlobalRangingTableSet();
+    // for(int i=0; i < rangingTableSet->size; i++){
+    //     realtimeRelativeLocation[] = ;
+    // }
+}
+
+static void initUpdateLocationTimer()
+{
+    static TimerHandle_t updateLocationTimer;
+    DEBUG_PRINT("init updateLocationTimer\n");
+    updateLocationTimer = xTimerCreate("imu_state_timer",
+                                               M2T(UPDATE_LOCATION_TICK),
+                                               pdTRUE,
+                                               (void *)0,
+                                               updateLocationTimerCallback);
+    if (updateLocationTimer != NULL)
+    {
+        xTimerStart(updateLocationTimer, M2T(0));
+        DEBUG_PRINT("succ timer");
+    }else{
+        DEBUG_PRINT("fail timer");
+    }
+}
+
 void relativeLocoInit(void)
 {
     if (isInit)
@@ -173,12 +201,6 @@ void relaVarInit(relaVariable_t *relaVar, uint16_t neighborAddress)
 
 void relativeLocoTask(void *arg)
 {
-    /* 这块用于在指定无人机的初始位置时使用
-    initRelativePosition[0][1][STATE_rlX] = 1; // 0号无人机相对于1号无人机的相对位置
-    initRelativePosition[0][1][STATE_rlY] = -1;
-    initRelativePosition[1][0][STATE_rlX] = -1; // 1号无人机相对于0号无人机的相对位置
-    initRelativePosition[1][0][STATE_rlY] = 1;
-    */
     systemWaitStart();
     while (1)
     {
@@ -199,6 +221,11 @@ void relativeLocoTask(void *arg)
                 if (isNewAdd)
                 {
                     relaVarInit(relaVar, neighborAddress);
+                    // 相对定位初始化完成，更新最新位置
+                    realtimeRelativeLocation[neighborAddress].S[STATE_rlX] = relaVar[neighborAddress].S[STATE_rlX];
+                    realtimeRelativeLocation[neighborAddress].S[STATE_rlY] = relaVar[neighborAddress].S[STATE_rlY];
+                    realtimeRelativeLocation[neighborAddress].S[STATE_rlYaw] = relaVar[neighborAddress].S[STATE_rlYaw];
+                    realtimeRelativeLocation[neighborAddress].oldTimetick = relaVar[neighborAddress].oldTimetick;
                 }
                 else
                 {
@@ -215,6 +242,7 @@ void relativeLocoTask(void *arg)
                     realtimeRelativeLocation[neighborAddress].S[STATE_rlX] = relaVar[neighborAddress].S[STATE_rlX];
                     realtimeRelativeLocation[neighborAddress].S[STATE_rlY] = relaVar[neighborAddress].S[STATE_rlY];
                     realtimeRelativeLocation[neighborAddress].S[STATE_rlYaw] = relaVar[neighborAddress].S[STATE_rlYaw];
+                    realtimeRelativeLocation[neighborAddress].oldTimetick = relaVar[neighborAddress].oldTimetick;
                 }
                 //DEBUG_PRINT("addr:%d,X:%f,Y:%f\n",neighborAddress,relaVar[neighborAddress].S[STATE_rlX],relaVar[neighborAddress].S[STATE_rlY]);
             }

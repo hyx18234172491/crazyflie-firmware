@@ -191,6 +191,13 @@ typedef struct {
   Ranging_Table_t tables[RANGING_TABLE_SIZE_MAX];
 } Ranging_Table_Set_t;
 
+typedef struct
+{
+    address_t address[RANGING_TABLE_SIZE + 1];
+    int size;
+    SemaphoreHandle_t mu;
+} currentNeighborAddressInfo_t; /*当前正在和本无人机进行通信的邻居地址信息*/
+
 typedef void (*RangingTableEventHandler)(Ranging_Table_t *);
 
 typedef struct {

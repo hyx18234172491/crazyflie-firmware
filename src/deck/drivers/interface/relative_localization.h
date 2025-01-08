@@ -2,6 +2,7 @@
 #define RELATIVELOCA_H_
 #include "swarm_ranging.h"
 #include "math.h"
+#include "timers.h"
 typedef enum
 {
   STATE_rlX,
@@ -34,6 +35,7 @@ typedef struct
 typedef struct 
 {
   float S[STATE_DIM_rl];  // 实时状态
+  uint32_t oldTimetick;   // 上次更新时间
 }Realtime_Relative_Location_t;
 
 
