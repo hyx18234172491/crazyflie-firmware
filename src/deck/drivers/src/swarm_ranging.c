@@ -25,6 +25,7 @@
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define ABS(a) ((a) > 0 ? (a) : -(a))
 static uint16_t MY_UWB_ADDRESS;
+static bool rangingAlreadyInit = false;
 
 static QueueHandle_t rxQueue;
 static Neighbor_Set_t neighborSet;
@@ -1562,7 +1563,7 @@ void setNeighborStateInfo(uint16_t neighborAddress, Ranging_Message_Header_t *ra
     neighborStateInfo[neighborAddress].gyroZ[i] = rangingMessageHeader->locationInfo[i].gyroZ;
     neighborStateInfo[neighborAddress].allTick[i] = rangingMessageHeader->locationInfo[i].allTick;
     neighborStateInfo[neighborAddress].msgSequence[i] = rangingMessageHeader->msgSequence;
-    DEBUG_PRINT("---");
+    DEBUG_PRINT("recv-");
     DEBUG_PRINT("vx:%d\n",neighborStateInfo[neighborAddress].velocityYInWorld[i]);
     neighborStateInfo[neighborAddress].positionZ = rangingMessageHeader->positionZ;
   }
@@ -1805,7 +1806,7 @@ void getImuStateInfo(Ranging_Message_Header_t *rangingMessageHeader)
     rangingMessageHeader->locationInfo[i].velocityYInWorld = (short)(imuStateList->imuStateList[curr].velocityYInWorld);
     rangingMessageHeader->locationInfo[i].gyroZ = imuStateList->imuStateList[curr].gyroZ;
     curr = (curr - 1 + IMU_STATE_LIST_LENGTH) % IMU_STATE_LIST_LENGTH;
-    // DEBUG_PRINT("vx:%d\n",rangingMessageHeader->locationInfo[i].velocityXInWorld);
+    DEBUG_PRINT("vx:%d\n",rangingMessageHeader->locationInfo[i].velocityXInWorld);
   }
 
   xSemaphoreGive(imuStateList->mu);
@@ -2206,6 +2207,11 @@ void rangingInit()
               ADHOC_DECK_TASK_PRI, &uwbRangingTxTaskHandle);
   xTaskCreate(uwbRangingRxTask, ADHOC_DECK_RANGING_RX_TASK_NAME, UWB_TASK_STACK_SIZE, NULL,
               ADHOC_DECK_TASK_PRI, &uwbRangingRxTaskHandle);
+  rangingAlreadyInit = true;
+}
+
+bool isRangingInitComplete(){
+  return rangingAlreadyInit;
 }
 
 uint16_t getStatisticIndex = 3;

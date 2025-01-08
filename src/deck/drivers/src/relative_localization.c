@@ -138,9 +138,10 @@ static void updateLocationTimerCallback(TimerHandle_t timer)
     for (int i = 0; i < currentNeighborAddressInfo->size; i++)
     {
         UWB_Address_t neighborAddress = currentNeighborAddressInfo[i].address;
-        uint32_t dt = xTaskGetTickCount() - realtimeRelativeLocation[neighborAddress].oldTimetick;
+        uint32_t dt = (float)(xTaskGetTickCount() - realtimeRelativeLocation[neighborAddress].oldTimetick) / configTICK_RATE_HZ;
         // 获取自己的
         estimatorKalmanGetSwarmInfo(&vxi, &vyi, &ri, &hi);
+        updateRealtimeLocationImuInfo(neighborAddress,vxi,vyi,ri,hi,xTaskGetTickCount());
         vxi = vxi / 100;
         vyi = vyi / 100;
         // 获取邻居的
@@ -179,12 +180,17 @@ void relativeLocoInit(void)
     {
         return;
     }
+    while (isRangingInitComplete()==false)
+    {
+        vTaskDelay(100);
+    }
     MY_UWB_ADDRESS = uwbGetAddress();
+    // initUpdateLocationTimer();
     xTaskCreate(relativeLocoTask, "relative_Localization", ZRANGER_TASK_STACKSIZE, NULL, ZRANGER_TASK_PRI, NULL);
     isInit = true;
 }
 
-void relaVarInit(relaVariable_t *relaVar, uint16_t neighborAddress)
+void initRelaVar(relaVariable_t *relaVar, uint16_t neighborAddress)
 {
     ASSERT(neighborAddress <= RANGING_TABLE_SIZE);
     for (int i = 0; i < STATE_DIM_rl; i++)
@@ -236,13 +242,16 @@ void relativeLocoTask(void *arg)
                 hj = (hj_t + 0.0) / 100;
                 if (isNewAdd)
                 {
-                    relaVarInit(relaVar, neighborAddress);
+                    initRelaVar(relaVar, neighborAddress);
                     // 相对定位初始化完成，更新最新位置
                     updateRealtimeLocationFromRelaVar(neighborAddress);
+                    initRealtimeLocation(realtimeRelativeLocation,neighborAddress);
                 }
                 else
                 {
-                    estimatorKalmanGetSwarmInfo(&vxi_t, &vyi_t, &ri, &hi_t); // 当前无人机的信息
+                    getCurrImuInfo(neighborAddress,&vxi_t, &vyi_t, &ri, &hi_t); // 当前无人机的信息
+                    DEBUG_PRINT("vxi:%f\n",vxi_t);
+                    DEBUG_PRINT("vyi:%f\n",vyi_t);
                     vxi = (vxi_t + 0.0) / 100;
                     vyi = (vyi_t + 0.0) / 100;
                     hi = (hi_t + 0.0) / 100;
@@ -250,6 +259,8 @@ void relativeLocoTask(void *arg)
                     float dtEKF = (float)(osTick - relaVar[neighborAddress].oldTimetick) / configTICK_RATE_HZ;
                     relaVar[neighborAddress].oldTimetick = osTick;
                     relaVar[neighborAddress].height = hj;
+                    // 又要开始新的一轮统计了
+                    initRealtimeLocation(realtimeRelativeLocation,neighborAddress);
                     relativeEKF(neighborAddress, vxi, vyi, ri, hi, vxj, vyj, rj, hj, dij, dtEKF);
                     // 相对定位完成，更新校正后的位置
                     updateRealtimeLocationFromRelaVar(neighborAddress);
@@ -358,6 +369,35 @@ void updateRealtimeLocationFromRelaVar(UWB_Address_t neighborAddress)
     realtimeRelativeLocation[neighborAddress].S[STATE_rlY] = relaVar[neighborAddress].S[STATE_rlY];
     realtimeRelativeLocation[neighborAddress].S[STATE_rlYaw] = relaVar[neighborAddress].S[STATE_rlYaw];
     realtimeRelativeLocation[neighborAddress].oldTimetick = relaVar[neighborAddress].oldTimetick;
+}
+
+void updateRealtimeLocationImuInfo(UWB_Address_t neighborAddress, float velocityXInWorld, float velocityYInWorld, float gyroZ, float posiZ, uint32_t updatedTick)
+{
+    // 和当前的进行更新
+    uint32_t holdTick = realtimeRelativeLocation[neighborAddress].imuState.allTickCount;
+    uint32_t diffTickCount = updatedTick - realtimeRelativeLocation[neighborAddress].imuState.lastUpdateTick;
+    uint32_t allTickCount = diffTickCount + holdTick;
+    realtimeRelativeLocation[neighborAddress].imuState.velocityXInWorld = ((holdTick * realtimeRelativeLocation[neighborAddress].imuState.velocityXInWorld) + (diffTickCount * velocityXInWorld)) / (allTickCount);
+    realtimeRelativeLocation[neighborAddress].imuState.velocityYInWorld = ((holdTick * realtimeRelativeLocation[neighborAddress].imuState.velocityYInWorld) + (diffTickCount * velocityYInWorld)) / (allTickCount);
+    realtimeRelativeLocation[neighborAddress].imuState.gyroZ = ((holdTick * realtimeRelativeLocation[neighborAddress].imuState.gyroZ) + (diffTickCount * gyroZ)) / (allTickCount);
+    realtimeRelativeLocation[neighborAddress].imuState.posiZ = posiZ;
+
+    // 更新最新的均值的时间
+    realtimeRelativeLocation[neighborAddress].imuState.lastUpdateTick = updatedTick;
+    // 更新当前均值持续的时间
+    realtimeRelativeLocation[neighborAddress].imuState.allTickCount = allTickCount;
+}
+
+
+void initRealtimeLocation(Realtime_Relative_Location_t *realtimeRelativeLocation,UWB_Address_t neighborAddress){
+    realtimeRelativeLocation[neighborAddress].imuState.allTickCount = 0;
+}
+
+void getCurrImuInfo(UWB_Address_t neighborAddress,float *vxi,float *vyi, float *ri, float *hi){
+    *vxi = realtimeRelativeLocation[neighborAddress].imuState.velocityXInWorld;
+    *vyi = realtimeRelativeLocation[neighborAddress].imuState.velocityYInWorld;
+    *ri = realtimeRelativeLocation[neighborAddress].imuState.gyroZ;
+    *hi = realtimeRelativeLocation[neighborAddress].imuState.posiZ;
 }
 
 void copyTargetList(float_t *dest, float_t *src)

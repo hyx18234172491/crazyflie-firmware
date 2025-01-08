@@ -2,6 +2,7 @@
 #define RELATIVELOCA_H_
 #include "swarm_ranging.h"
 #include "math.h"
+#include "imu_state.h"
 #include "timers.h"
 typedef enum
 {
@@ -36,6 +37,8 @@ typedef struct
 {
   float S[STATE_DIM_rl];  // 实时状态
   uint32_t oldTimetick;   // 上次更新时间
+  // 存储历史imu信息
+  ImuState_t imuState;
 }Realtime_Relative_Location_t;
 
 
@@ -74,6 +77,9 @@ void relativeLocoTask(void *arg);
 void relativeEKF(int n, float vxi, float vyi, float ri, float hi, float vxj, float vyj, float rj, float hj, uint16_t dij, float dt);
 void relativeLocationPredict(int n, float vxi, float vyi, float ri, float vxj, float vyj, float rj, float dt);
 // bool relativeInfoRead(float *relaVarParam, float *neighbor_height, currentNeighborAddressInfo_t *dest);
-void relaVarInit(relaVariable_t *relaVar, uint16_t neighborAddress); // // Initialize EKF for relative localization
+void initRelaVar(relaVariable_t *relaVar, uint16_t neighborAddress); // // Initialize EKF for relative localization
+void initRealtimeLocation(Realtime_Relative_Location_t *realtimeRelativeLocation,UWB_Address_t neighborAddress);
 void updateRealtimeLocationFromRelaVar(UWB_Address_t neighborAddress);
+void updateRealtimeLocationImuInfo(UWB_Address_t neighborAddress,float velocityXInWorld,float velocityYInWorld,float gyroZ,float posiZ,uint32_t updatedTick);
+void getCurrImuInfo(UWB_Address_t neighborAddress,float *vxi,float *vyi, float *ri, float *hi);
 #endif

@@ -346,7 +346,9 @@ bool getOrSetKeepflying(uint16_t RobIDfromControl, bool keep_flying);
 /*维护当前正在集群中通信的邻居的地址信息*/
 CurrentNeighborAddressInfo_t *getGlobalCurrentNeighborAddressInfo();
 
+/*有距离更新了，就将该邻居放入队列等待相对定位*/
 QueueHandle_t queueDistUpdatedAddress;
 
+bool isRangingInitComplete();
 
 #endif
