@@ -27,8 +27,15 @@ typedef struct
   float P[STATE_DIM_rl][STATE_DIM_rl];
   float height;
   uint32_t oldTimetick;
+  uint16_t oldMsgSequence;
   uint8_t receiveFlag;
 } relaVariable_t;
+
+typedef struct 
+{
+  float S[STATE_DIM_rl];  // 实时状态
+}Realtime_Relative_Location_t;
+
 
 /*--用于初始位置设定--*/
 static uint8_t CONTROL_MODE = 1;

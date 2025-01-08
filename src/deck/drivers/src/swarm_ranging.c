@@ -1607,7 +1607,7 @@ void setNeighborStateInfo_isNewAdd(uint16_t neighborAddress, bool isNewAddNeighb
 }
 
 bool getNeighborStateInfo(uint16_t neighborAddress,
-                          int lastMsgSequence,
+                          uint16_t *lastMsgSequence,
                           uint16_t *distance,
                           float *vx,
                           float *vy,
@@ -1624,7 +1624,7 @@ bool getNeighborStateInfo(uint16_t neighborAddress,
     uint32_t holdTick = 0;
     for (int i = 0; i < RANGING_MAX_Tr_UNIT; i++)
     {
-      if (lastMsgSequence == neighborStateInfo[neighborAddress].msgSequence[i])
+      if (*lastMsgSequence == neighborStateInfo[neighborAddress].msgSequence[i])
       {
         break;
       }
@@ -1636,6 +1636,7 @@ bool getNeighborStateInfo(uint16_t neighborAddress,
     *height = neighborStateInfo[neighborAddress].positionZ;
     *isNewAddNeighbor = neighborStateInfo[neighborAddress].isNewAdd;
     neighborStateInfo[neighborAddress].isNewAddUsed = true;
+    *lastMsgSequence = neighborStateInfo[neighborAddress].msgSequence[0];
     return true;
   }
   else
@@ -1643,6 +1644,26 @@ bool getNeighborStateInfo(uint16_t neighborAddress,
     return false;
   }
 }
+
+bool getNewlyNeighborStateInfo(uint16_t neighborAddress,
+                          float *vx,
+                          float *vy,
+                          float *gyroZ)
+{
+  // if (leaderStateInfo.keepFlying == true)
+  if (true)
+  {
+    *vx = (neighborStateInfo[neighborAddress].velocityXInWorld[0] * neighborStateInfo[neighborAddress].allTick[0]);
+    *vy = (neighborStateInfo[neighborAddress].velocityYInWorld[0] * neighborStateInfo[neighborAddress].allTick[0]);
+    *gyroZ = (neighborStateInfo[neighborAddress].gyroZ[0] * neighborStateInfo[neighborAddress].allTick[0]);
+    return true;
+  }
+  else
+  {
+    return false;
+  }
+}
+
 
 /* Swarm Ranging */
 static int processRangingMessage(Ranging_Message_With_Timestamp_t *rangingMessageWithTimestamp)

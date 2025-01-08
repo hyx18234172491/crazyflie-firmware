@@ -326,8 +326,13 @@ void setNeighborDistance(uint16_t neighborAddress, int16_t distance);
 void setNeighborStateInfo_isNewAdd(uint16_t neighborAddress, bool isNewAddNeighbor);
 
 /*get邻居的状态信息*/
-bool getNeighborStateInfo(uint16_t neighborAddress, int lastMsgSequence,uint16_t *distance, float *vx, float *vy, float *gyroZ, uint16_t *height, bool *isNewAddNeighbor);
+bool getNeighborStateInfo(uint16_t neighborAddress, uint16_t* lastMsgSequence,uint16_t *distance, float *vx, float *vy, float *gyroZ, uint16_t *height, bool *isNewAddNeighbor);
 
+/*获取最新收到的邻居状态信息*/
+bool getNewlyNeighborStateInfo(uint16_t neighborAddress,
+                          float *vx,
+                          float *vy,
+                          float *gyroZ);
 /*getOrSetKeepflying*/
 bool getOrSetKeepflying(uint16_t RobIDfromControl, bool keep_flying);
 

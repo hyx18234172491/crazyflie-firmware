@@ -28,6 +28,8 @@ static float InitCovYaw = 0.2f; // 初始偏航角误差
 
 static relaVariable_t relaVar[RANGING_TABLE_SIZE];
 
+static Realtime_Relative_Location_t realtimeRelativeLocation[RANGING_TABLE_SIZE];
+
 static float A[STATE_DIM_rl][STATE_DIM_rl];
 static float h[STATE_DIM_rl] = {0};
 static arm_matrix_instance_f32 H = {1, STATE_DIM_rl, h};
@@ -163,6 +165,7 @@ void relaVarInit(relaVariable_t *relaVar, uint16_t neighborAddress)
     relaVar[neighborAddress].S[STATE_rlYaw] = 0;
     /*----------*/
     relaVar[neighborAddress].oldTimetick = xTaskGetTickCount();
+    relaVar[neighborAddress].oldMsgSequence = 0;
 
     fullConnect = true;
     // DEBUG_PRINT("%f\n", relaVar[neighborAddress].S[STATE_rlX]);
@@ -183,13 +186,13 @@ void relativeLocoTask(void *arg)
         UWB_Address_t neighborAddress;
         if (xQueueReceive(queueDistUpdatedAddress, &neighborAddress, portMAX_DELAY))
         {
-            DEBUG_PRINT("location:%d\n",neighborAddress);
+            DEBUG_PRINT("location address:%d\n",neighborAddress);
             connectCount = 0;
             bool isNewAdd; // 邻居是否是新加入的
 
-            if (getNeighborStateInfo(neighborAddress,10, &dij, &vxj_t, &vyj_t, &rj, &hj_t, &isNewAdd))
+            if (getNeighborStateInfo(neighborAddress,&relaVar[neighborAddress].oldMsgSequence, &dij, &vxj_t, &vyj_t, &rj, &hj_t, &isNewAdd))
             {
-                //DEBUG_PRINT("start%d\n", xTaskGetTickCount());
+                DEBUG_PRINT("location seq:%d\n", relaVar[neighborAddress].oldMsgSequence);
                 vxj = (vxj_t + 0.0) / 100;
                 vyj = (vyj_t + 0.0) / 100;
                 hj = (hj_t + 0.0) / 100;
@@ -208,21 +211,14 @@ void relativeLocoTask(void *arg)
                     relaVar[neighborAddress].oldTimetick = osTick;
                     relaVar[neighborAddress].height = hj;
                     relativeEKF(neighborAddress, vxi, vyi, ri, hi, vxj, vyj, rj, hj, dij, dtEKF);
+                    // 相对定位完成，更新校正后的位置
+                    realtimeRelativeLocation[neighborAddress].S[STATE_rlX] = relaVar[neighborAddress].S[STATE_rlX];
+                    realtimeRelativeLocation[neighborAddress].S[STATE_rlY] = relaVar[neighborAddress].S[STATE_rlY];
+                    realtimeRelativeLocation[neighborAddress].S[STATE_rlYaw] = relaVar[neighborAddress].S[STATE_rlYaw];
                 }
                 //DEBUG_PRINT("addr:%d,X:%f,Y:%f\n",neighborAddress,relaVar[neighborAddress].S[STATE_rlX],relaVar[neighborAddress].S[STATE_rlY]);
             }
         }
-        // connectCount++;
-        // // DEBUG_PRINT("%d\n", connectCount);
-        // if (connectCount < 1000) // // 这里我设定的是60s没有测距，fullConnect=false
-        // {
-        //     fullConnect = true; // disable control if there is no ranging after 1 second
-        // }
-        // else
-        // {
-        //     // DEBUG_PRINT("------------");
-        //     fullConnect = false;
-        // }
     }
 }
 
