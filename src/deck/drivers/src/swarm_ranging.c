@@ -578,6 +578,7 @@ bool rangingTableSetAddTable(Ranging_Table_Set_t *set, Ranging_Table_t table)
   currentNeighborAddressInfo.address[currentNeighborAddressInfo.size] = table.neighborAddress;
   currentNeighborAddressInfo.size++;
   xSemaphoreGive(currentNeighborAddressInfo.mu);
+  DEBUG_PRINT("currentNeighborAddressInfo\n");
   return true;
 }
 
@@ -677,7 +678,7 @@ Neighbor_Set_t *getGlobalNeighborSet()
 }
 
 CurrentNeighborAddressInfo_t *getGlobalCurrentNeighborAddressInfo(){
-  return & currentNeighborAddressInfo;
+  return &currentNeighborAddressInfo;
 }
 
 void neighborSetInit(Neighbor_Set_t *set)
@@ -1093,7 +1094,7 @@ static int16_t computeDistance(Timestamp_Tuple_t Tp, Timestamp_Tuple_t Rp,
 {
 
   bool isErrorOccurred = false;
-
+  DEBUG_PRINT("dist1");
   // DEBUG_PRINT("Tp:%d,Rp:%d,Tr:%d,Rr:%d,Tf:%d,Rf:%d\n", Tp.seqNumber, Rp.seqNumber, Tr.seqNumber, Rr.seqNumber, Tf.seqNumber, Rf.seqNumber);
   if (Tp.seqNumber != Rp.seqNumber || Tr.seqNumber != Rr.seqNumber || Tf.seqNumber != Rf.seqNumber)
   {
@@ -1152,6 +1153,7 @@ static int16_t computeDistance2(Timestamp_Tuple_t Tx, Timestamp_Tuple_t Rx,
                                 Timestamp_Tuple_t Tp, Timestamp_Tuple_t Rp,
                                 Timestamp_Tuple_t Tr, Timestamp_Tuple_t Rr)
 {
+  DEBUG_PRINT("dist2");
   bool isErrorOccurred = false;
   // DEBUG_PRINT("Tx:%d,Rx:%d,Tp:%d,Rp:%d,Tr:%d,Rr:%d\n", Tx.seqNumber, Rx.seqNumber, Tp.seqNumber, Rp.seqNumber, Tr.seqNumber, Rr.seqNumber);
 

@@ -137,15 +137,16 @@ static void updateLocationTimerCallback(TimerHandle_t timer)
     xSemaphoreTake(currentNeighborAddressInfo->mu, portMAX_DELAY);
     for (int i = 0; i < currentNeighborAddressInfo->size; i++)
     {
-        
-        UWB_Address_t neighborAddress = currentNeighborAddressInfo[i].address;
+
+        UWB_Address_t neighborAddress = currentNeighborAddressInfo->address[i];
+        ASSERT(neighborAddress < RANGING_TABLE_SIZE_MAX);
         uint32_t dt = (float)(xTaskGetTickCount() - realtimeRelativeLocation[neighborAddress].oldTimetick) / configTICK_RATE_HZ;
         // 获取自己的
         estimatorKalmanGetSwarmInfo(&vxi, &vyi, &ri, &hi);
-        updateRealtimeLocationImuInfo(neighborAddress,vxi,vyi,ri,hi,xTaskGetTickCount());
+        updateRealtimeLocationImuInfo(neighborAddress, vxi, vyi, ri, hi, xTaskGetTickCount());
         vxi = vxi / 100;
         vyi = vyi / 100;
-        DEBUG_PRINT("locVx:%f\n",vxi);
+        // DEBUG_PRINT("locVx:%f\n", vxi);
         // 获取邻居的
         getLatestNeighborStateInfo(neighborAddress, &vxj, &vyj, &rj);
         vxj /= 100;
@@ -182,13 +183,13 @@ void relativeLocoInit(void)
     {
         return;
     }
-    while (isRangingInitComplete()==false)
+    while (isRangingInitComplete() == false)
     {
         vTaskDelay(100);
     }
     MY_UWB_ADDRESS = uwbGetAddress();
     initUpdateLocationTimer();
-    xTaskCreate(relativeLocoTask, "relative_Localization", ZRANGER_TASK_STACKSIZE, NULL, ZRANGER_TASK_PRI, NULL);
+    xTaskCreate(relativeLocoTask, "relative_Localization", ZRANGER_TASK_STACKSIZE + 150, NULL, ZRANGER_TASK_PRI, NULL);
     isInit = true;
 }
 
@@ -379,6 +380,7 @@ void updateRealtimeLocationImuInfo(UWB_Address_t neighborAddress, float velocity
     uint32_t holdTick = realtimeRelativeLocation[neighborAddress].imuState.allTickCount;
     uint32_t diffTickCount = updatedTick - realtimeRelativeLocation[neighborAddress].imuState.lastUpdateTick;
     uint32_t allTickCount = diffTickCount + holdTick;
+    ASSERT(allTickCount > 0);
     realtimeRelativeLocation[neighborAddress].imuState.velocityXInWorld = ((holdTick * realtimeRelativeLocation[neighborAddress].imuState.velocityXInWorld) + (diffTickCount * velocityXInWorld)) / (allTickCount);
     realtimeRelativeLocation[neighborAddress].imuState.velocityYInWorld = ((holdTick * realtimeRelativeLocation[neighborAddress].imuState.velocityYInWorld) + (diffTickCount * velocityYInWorld)) / (allTickCount);
     realtimeRelativeLocation[neighborAddress].imuState.gyroZ = ((holdTick * realtimeRelativeLocation[neighborAddress].imuState.gyroZ) + (diffTickCount * gyroZ)) / (allTickCount);
@@ -390,12 +392,22 @@ void updateRealtimeLocationImuInfo(UWB_Address_t neighborAddress, float velocity
     realtimeRelativeLocation[neighborAddress].imuState.allTickCount = allTickCount;
 }
 
-
-void initRealtimeLocation(Realtime_Relative_Location_t *realtimeRelativeLocation,UWB_Address_t neighborAddress){
+void initRealtimeLocation(Realtime_Relative_Location_t *realtimeRelativeLocation, UWB_Address_t neighborAddress)
+{
     realtimeRelativeLocation[neighborAddress].imuState.allTickCount = 0;
+    realtimeRelativeLocation[neighborAddress].imuState.lastUpdateTick = 0;
 }
 
-void getCurrImuInfo(UWB_Address_t neighborAddress,float *vxi,float *vyi, float *ri, float *hi){
+void initRealtimeLocationList(Realtime_Relative_Location_t *realtimeRelativeLocation)
+{
+    for (int i = 0; i < RANGING_TABLE_SIZE; i++)
+    {
+        initRealtimeLocation(initRealtimeLocation, i);
+    }
+}
+
+void getCurrImuInfo(UWB_Address_t neighborAddress, float *vxi, float *vyi, float *ri, float *hi)
+{
     *vxi = realtimeRelativeLocation[neighborAddress].imuState.velocityXInWorld;
     *vyi = realtimeRelativeLocation[neighborAddress].imuState.velocityYInWorld;
     *ri = realtimeRelativeLocation[neighborAddress].imuState.gyroZ;
