@@ -9,7 +9,7 @@ void initImuStateList(ImuStateList_t *list)
     list->head = 0;
     list->curr = 0;
     list->size = 0;
-    list->mu = xSemaphoreCreateBinary();
+    list->mu = xSemaphoreCreateMutex();
 }
 
 // Check if the buffer is full
@@ -27,7 +27,6 @@ int isBufferEmpty(ImuStateList_t *list)
 // Add a new IMU state to the buffer
 void addImuState(ImuStateList_t *list, ImuState_t state)
 {
-    xSemaphoreTake(list->mu, portMAX_DELAY);
     if (isBufferFull(list))
     {
     }
@@ -38,13 +37,10 @@ void addImuState(ImuStateList_t *list, ImuState_t state)
     list->imuStateList[list->head] = state;
     list->curr = list->head;
     list->head = (list->head + 1) % IMU_STATE_LIST_LENGTH; // Move head forward
-    xSemaphoreGive(list->mu);
 }
 
 void updateImuState(ImuStateList_t *list, ImuState_t newState, bool isFirstAdd)
 {
-    xSemaphoreTake(list->mu, portMAX_DELAY);
-    DEBUG_PRINT("update\n");
     // 如果现在是空的，或者指定是新插入的，则插入
     if (isBufferEmpty(list) || isFirstAdd == true)
     {
@@ -78,7 +74,7 @@ void updateImuState(ImuStateList_t *list, ImuState_t newState, bool isFirstAdd)
             currState->velocityYInWorld = newState.velocityYInWorld;
         }
     }
-    xSemaphoreGive(list->mu);
+    
 }
 
 ImuStateList_t *getGlobalImuState()
@@ -88,20 +84,22 @@ ImuStateList_t *getGlobalImuState()
 
 static void collectHistoryImuStateTimerCallback(TimerHandle_t timer)
 {
-    DEBUG_PRINT("call_back\n");
     ImuState_t newImuState;
     newImuState.lastUpdateTick = xTaskGetTickCount();
     newImuState.allTickCount = COLLECT_FREQUENCY_TICK;
     estimatorKalmanGetSwarmInfo(&newImuState.velocityXInWorld, &newImuState.velocityYInWorld, &newImuState.gyroZ, &newImuState.posiZ);
+    xSemaphoreTake(imuStateList.mu, portMAX_DELAY);
     updateImuState(&imuStateList, newImuState, false);
+    xSemaphoreGive(imuStateList.mu);
 }
 
 void initImuStateTimer()
 {
-    DEBUG_PRINT("timerStart\n");
+    static TimerHandle_t collectHistoryImuStateTimer;
+    DEBUG_PRINT("imu state timerStart\n");
     initImuStateList(&imuStateList);
     collectHistoryImuStateTimer = xTimerCreate("imu_state_timer",
-                                               M2T(COLLECT_FREQUENCY_TICK * 2),
+                                               M2T(COLLECT_FREQUENCY_TICK),
                                                pdTRUE,
                                                (void *)0,
                                                collectHistoryImuStateTimerCallback);

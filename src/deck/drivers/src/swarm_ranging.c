@@ -1754,20 +1754,24 @@ void getImuStateInfo(Ranging_Message_Header_t *rangingMessageHeader)
   
   xSemaphoreTake(imuStateList->mu, portMAX_DELAY);
   int i = 0,curr = imuStateList->curr;
+  // DEBUG_PRINT("curr:%d\n",curr);
   int n = MIN(RANGING_MAX_Tr_UNIT, imuStateList->size);
-  // for (i = 0; i < n; i++)
-  // {
-  //   rangingMessageHeader->locationInfo[i].allTick = imuStateList->imuStateList[curr].allTickCount;
-  //   rangingMessageHeader->locationInfo[i].velocityXInWorld = imuStateList->imuStateList[curr].velocityXInWorld;
-  //   rangingMessageHeader->locationInfo[i].velocityYInWorld = imuStateList->imuStateList[curr].velocityYInWorld;
-  //   rangingMessageHeader->locationInfo[i].gyroZ = imuStateList->imuStateList[curr].gyroZ;
-  //   curr = (curr - 1 + IMU_STATE_LIST_LENGTH) % IMU_STATE_LIST_LENGTH;
-  // }
+  for (i = 0; i < n; i++)
+  {
+    rangingMessageHeader->locationInfo[i].allTick = imuStateList->imuStateList[curr].allTickCount;
+    rangingMessageHeader->locationInfo[i].velocityXInWorld = imuStateList->imuStateList[curr].velocityXInWorld;
+    rangingMessageHeader->locationInfo[i].velocityYInWorld = imuStateList->imuStateList[curr].velocityYInWorld;
+    rangingMessageHeader->locationInfo[i].gyroZ = imuStateList->imuStateList[curr].gyroZ;
+    curr = (curr - 1 + IMU_STATE_LIST_LENGTH) % IMU_STATE_LIST_LENGTH;
+    // DEBUG_PRINT("allTick:%d\n",rangingMessageHeader->locationInfo[i].allTick);
+  }
+
   xSemaphoreGive(imuStateList->mu);
-  return ;
   ImuState_t newImuState;
   newImuState.allTickCount = 0;
+  xSemaphoreTake(imuStateList->mu, portMAX_DELAY);
   addImuState(imuStateList,newImuState);
+  xSemaphoreGive(imuStateList->mu);
   for (; i < RANGING_MAX_Tr_UNIT; i++)
   {
     rangingMessageHeader->locationInfo[i].allTick=0;
@@ -1911,7 +1915,7 @@ static Time_t generateRangingMessage(Ranging_Message_t *rangingMessage)
   //              bodyUnitNumber
   //  );
 
-  // getImuStateInfo(&rangingMessage->header);
+  getImuStateInfo(&rangingMessage->header);
 
   rangingMessage->header.keep_flying = leaderStateInfo.keepFlying;
   // 如果是leader则进行阶段控制
