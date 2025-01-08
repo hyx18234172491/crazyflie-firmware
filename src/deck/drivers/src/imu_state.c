@@ -54,11 +54,11 @@ void updateImuState(ImuStateList_t *list, ImuState_t newState, bool isFirstAdd)
             // 和当前的进行更新
             uint32_t diffTickCount = newState.lastUpdateTick - currState->lastUpdateTick;
             uint32_t allTickCount = diffTickCount + currState->allTickCount;
-            DEBUG_PRINT("new-count:%d\n",newState.lastUpdateTick);
-            DEBUG_PRINT("curr-count:%d\n",currState->lastUpdateTick);
-            DEBUG_PRINT("newVx:%f\n",newState.velocityXInWorld);
-            DEBUG_PRINT("currVx:%f\n",currState->velocityXInWorld);
-            DEBUG_PRINT("allcount:%d\n",currState->allTickCount);
+            // DEBUG_PRINT("new-count:%d\n",newState.lastUpdateTick);
+            // DEBUG_PRINT("curr-count:%d\n",currState->lastUpdateTick);
+            // DEBUG_PRINT("newVx:%f\n",newState.velocityXInWorld);
+            // DEBUG_PRINT("currVx:%f\n",currState->velocityXInWorld);
+            // DEBUG_PRINT("allcount:%d\n",currState->allTickCount);
             currState->velocityXInWorld = ((currState->allTickCount * currState->velocityXInWorld) + (diffTickCount * newState.velocityXInWorld)) / (allTickCount);
             currState->velocityYInWorld = ((currState->allTickCount * currState->velocityYInWorld) + (diffTickCount * newState.velocityYInWorld)) / (allTickCount);
             currState->gyroZ = ((currState->allTickCount * currState->gyroZ) + (diffTickCount * newState.gyroZ)) / (allTickCount);
@@ -72,7 +72,7 @@ void updateImuState(ImuStateList_t *list, ImuState_t newState, bool isFirstAdd)
         }
         else
         {
-            DEBUG_PRINT("newadd\n");
+            // DEBUG_PRINT("newadd\n");
             currState->allTickCount = newState.allTickCount;
             currState->gyroZ = newState.gyroZ;
             currState->lastUpdateTick = newState.lastUpdateTick;

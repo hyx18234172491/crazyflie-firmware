@@ -235,7 +235,7 @@ typedef struct
     short velocityYInWorld[RANGING_MAX_Tr_UNIT];   // 2byte cm/s 在世界坐标系下的速度（不是机体坐标系）
     float gyroZ[RANGING_MAX_Tr_UNIT];              // 4 byte rad/s
     uint32_t allTick[RANGING_MAX_Tr_UNIT];         // 当前均值持续时间
-    int msgSequence[RANGING_MAX_Tr_UNIT];
+    uint16_t msgSequence[RANGING_MAX_Tr_UNIT];
     uint16_t positionZ;                            // 2 byte cm/s
     bool isNewAdd;                                 // 这个邻居是否是新加入的
     bool isNewAddUsed;

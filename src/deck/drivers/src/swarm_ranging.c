@@ -1763,7 +1763,7 @@ void getImuStateInfo(Ranging_Message_Header_t *rangingMessageHeader)
     rangingMessageHeader->locationInfo[i].velocityYInWorld = (short)(imuStateList->imuStateList[curr].velocityYInWorld);
     rangingMessageHeader->locationInfo[i].gyroZ = imuStateList->imuStateList[curr].gyroZ;
     curr = (curr - 1 + IMU_STATE_LIST_LENGTH) % IMU_STATE_LIST_LENGTH;
-    DEBUG_PRINT("vx:%d\n",rangingMessageHeader->locationInfo[i].velocityXInWorld);
+    // DEBUG_PRINT("vx:%d\n",rangingMessageHeader->locationInfo[i].velocityXInWorld);
   }
 
   xSemaphoreGive(imuStateList->mu);

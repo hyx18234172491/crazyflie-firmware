@@ -179,7 +179,7 @@ void relativeLocoTask(void *arg)
     systemWaitStart();
     while (1)
     {
-        vTaskDelay(10);
+        vTaskDelay(1);
         UWB_Address_t neighborAddress;
         if (xQueueReceive(queueDistUpdatedAddress, &neighborAddress, portMAX_DELAY))
         {
