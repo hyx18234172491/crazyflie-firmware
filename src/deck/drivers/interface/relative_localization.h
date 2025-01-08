@@ -72,6 +72,7 @@ void copyTargetList(float_t *dest, float_t *src);
 void relativeLocoInit(void);
 void relativeLocoTask(void *arg);
 void relativeEKF(int n, float vxi, float vyi, float ri, float hi, float vxj, float vyj, float rj, float hj, uint16_t dij, float dt);
+void relativeLocationPredict(int n, float vxi, float vyi, float ri, float vxj, float vyj, float rj, float dt);
 // bool relativeInfoRead(float *relaVarParam, float *neighbor_height, currentNeighborAddressInfo_t *dest);
 void relaVarInit(relaVariable_t *relaVar, uint16_t neighborAddress); // // Initialize EKF for relative localization
 #endif

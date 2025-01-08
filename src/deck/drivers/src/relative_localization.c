@@ -133,10 +133,23 @@ static inline float arm_sqrt(float32_t in)
 
 static void updateLocationTimerCallback(TimerHandle_t timer){
     // 遍历rangingTable中所有的成员进行位置更新
-    // Ranging_Table_Set_t * rangingTableSet = getGlobalRangingTableSet();
-    // for(int i=0; i < rangingTableSet->size; i++){
-    //     realtimeRelativeLocation[] = ;
-    // }
+    CurrentNeighborAddressInfo_t * currentNeighborAddressInfo = getGlobalCurrentNeighborAddressInfo();
+    xSemaphoreTake(currentNeighborAddressInfo->mu,portMAX_DELAY);
+    for(int i=0; i < currentNeighborAddressInfo->size; i++){
+        UWB_Address_t neighborAddress = currentNeighborAddressInfo[i].address;
+        uint32_t dt = xTaskGetTickCount() - realtimeRelativeLocation[neighborAddress].oldTimetick;
+        // 获取自己的
+        estimatorKalmanGetSwarmInfo(&vxi, &vyi, &ri, &hi);
+        vxi = vxi / 100;
+        vyi = vyi / 100;
+        // 获取邻居的
+        getLatestNeighborStateInfo(neighborAddress,&vxj,&vyj,&rj);
+        vxj /= 100;
+        vyj /= 100;
+        // 更新
+        relativeLocationPredict(neighborAddress,vxi,vyi,ri,vxj,vyj,rj,dt);
+    }
+    xSemaphoreGive(currentNeighborAddressInfo->mu);
 }
 
 static void initUpdateLocationTimer()
@@ -248,6 +261,20 @@ void relativeLocoTask(void *arg)
             }
         }
     }
+}
+
+void relativeLocationPredict(int n, float vxi, float vyi, float ri, float vxj, float vyj, float rj, float dt){
+    // some preprocessing
+    arm_matrix_instance_f32 Pm = {STATE_DIM_rl, STATE_DIM_rl, (float *)relaVar[n].P};
+    float cyaw = arm_cos_f32(realtimeRelativeLocation[n].S[STATE_rlYaw]);
+    float syaw = arm_sin_f32(realtimeRelativeLocation[n].S[STATE_rlYaw]);
+    float xij = realtimeRelativeLocation[n].S[STATE_rlX];
+    float yij = realtimeRelativeLocation[n].S[STATE_rlY];
+
+    // prediction
+    realtimeRelativeLocation[n].S[STATE_rlX] = xij + (cyaw * vxj - syaw * vyj - vxi + ri * yij) * dt;
+    realtimeRelativeLocation[n].S[STATE_rlY] = yij + (syaw * vxj + cyaw * vyj - vyi - ri * xij) * dt;
+    realtimeRelativeLocation[n].S[STATE_rlYaw] = realtimeRelativeLocation[n].S[STATE_rlYaw] + (rj - ri) * dt;
 }
 
 void relativeEKF(int n, float vxi, float vyi, float ri, float hi, float vxj, float vyj, float rj, float hj, uint16_t dij, float dt)

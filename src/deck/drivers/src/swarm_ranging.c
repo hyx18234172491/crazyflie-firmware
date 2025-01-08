@@ -93,7 +93,7 @@ static int8_t stage = ZERO_STAGE; // 编队控制阶段
 // static bool allIsTakeoff = true; // 测试时，设置为true
 static leaderStateInfo_t leaderStateInfo;
 static neighborStateInfo_t neighborStateInfo[RANGING_TABLE_SIZE_MAX + 1]; // 邻居的状态信息
-static currentNeighborAddressInfo_t currentNeighborAddressInfo;
+static CurrentNeighborAddressInfo_t currentNeighborAddressInfo;
 // Add by lcy
 inline static void txPeriodDelayset()
 {
@@ -673,6 +673,10 @@ bool neighborBitSetHas(Neighbor_Bit_Set_t *bitSet, UWB_Address_t neighborAddress
 Neighbor_Set_t *getGlobalNeighborSet()
 {
   return &neighborSet;
+}
+
+CurrentNeighborAddressInfo_t *getGlobalCurrentNeighborAddressInfo(){
+  return & currentNeighborAddressInfo;
 }
 
 void neighborSetInit(Neighbor_Set_t *set)
@@ -1662,7 +1666,7 @@ bool getNeighborStateInfo(uint16_t neighborAddress,
   }
 }
 
-bool getNewlyNeighborStateInfo(uint16_t neighborAddress,
+bool getLatestNeighborStateInfo(uint16_t neighborAddress,
                           float *vx,
                           float *vy,
                           float *gyroZ)

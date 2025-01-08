@@ -196,7 +196,7 @@ typedef struct
     address_t address[RANGING_TABLE_SIZE + 1];
     int size;
     SemaphoreHandle_t mu;
-} currentNeighborAddressInfo_t; /*当前正在和本无人机进行通信的邻居地址信息*/
+} CurrentNeighborAddressInfo_t; /*当前正在和本无人机进行通信的邻居地址信息*/
 
 typedef void (*RangingTableEventHandler)(Ranging_Table_t *);
 
@@ -336,13 +336,15 @@ void setNeighborStateInfo_isNewAdd(uint16_t neighborAddress, bool isNewAddNeighb
 bool getNeighborStateInfo(uint16_t neighborAddress, uint16_t* lastMsgSequence,uint16_t *distance, float *vx, float *vy, float *gyroZ, uint16_t *height, bool *isNewAddNeighbor);
 
 /*获取最新收到的邻居状态信息*/
-bool getNewlyNeighborStateInfo(uint16_t neighborAddress,
+bool getLatestNeighborStateInfo(uint16_t neighborAddress,
                           float *vx,
                           float *vy,
                           float *gyroZ);
 /*getOrSetKeepflying*/
 bool getOrSetKeepflying(uint16_t RobIDfromControl, bool keep_flying);
 
+/*维护当前正在集群中通信的邻居的地址信息*/
+CurrentNeighborAddressInfo_t *getGlobalCurrentNeighborAddressInfo();
 
 QueueHandle_t queueDistUpdatedAddress;
 
