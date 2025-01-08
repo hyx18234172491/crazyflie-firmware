@@ -1759,11 +1759,11 @@ void getImuStateInfo(Ranging_Message_Header_t *rangingMessageHeader)
   for (i = 0; i < n; i++)
   {
     rangingMessageHeader->locationInfo[i].allTick = imuStateList->imuStateList[curr].allTickCount;
-    rangingMessageHeader->locationInfo[i].velocityXInWorld = imuStateList->imuStateList[curr].velocityXInWorld;
-    rangingMessageHeader->locationInfo[i].velocityYInWorld = imuStateList->imuStateList[curr].velocityYInWorld;
+    rangingMessageHeader->locationInfo[i].velocityXInWorld = (short)(imuStateList->imuStateList[curr].velocityXInWorld);
+    rangingMessageHeader->locationInfo[i].velocityYInWorld = (short)(imuStateList->imuStateList[curr].velocityYInWorld);
     rangingMessageHeader->locationInfo[i].gyroZ = imuStateList->imuStateList[curr].gyroZ;
     curr = (curr - 1 + IMU_STATE_LIST_LENGTH) % IMU_STATE_LIST_LENGTH;
-    // DEBUG_PRINT("allTick:%d\n",rangingMessageHeader->locationInfo[i].allTick);
+    DEBUG_PRINT("vx:%d\n",rangingMessageHeader->locationInfo[i].velocityXInWorld);
   }
 
   xSemaphoreGive(imuStateList->mu);

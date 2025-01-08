@@ -9,7 +9,7 @@
 #include "semphr.h"
 
 #define IMU_STATE_LIST_LENGTH 10
-#define COLLECT_FREQUENCY_TICK 10
+#define COLLECT_FREQUENCY_TICK 100
 
 
 typedef struct ImuState_t
