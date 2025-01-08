@@ -130,12 +130,13 @@ static inline float arm_sqrt(float32_t in)
     return pOut;
 }
 
-
-static void updateLocationTimerCallback(TimerHandle_t timer){
+static void updateLocationTimerCallback(TimerHandle_t timer)
+{
     // 遍历rangingTable中所有的成员进行位置更新
-    CurrentNeighborAddressInfo_t * currentNeighborAddressInfo = getGlobalCurrentNeighborAddressInfo();
-    xSemaphoreTake(currentNeighborAddressInfo->mu,portMAX_DELAY);
-    for(int i=0; i < currentNeighborAddressInfo->size; i++){
+    CurrentNeighborAddressInfo_t *currentNeighborAddressInfo = getGlobalCurrentNeighborAddressInfo();
+    xSemaphoreTake(currentNeighborAddressInfo->mu, portMAX_DELAY);
+    for (int i = 0; i < currentNeighborAddressInfo->size; i++)
+    {
         UWB_Address_t neighborAddress = currentNeighborAddressInfo[i].address;
         uint32_t dt = xTaskGetTickCount() - realtimeRelativeLocation[neighborAddress].oldTimetick;
         // 获取自己的
@@ -143,11 +144,11 @@ static void updateLocationTimerCallback(TimerHandle_t timer){
         vxi = vxi / 100;
         vyi = vyi / 100;
         // 获取邻居的
-        getLatestNeighborStateInfo(neighborAddress,&vxj,&vyj,&rj);
+        getLatestNeighborStateInfo(neighborAddress, &vxj, &vyj, &rj);
         vxj /= 100;
         vyj /= 100;
         // 更新
-        relativeLocationPredict(neighborAddress,vxi,vyi,ri,vxj,vyj,rj,dt);
+        relativeLocationPredict(neighborAddress, vxi, vyi, ri, vxj, vyj, rj, dt);
     }
     xSemaphoreGive(currentNeighborAddressInfo->mu);
 }
@@ -157,15 +158,17 @@ static void initUpdateLocationTimer()
     static TimerHandle_t updateLocationTimer;
     DEBUG_PRINT("init updateLocationTimer\n");
     updateLocationTimer = xTimerCreate("imu_state_timer",
-                                               M2T(UPDATE_LOCATION_TICK),
-                                               pdTRUE,
-                                               (void *)0,
-                                               updateLocationTimerCallback);
+                                       M2T(UPDATE_LOCATION_TICK),
+                                       pdTRUE,
+                                       (void *)0,
+                                       updateLocationTimerCallback);
     if (updateLocationTimer != NULL)
     {
         xTimerStart(updateLocationTimer, M2T(0));
         DEBUG_PRINT("succ timer");
-    }else{
+    }
+    else
+    {
         DEBUG_PRINT("fail timer");
     }
 }
@@ -221,11 +224,11 @@ void relativeLocoTask(void *arg)
         UWB_Address_t neighborAddress;
         if (xQueueReceive(queueDistUpdatedAddress, &neighborAddress, portMAX_DELAY))
         {
-            DEBUG_PRINT("location address:%d\n",neighborAddress);
+            DEBUG_PRINT("location address:%d\n", neighborAddress);
             connectCount = 0;
             bool isNewAdd; // 邻居是否是新加入的
 
-            if (getNeighborStateInfo(neighborAddress,&relaVar[neighborAddress].oldMsgSequence, &dij, &vxj_t, &vyj_t, &rj, &hj_t, &isNewAdd))
+            if (getNeighborStateInfo(neighborAddress, &relaVar[neighborAddress].oldMsgSequence, &dij, &vxj_t, &vyj_t, &rj, &hj_t, &isNewAdd))
             {
                 DEBUG_PRINT("location seq:%d\n", relaVar[neighborAddress].oldMsgSequence);
                 vxj = (vxj_t + 0.0) / 100;
@@ -235,10 +238,7 @@ void relativeLocoTask(void *arg)
                 {
                     relaVarInit(relaVar, neighborAddress);
                     // 相对定位初始化完成，更新最新位置
-                    realtimeRelativeLocation[neighborAddress].S[STATE_rlX] = relaVar[neighborAddress].S[STATE_rlX];
-                    realtimeRelativeLocation[neighborAddress].S[STATE_rlY] = relaVar[neighborAddress].S[STATE_rlY];
-                    realtimeRelativeLocation[neighborAddress].S[STATE_rlYaw] = relaVar[neighborAddress].S[STATE_rlYaw];
-                    realtimeRelativeLocation[neighborAddress].oldTimetick = relaVar[neighborAddress].oldTimetick;
+                    updateRealtimeLocationFromRelaVar(neighborAddress);
                 }
                 else
                 {
@@ -252,18 +252,16 @@ void relativeLocoTask(void *arg)
                     relaVar[neighborAddress].height = hj;
                     relativeEKF(neighborAddress, vxi, vyi, ri, hi, vxj, vyj, rj, hj, dij, dtEKF);
                     // 相对定位完成，更新校正后的位置
-                    realtimeRelativeLocation[neighborAddress].S[STATE_rlX] = relaVar[neighborAddress].S[STATE_rlX];
-                    realtimeRelativeLocation[neighborAddress].S[STATE_rlY] = relaVar[neighborAddress].S[STATE_rlY];
-                    realtimeRelativeLocation[neighborAddress].S[STATE_rlYaw] = relaVar[neighborAddress].S[STATE_rlYaw];
-                    realtimeRelativeLocation[neighborAddress].oldTimetick = relaVar[neighborAddress].oldTimetick;
+                    updateRealtimeLocationFromRelaVar(neighborAddress);
                 }
-                //DEBUG_PRINT("addr:%d,X:%f,Y:%f\n",neighborAddress,relaVar[neighborAddress].S[STATE_rlX],relaVar[neighborAddress].S[STATE_rlY]);
+                // DEBUG_PRINT("addr:%d,X:%f,Y:%f\n",neighborAddress,relaVar[neighborAddress].S[STATE_rlX],relaVar[neighborAddress].S[STATE_rlY]);
             }
         }
     }
 }
 
-void relativeLocationPredict(int n, float vxi, float vyi, float ri, float vxj, float vyj, float rj, float dt){
+void relativeLocationPredict(int n, float vxi, float vyi, float ri, float vxj, float vyj, float rj, float dt)
+{
     // some preprocessing
     arm_matrix_instance_f32 Pm = {STATE_DIM_rl, STATE_DIM_rl, (float *)relaVar[n].P};
     float cyaw = arm_cos_f32(realtimeRelativeLocation[n].S[STATE_rlYaw]);
@@ -354,25 +352,14 @@ void relativeEKF(int n, float vxi, float vyi, float ri, float hi, float vxj, flo
     // DEBUG_PRINT("dis:%d\n", dij);
 }
 
-// bool relativeInfoRead(float *relaVarParam, float *neighbor_height)
-// {
-//     if (fullConnect)
-//     {
-//         for (int index = 0; index < currentNeighborAddressInfo.size; index++)
-//         {
-//             address_t neighborAddress = currentNeighborAddressInfo.address[index];
-//             *(relaVarParam + neighborAddress * STATE_DIM_rl + 0) = relaVar[neighborAddress].S[STATE_rlX];
-//             *(relaVarParam + neighborAddress * STATE_DIM_rl + 1) = relaVar[neighborAddress].S[STATE_rlY];
-//             *(relaVarParam + neighborAddress * STATE_DIM_rl + 2) = relaVar[neighborAddress].S[STATE_rlYaw];
-//             *(neighbor_height + neighborAddress) = relaVar[neighborAddress].height;
-//         }
-//         return true;
-//     }
-//     else
-//     {
-//         return false;
-//     }
-// }
+void updateRealtimeLocationFromRelaVar(UWB_Address_t neighborAddress)
+{
+    realtimeRelativeLocation[neighborAddress].S[STATE_rlX] = relaVar[neighborAddress].S[STATE_rlX];
+    realtimeRelativeLocation[neighborAddress].S[STATE_rlY] = relaVar[neighborAddress].S[STATE_rlY];
+    realtimeRelativeLocation[neighborAddress].S[STATE_rlYaw] = relaVar[neighborAddress].S[STATE_rlYaw];
+    realtimeRelativeLocation[neighborAddress].oldTimetick = relaVar[neighborAddress].oldTimetick;
+}
+
 void copyTargetList(float_t *dest, float_t *src)
 {
     for (int i = 0; i < ARRAY_LENGTH; i++)

@@ -75,4 +75,5 @@ void relativeEKF(int n, float vxi, float vyi, float ri, float hi, float vxj, flo
 void relativeLocationPredict(int n, float vxi, float vyi, float ri, float vxj, float vyj, float rj, float dt);
 // bool relativeInfoRead(float *relaVarParam, float *neighbor_height, currentNeighborAddressInfo_t *dest);
 void relaVarInit(relaVariable_t *relaVar, uint16_t neighborAddress); // // Initialize EKF for relative localization
+void updateRealtimeLocationFromRelaVar(UWB_Address_t neighborAddress);
 #endif
