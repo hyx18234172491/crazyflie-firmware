@@ -424,6 +424,10 @@ void copyTargetList(float_t *dest, float_t *src)
     }
 }
 
+Realtime_Relative_Location_t * getGlobalRealtimeLocation(){
+    return realtimeRelativeLocation;
+}
+
 // LOG_GROUP_START(relative_pos)
 // LOG_ADD(LOG_FLOAT, rlX0, &relaVar[0].S[STATE_rlX])
 // LOG_ADD(LOG_FLOAT, rlY0, &relaVar[0].S[STATE_rlY])

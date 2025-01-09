@@ -82,4 +82,5 @@ void initRealtimeLocation(Realtime_Relative_Location_t *realtimeRelativeLocation
 void updateRealtimeLocationFromRelaVar(UWB_Address_t neighborAddress);
 void updateRealtimeLocationImuInfo(UWB_Address_t neighborAddress,float velocityXInWorld,float velocityYInWorld,float gyroZ,float posiZ,uint32_t updatedTick);
 void getCurrImuInfo(UWB_Address_t neighborAddress,float *vxi,float *vyi, float *ri, float *hi);
+Realtime_Relative_Location_t * getGlobalRealtimeLocation();
 #endif
