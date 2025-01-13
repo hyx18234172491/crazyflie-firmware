@@ -77,7 +77,8 @@
     "cstdint": "cpp",
     "imu_state.h": "c",
     "freertosconfig.h": "c",
-    "sentinel.h": "c"
+    "sentinel.h": "c",
+    "usb.h": "c"
   },
   "C_Cpp_Runner.cCompilerPath": "clang",
   "C_Cpp_Runner.cppCompilerPath": "clang++",

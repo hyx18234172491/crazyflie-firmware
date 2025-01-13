@@ -84,5 +84,6 @@ typedef struct Sentinel_Node_t
 */ 
 
 void initNeighborStateTableSet(Neighbor_State_Table_Set_t *set);
-
+void neighborStateTableSetUpdate(Neighbor_State_Table_Set_t *set, UWB_Address_t neighborAddress, uint32_t tick);
+void neighborStateTableSetRemove(Neighbor_State_Table_Set_t *set, UWB_Address_t neighborAddress);
 #endif
