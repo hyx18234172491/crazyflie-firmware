@@ -1,22 +1,25 @@
 #ifndef SENTINEL_H
 #define SENTINEL_H
 #include "adhocdeck.h"
+#include "semphr.h"
 
 /* Queue Constants */
-#define SNIFFER_SWARMRANGING_RX_QUEUE_SIZE 10
+#define SNIFFER_SWARMRANGING_RX_QUEUE_SIZE 10   // 这个是接收rangingMessage的消息队列
 #define SNIFFER_SWARMRANGING_RX_QUEUE_ITEM_SIZE sizeof(UWB_Packet_With_Timestamp_t)
 
-#define DOWN_AFTER_MILLISECOND 500
+#define SENTINEl_RX_QUEUE_SIZE 5 // 这个是用于sentinel之间进去通信的队列
 
+#define DOWN_AFTER_MILLISECOND 500
+#define SNIFFER_SWARMRANGING_SIZE_MAX 25
 
 typedef enum {
   IS_MASTER_DOWN_BY_ADDRESS,               // 看看当前master是否已经宕机了
   IS_MASTER_DOWN_BY_ADDRESS_REPLY,         // 看看当前master是否已经宕机了的回复
-
 } SENTINEL_COMMAND_TYPE;
 
 typedef struct 
 {
+    SENTINEL_COMMAND_TYPE type;
     UWB_Address_t address;  // 被sentinel判断为主观下线的master的地址
     uint16_t currentEpoch; // 当前的配置epoch,用于选举leader
     UWB_Address_t runAddress;     // 发消息者的地址，或者空
@@ -24,6 +27,7 @@ typedef struct
 
 typedef struct 
 {
+    SENTINEL_COMMAND_TYPE type;
     uint8_t downState;      // 返回哨兵对master服务器的检查结果, 1代表master下线，0代表master未下线
     UWB_Address_t leaderRunAddress;
     uint16_t leaderEpoch;
@@ -31,25 +35,30 @@ typedef struct
 
 typedef struct Sentinel_Message_t
 {
-    UWB_Address_t srcAddress;
-    SENTINEL_COMMAND_TYPE commandType;
-    UWB_Address_t runId;
 
 }Sentinel_Message_t;
 
+typedef struct {
+  int size;
+  SemaphoreHandle_t mu;
+  uint32_t lastRecvNeighborTick[SNIFFER_SWARMRANGING_SIZE_MAX];
+  uint8_t isValid[SNIFFER_SWARMRANGING_SIZE_MAX];   // 表示是否有效，从而可以判断是否新旧节点
+  int16_t prev[SNIFFER_SWARMRANGING_SIZE_MAX];      // 表示向前指针
+  int16_t next[SNIFFER_SWARMRANGING_SIZE_MAX];      // 表示向后指针
+  int16_t head;
+} Neighbor_State_Table_Set_t;
 
-typedef struct Sentinel_Message_t
+// 既要实现高效的插入，还要有高效的删除
+
+// 维护一个数据结构，表示当前的集群的状态
+typedef struct Sentinel_Node_t
 {
-    UWB_Address_t currLeader;
-    uint16_t currentTerm;
-
-    UWB_Address_t voteFor;
-    
+    UWB_Address_t currLeader;   // 当前leader
+    uint16_t currentTerm;   // 当前任期
+    UWB_Address_t voteFor;  // 给谁投票了
+    Neighbor_State_Table_Set_t neighborStateSet;    // 当前邻居的状态集合
 }Sentinel_Node_t;
 
-
-
-#define SENTINE_RX_QUEUE_SIZE 5
 
 
 // 哨兵节点的地址都是事先配置好的
@@ -74,5 +83,6 @@ typedef struct Sentinel_Message_t
 
 */ 
 
+void initNeighborStateTableSet(Neighbor_State_Table_Set_t *set);
 
 #endif
