@@ -19,7 +19,7 @@
 
 static uint16_t MY_UWB_ADDRESS;
 static bool isInit;
-#define UPDATE_LOCATION_TICK 10
+#define UPDATE_LOCATION_TICK 50
 
 static float Qv = 0.2f;         // velocity deviation,初始值为1.0    -0.25
 static float Qr = 0.1f;         // yaw rate deviation
@@ -49,8 +49,6 @@ static float HTd[STATE_DIM_rl * 1];
 static arm_matrix_instance_f32 HTm = {STATE_DIM_rl, 1, HTd};
 static float PHTd[STATE_DIM_rl * 1];
 static arm_matrix_instance_f32 PHTm = {STATE_DIM_rl, 1, PHTd};
-
-static uint32_t connectCount = 0; // watchdog for detecting the connection
 
 static float vxj_t, vyj_t;
 static float vxi_t, vyi_t;
@@ -232,7 +230,6 @@ void relativeLocoTask(void *arg)
         if (xQueueReceive(queueDistUpdatedAddress, &neighborAddress, portMAX_DELAY))
         {
             // DEBUG_PRINT("location address:%d\n", neighborAddress);
-            connectCount = 0;
             bool isNewAdd; // 邻居是否是新加入的
 
             if (getNeighborStateInfo(neighborAddress, &relaVar[neighborAddress].oldMsgSequence, &dij, &vxj_t, &vyj_t, &rj, &hj_t, &isNewAdd))
@@ -246,11 +243,11 @@ void relativeLocoTask(void *arg)
                     initRelaVar(relaVar, neighborAddress);
                     // 相对定位初始化完成，更新最新位置
                     updateRealtimeLocationFromRelaVar(neighborAddress);
-                    initRealtimeLocation(realtimeRelativeLocation,neighborAddress);
+                    initRealtimeLocation(realtimeRelativeLocation, neighborAddress);
                 }
                 else
                 {
-                    getCurrImuInfo(neighborAddress,&vxi_t, &vyi_t, &ri, &hi_t); // 当前无人机的信息
+                    getCurrImuInfo(neighborAddress, &vxi_t, &vyi_t, &ri, &hi_t); // 当前无人机的信息
                     // DEBUG_PRINT("vxi:%f\n",vxi_t);
                     // DEBUG_PRINT("vyi:%f\n",vyi_t);
                     vxi = (vxi_t + 0.0) / 100;
@@ -261,7 +258,7 @@ void relativeLocoTask(void *arg)
                     relaVar[neighborAddress].oldTimetick = osTick;
                     relaVar[neighborAddress].height = hj;
                     // 又要开始新的一轮统计了
-                    initRealtimeLocation(realtimeRelativeLocation,neighborAddress);
+                    initRealtimeLocation(realtimeRelativeLocation, neighborAddress);
                     relativeEKF(neighborAddress, vxi, vyi, ri, hi, vxj, vyj, rj, hj, dij, dtEKF);
                     // 相对定位完成，更新校正后的位置
                     updateRealtimeLocationFromRelaVar(neighborAddress);
@@ -285,6 +282,8 @@ void relativeLocationPredict(int n, float vxi, float vyi, float ri, float vxj, f
     realtimeRelativeLocation[n].S[STATE_rlX] = xij + (cyaw * vxj - syaw * vyj - vxi + ri * yij) * dt;
     realtimeRelativeLocation[n].S[STATE_rlY] = yij + (syaw * vxj + cyaw * vyj - vyi - ri * xij) * dt;
     realtimeRelativeLocation[n].S[STATE_rlYaw] = realtimeRelativeLocation[n].S[STATE_rlYaw] + (rj - ri) * dt;
+
+    DEBUG_PRINT("X:%d,Y:%d\n",realtimeRelativeLocation[n].S[STATE_rlX],realtimeRelativeLocation[n].S[STATE_rlY]);
 }
 
 void relativeEKF(int n, float vxi, float vyi, float ri, float hi, float vxj, float vyj, float rj, float hj, uint16_t dij, float dt)
@@ -370,6 +369,7 @@ void updateRealtimeLocationFromRelaVar(UWB_Address_t neighborAddress)
     realtimeRelativeLocation[neighborAddress].S[STATE_rlY] = relaVar[neighborAddress].S[STATE_rlY];
     realtimeRelativeLocation[neighborAddress].S[STATE_rlYaw] = relaVar[neighborAddress].S[STATE_rlYaw];
     realtimeRelativeLocation[neighborAddress].oldTimetick = relaVar[neighborAddress].oldTimetick;
+    DEBUG_PRINT("update-X:%d,Y:%d\n",realtimeRelativeLocation[neighborAddress].S[STATE_rlX],realtimeRelativeLocation[neighborAddress].S[STATE_rlY]);
 }
 
 void updateRealtimeLocationImuInfo(UWB_Address_t neighborAddress, float velocityXInWorld, float velocityYInWorld, float gyroZ, float posiZ, uint32_t updatedTick)
@@ -422,7 +422,8 @@ void copyTargetList(float_t *dest, float_t *src)
     }
 }
 
-Realtime_Relative_Location_t * getGlobalRealtimeLocation(){
+Realtime_Relative_Location_t *getGlobalRealtimeLocation()
+{
     return realtimeRelativeLocation;
 }
 
