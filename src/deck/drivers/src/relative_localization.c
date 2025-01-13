@@ -50,7 +50,6 @@ static arm_matrix_instance_f32 HTm = {STATE_DIM_rl, 1, HTd};
 static float PHTd[STATE_DIM_rl * 1];
 static arm_matrix_instance_f32 PHTm = {STATE_DIM_rl, 1, PHTd};
 
-static bool fullConnect = false;  // a flag for control (fly or not)
 static uint32_t connectCount = 0; // watchdog for detecting the connection
 
 static float vxj_t, vyj_t;
@@ -220,7 +219,6 @@ void initRelaVar(relaVariable_t *relaVar, uint16_t neighborAddress)
     relaVar[neighborAddress].oldTimetick = xTaskGetTickCount();
     relaVar[neighborAddress].oldMsgSequence = 0;
 
-    fullConnect = true;
     // DEBUG_PRINT("%f\n", relaVar[neighborAddress].S[STATE_rlX]);
 }
 
@@ -233,13 +231,13 @@ void relativeLocoTask(void *arg)
         UWB_Address_t neighborAddress;
         if (xQueueReceive(queueDistUpdatedAddress, &neighborAddress, portMAX_DELAY))
         {
-            DEBUG_PRINT("location address:%d\n", neighborAddress);
+            // DEBUG_PRINT("location address:%d\n", neighborAddress);
             connectCount = 0;
             bool isNewAdd; // 邻居是否是新加入的
 
             if (getNeighborStateInfo(neighborAddress, &relaVar[neighborAddress].oldMsgSequence, &dij, &vxj_t, &vyj_t, &rj, &hj_t, &isNewAdd))
             {
-                DEBUG_PRINT("location seq:%d\n", relaVar[neighborAddress].oldMsgSequence);
+                // DEBUG_PRINT("location seq:%d\n", relaVar[neighborAddress].oldMsgSequence);
                 vxj = (vxj_t + 0.0) / 100;
                 vyj = (vyj_t + 0.0) / 100;
                 hj = (hj_t + 0.0) / 100;
@@ -253,8 +251,8 @@ void relativeLocoTask(void *arg)
                 else
                 {
                     getCurrImuInfo(neighborAddress,&vxi_t, &vyi_t, &ri, &hi_t); // 当前无人机的信息
-                    DEBUG_PRINT("vxi:%f\n",vxi_t);
-                    DEBUG_PRINT("vyi:%f\n",vyi_t);
+                    // DEBUG_PRINT("vxi:%f\n",vxi_t);
+                    // DEBUG_PRINT("vyi:%f\n",vyi_t);
                     vxi = (vxi_t + 0.0) / 100;
                     vyi = (vyi_t + 0.0) / 100;
                     hi = (hi_t + 0.0) / 100;
