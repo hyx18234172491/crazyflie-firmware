@@ -8,7 +8,7 @@
 #include "adhocdeck.h"
 #include "usb.h"
 #include "debug.h"
-#include "sniffer.h"
+#include "uwb_print.h"
 
 static TaskHandle_t uwbPrintTaskHandle = 0;
 static QueueHandle_t rxQueue;
@@ -70,13 +70,13 @@ void uwbPrintInit() {
   rxQueue = xQueueCreate(SNIFFER_RX_QUEUE_SIZE, SNIFFER_RX_QUEUE_ITEM_SIZE);
 
   UWB_Message_Listener_t listener;
-  listener.type = SNIFFER;
+  listener.type = PRINT;
   listener.rxQueue = NULL;
   listener.rxCb = uwbPrintRxCallback;
   listener.txCb = NULL;
   uwbRegisterListener(&listener);
 
-  xTaskCreate(uwbPrintTask, "ADHOC_DECK_SNIFFER_TASK_NAME", 4 * configMINIMAL_STACK_SIZE, NULL,
+  xTaskCreate(uwbPrintTask, "ADHOC_DECK_SNIFFER_TASK_NAME", 5 * configMINIMAL_STACK_SIZE, NULL,
               ADHOC_DECK_TASK_PRI, &uwbPrintTaskHandle);
 }
 

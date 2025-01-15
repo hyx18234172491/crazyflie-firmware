@@ -115,8 +115,12 @@ static void rxCallback(dwt_cb_data_t *cbData)
     return;
   }
 
+
 #ifdef ENABLE_SNIFFER
-  listeners[SNIFFER].rxCb(packet);
+// #ifdef ENABLE_UWB_PRINT
+  // if(msgType==PRINT){
+    listeners[PRINT].rxCb(packet);
+  // }
 #else
   if (listeners[msgType].rxCb)
   {
