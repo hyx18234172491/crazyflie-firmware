@@ -452,6 +452,9 @@ static void uwbTaskInit()
 #ifdef ENABLE_SNIFFER
   snifferInit(); // TODO ugly code
 #endif
+#ifdef ENABLE_UWB_PRINT
+  uwbPrintInit();
+#endif
 }
 /*********** Deck driver initialization ***************/
 static void dwm3000Init(DeckInfo *info)

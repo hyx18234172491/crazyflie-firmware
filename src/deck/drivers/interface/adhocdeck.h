@@ -10,10 +10,11 @@
 
 /* Function Switch */
 #define ENABLE_PHR_EXT_MODE
-#define ENABLE_RANGING
+// #define ENABLE_RANGING
 //#define ENABLE_FLOODING
 //#define ENABLE_ROUTING
 // #define ENABLE_SNIFFER
+#define ENABLE_UWB_PRINT
 
 #define ENABLE_RX_DBL_BUFF
 
@@ -77,6 +78,7 @@ typedef enum {
   FLOODING = 1,
   DATA = 2,
   SNIFFER = 3,
+  PRINT = 4,  
   MESSAGE_TYPE_COUNT, /* only used for counting message types. */
 } MESSAGE_TYPE;
 
