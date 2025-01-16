@@ -343,7 +343,7 @@ int uwbPutchar(int ch)
   {
     // 发送
     uwbPackets[uwbPacketsWriteIndex].header.type = PRINT;
-    uwbSendPacketBlock(&uwbPackets[uwbPacketsWriteIndex]);
+    // uwbSendPacketBlock(&uwbPackets[uwbPacketsWriteIndex]);
     // 初始化下一个
     uwbPacketsWriteIndex = (uwbPacketsWriteIndex + 1) % UWB_PACKET_NUM;
     uwbPackets[uwbPacketsWriteIndex].header.length = sizeof(Packet_Header_t);
@@ -363,12 +363,13 @@ static void debugPrintTimerCallback(TimerHandle_t timer){
     for(int i = 0; i < UWB_PACKET_NUM; i++){
         if(uwbPacketsIsSend[uwbPacketsReadIndex] == 0){
             uwbSendPacketBlock(&uwbPackets[uwbPacketsReadIndex]);
+            uwbPacketsIsSend[uwbPacketsReadIndex]=1;
             if(uwbPacketsReadIndex == uwbPacketsWriteIndex){
                 // 重置下一个块
                 uwbPacketsWriteIndex = (uwbPacketsWriteIndex + 1) % UWB_PACKET_NUM;
                 uwbPackets[uwbPacketsWriteIndex].header.length = sizeof(Packet_Header_t);
+                len = 0;
             }
-            uwbPacketsIsSend[uwbPacketsReadIndex]=1;
             uwbPacketsReadIndex = (uwbPacketsReadIndex + 1) % UWB_PACKET_NUM;
             uwbPacketsSize-=1;
         }else{
@@ -406,5 +407,5 @@ void initUWBDebugPrint(void) {
     uwbPacketsReadIndex = 0;
     uwbPacketsSize = 0;
     uwbPacketsMu = xSemaphoreCreateMutex();
-    // initDebugPrintTimer();
+    initDebugPrintTimer();
 }
