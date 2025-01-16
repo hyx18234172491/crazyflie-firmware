@@ -18,7 +18,12 @@ static TaskHandle_t uwbPrintTaskHandle = 0;
 static QueueHandle_t rxQueue;
 
 static bool SendingisPending = 0;
-static UWB_Packet_t uwbPacket={.header.type=PRINT};
+#define UWB_PACKET_NUM 3
+int uwb_debug_print_init = 0;
+// 静态初始化数组，每个元素赋默认值
+static UWB_Packet_t uwbPackets[UWB_PACKET_NUM] = {};
+static int uwbPacketsWriteIndex = 0;
+
 int len = 0;
 static const char digit[] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 
                              'A', 'B', 'C', 'D', 'E', 'F'};
@@ -320,18 +325,26 @@ int uwbPutchar(int ch)
   {
     if(len < PAYLOAD_SIZE)
     {
-      uwbPacket.payload[len] = (uint8_t)ch;
+      uwbPackets[uwbPacketsWriteIndex].payload[len] = (uint8_t)ch;
       len++;
     }
 
     if(ch == '\n' || len >= PAYLOAD_SIZE)
     {
       SendingisPending = 1;
-      uwbPacket.header.length = sizeof(Packet_Header_t) + len;
-      uwbSendPacketBlock(&uwbPacket);
+      uwbPackets[uwbPacketsWriteIndex].header.length = sizeof(Packet_Header_t) + len;
+      uwbSendPacketBlock(&uwbPackets[uwbPacketsWriteIndex]);
+      uwbPacketsWriteIndex = (uwbPacketsWriteIndex + 1) % UWB_PACKET_NUM;
       SendingisPending = 0;
       len = 0;
     }
   }
   return ch;
+}
+
+void initUWBDebugPrint(void) {
+    for (int i = 0; i < UWB_PACKET_NUM; i++) {
+        uwbPackets[i].header.type = PRINT;  // 设置 header.type 字段为 PRINT
+    }
+    uwbPacketsWriteIndex = 0;
 }
