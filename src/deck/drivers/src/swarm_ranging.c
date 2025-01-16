@@ -291,6 +291,8 @@ static void uwbRangingTxTask(void *parameters)
     // uwbSendPacketBlock(&txPacketCache);
     UWB_DEBUG_PRINTF("123\n");
     UWB_DEBUG_PRINTF("def\n");
+    UWB_DEBUG_PRINTF("oqc\n");
+    UWB_DEBUG_PRINTF("aaaaaaaa");
     /*--13添加--*/
     latest_txTime = xTaskGetTickCount();
     getCurrentNeighborAddressInfo_t(&currentNeighborAddressInfo);

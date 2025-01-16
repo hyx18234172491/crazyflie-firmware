@@ -330,31 +330,26 @@ int uwbprintf(putc_t putcf, const char * fmt, ...)
 int uwbPutchar(int ch)
 {
   // return ch;
-  // xSemaphoreTake(uwbPacketsMu, portMAX_DELAY);
-  if(!SendingisPending)
+  xSemaphoreTake(uwbPacketsMu, portMAX_DELAY);
+  if(len < PAYLOAD_SIZE)
   {
-    if(len < PAYLOAD_SIZE)
-    {
-      uwbPackets[uwbPacketsWriteIndex].payload[len] = (uint8_t)ch;
-      uwbPackets[uwbPacketsWriteIndex].header.length += 1;
-      uwbPacketsIsSend[uwbPacketsWriteIndex] = 0;
-      len++;
-    }
-    if(len >= PAYLOAD_SIZE-100)
-    {
-      SendingisPending = 1;
-      // 发送
-      uwbPackets[uwbPacketsWriteIndex].header.type = PRINT;
-      uwbSendPacketBlock(&uwbPackets[uwbPacketsWriteIndex]);
-      uwbPacketsIsSend[uwbPacketsWriteIndex] = 1; // 标记已发送
-      // 重置下一个块
-      uwbPacketsWriteIndex = (uwbPacketsWriteIndex + 1) % UWB_PACKET_NUM;
-      uwbPackets[uwbPacketsWriteIndex].header.length = sizeof(Packet_Header_t);
-      SendingisPending = 0;
-      len = 0;
-    }
+    uwbPackets[uwbPacketsWriteIndex].payload[len] = (uint8_t)ch;
+    uwbPackets[uwbPacketsWriteIndex].header.length += 1;
+    uwbPacketsIsSend[uwbPacketsWriteIndex] = 0;
+    len++;
   }
-  // xSemaphoreGive(uwbPacketsMu);
+  if(ch == '\n' || len >= PAYLOAD_SIZE-100)
+  {
+    // 发送
+    uwbPackets[uwbPacketsWriteIndex].header.type = PRINT;
+    uwbSendPacketBlock(&uwbPackets[uwbPacketsWriteIndex]);
+    // 初始化下一个
+    uwbPacketsWriteIndex = (uwbPacketsWriteIndex + 1) % UWB_PACKET_NUM;
+    uwbPackets[uwbPacketsWriteIndex].header.length = sizeof(Packet_Header_t);
+    uwbPacketsSize+=1;
+    len = 0;
+  }
+  xSemaphoreGive(uwbPacketsMu);
   return ch;
 }
 static void debugPrintTimerCallback(TimerHandle_t timer){
@@ -362,15 +357,24 @@ static void debugPrintTimerCallback(TimerHandle_t timer){
   // return 0;
   
   if(uwbPacketsSize > 0 || len != 0){
-    // xSemaphoreTake(uwbPacketsMu, portMAX_DELAY);
     // 这里size是已经封装好的包，如果没有封装好，则应该为+1
+    xSemaphoreTake(uwbPacketsMu, portMAX_DELAY);
     for(int i = 0; i < UWB_PACKET_NUM; i++){
-      if(uwbPacketsIsSend[i]==0){
-        uwbSendPacketBlock(&uwbPackets[i]);
-        uwbPacketsIsSend[i]=1;
-      }
+        if(uwbPacketsIsSend[uwbPacketsReadIndex] == 0){
+            uwbSendPacketBlock(&uwbPackets[uwbPacketsReadIndex]);
+            if(uwbPacketsReadIndex == uwbPacketsWriteIndex){
+                // 重置下一个块
+                uwbPacketsWriteIndex = (uwbPacketsWriteIndex + 1) % UWB_PACKET_NUM;
+                uwbPackets[uwbPacketsWriteIndex].header.length = sizeof(Packet_Header_t);
+            }
+            uwbPacketsIsSend[uwbPacketsReadIndex]=1;
+            uwbPacketsReadIndex = (uwbPacketsReadIndex + 1) % UWB_PACKET_NUM;
+            uwbPacketsSize-=1;
+        }else{
+            break;
+        }
     }
-    // xSemaphoreGive(uwbPacketsMu);
+    xSemaphoreGive(uwbPacketsMu);
   }
 }
 
@@ -401,5 +405,5 @@ void initUWBDebugPrint(void) {
     uwbPacketsReadIndex = 0;
     uwbPacketsSize = 0;
     uwbPacketsMu = xSemaphoreCreateMutex();
-    initDebugPrintTimer();
+    // initDebugPrintTimer();
 }
