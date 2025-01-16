@@ -289,7 +289,8 @@ static void uwbRangingTxTask(void *parameters)
     int msgLen = generateRangingMessage((Ranging_Message_t *)&txPacketCache.payload);
     txPacketCache.header.length = sizeof(Packet_Header_t) + msgLen;
     // uwbSendPacketBlock(&txPacketCache);
-    UWB_DEBUG_PRINTF("abc\n");
+    UWB_DEBUG_PRINTF("123\n");
+    UWB_DEBUG_PRINTF("def\n");
     /*--13添加--*/
     latest_txTime = xTaskGetTickCount();
     getCurrentNeighborAddressInfo_t(&currentNeighborAddressInfo);

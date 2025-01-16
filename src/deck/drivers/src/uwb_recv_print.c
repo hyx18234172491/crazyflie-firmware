@@ -332,6 +332,7 @@ int uwbPutchar(int ch)
     if(ch == '\n' || len >= PAYLOAD_SIZE)
     {
       SendingisPending = 1;
+      uwbPackets[uwbPacketsWriteIndex].header.type = PRINT;
       uwbPackets[uwbPacketsWriteIndex].header.length = sizeof(Packet_Header_t) + len;
       uwbSendPacketBlock(&uwbPackets[uwbPacketsWriteIndex]);
       uwbPacketsWriteIndex = (uwbPacketsWriteIndex + 1) % UWB_PACKET_NUM;
