@@ -343,6 +343,7 @@ static void uwbRangingRxTask(void *parameters)
 void rangingInit()
 {
   MY_UWB_ADDRESS = getUWBAddress();
+  initUWBDebugPrint();
   DEBUG_PRINT("MY_UWB_ADDRESS = %d \n", MY_UWB_ADDRESS);
   /*--12添加--*/
   initNeighborStateInfoAndMedian_data();

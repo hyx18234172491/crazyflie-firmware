@@ -8,7 +8,9 @@
 #include "adhocdeck.h"
 #include "usb.h"
 #include "debug.h"
+#include "timers.h"
 #include "uwb_recv_print.h"
+#include "semphr.h"
 #include <stdint.h> 
 #include <stdbool.h>
 #include <stdarg.h>
@@ -18,15 +20,21 @@ static TaskHandle_t uwbPrintTaskHandle = 0;
 static QueueHandle_t rxQueue;
 
 static bool SendingisPending = 0;
-#define UWB_PACKET_NUM 3
+#define UWB_PACKET_NUM 2
 int uwb_debug_print_init = 0;
 // 静态初始化数组，每个元素赋默认值
 static UWB_Packet_t uwbPackets[UWB_PACKET_NUM] = {};
+static uint8_t uwbPacketsIsSend[UWB_PACKET_NUM] = {};
 static int uwbPacketsWriteIndex = 0;
+static int uwbPacketsReadIndex = 0;
+static int uwbPacketsSize = 0;
+SemaphoreHandle_t uwbPacketsMu;
 
 int len = 0;
 static const char digit[] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 
                              'A', 'B', 'C', 'D', 'E', 'F'};
+
+#define DEBUG_PRINT_FREQUENCY_TICK 50
 
 static int getIntLen (long int value)
 {
@@ -321,31 +329,77 @@ int uwbprintf(putc_t putcf, const char * fmt, ...)
 
 int uwbPutchar(int ch)
 {
+  // return ch;
+  // xSemaphoreTake(uwbPacketsMu, portMAX_DELAY);
   if(!SendingisPending)
   {
     if(len < PAYLOAD_SIZE)
     {
       uwbPackets[uwbPacketsWriteIndex].payload[len] = (uint8_t)ch;
+      uwbPackets[uwbPacketsWriteIndex].header.length += 1;
+      uwbPacketsIsSend[uwbPacketsWriteIndex] = 0;
       len++;
     }
-
-    if(ch == '\n' || len >= PAYLOAD_SIZE)
+    if(len >= PAYLOAD_SIZE-100)
     {
       SendingisPending = 1;
+      // 发送
       uwbPackets[uwbPacketsWriteIndex].header.type = PRINT;
-      uwbPackets[uwbPacketsWriteIndex].header.length = sizeof(Packet_Header_t) + len;
       uwbSendPacketBlock(&uwbPackets[uwbPacketsWriteIndex]);
+      uwbPacketsIsSend[uwbPacketsWriteIndex] = 1; // 标记已发送
+      // 重置下一个块
       uwbPacketsWriteIndex = (uwbPacketsWriteIndex + 1) % UWB_PACKET_NUM;
+      uwbPackets[uwbPacketsWriteIndex].header.length = sizeof(Packet_Header_t);
       SendingisPending = 0;
       len = 0;
     }
   }
+  // xSemaphoreGive(uwbPacketsMu);
   return ch;
+}
+static void debugPrintTimerCallback(TimerHandle_t timer){
+  // uwbSendPacketBlock(&uwbPackets[0]);
+  // return 0;
+  
+  if(uwbPacketsSize > 0 || len != 0){
+    // xSemaphoreTake(uwbPacketsMu, portMAX_DELAY);
+    // 这里size是已经封装好的包，如果没有封装好，则应该为+1
+    for(int i = 0; i < UWB_PACKET_NUM; i++){
+      if(uwbPacketsIsSend[i]==0){
+        uwbSendPacketBlock(&uwbPackets[i]);
+        uwbPacketsIsSend[i]=1;
+      }
+    }
+    // xSemaphoreGive(uwbPacketsMu);
+  }
+}
+
+static void initDebugPrintTimer()
+{
+    static TimerHandle_t debugPrintTimer;
+    debugPrintTimer = xTimerCreate("debug_print_timer",
+                                               M2T(DEBUG_PRINT_FREQUENCY_TICK),
+                                               pdTRUE,
+                                               (void *)0,
+                                               debugPrintTimerCallback);
+    if (debugPrintTimer != NULL)
+    {
+        xTimerStart(debugPrintTimer, M2T(0));
+    }else{
+
+    }
 }
 
 void initUWBDebugPrint(void) {
     for (int i = 0; i < UWB_PACKET_NUM; i++) {
         uwbPackets[i].header.type = PRINT;  // 设置 header.type 字段为 PRINT
+        uwbPackets[i].header.length = sizeof(Packet_Header_t);
+        uwbPacketsIsSend[i] = 1;
     }
     uwbPacketsWriteIndex = 0;
+    uwbPacketsWriteIndex = 0;
+    uwbPacketsReadIndex = 0;
+    uwbPacketsSize = 0;
+    uwbPacketsMu = xSemaphoreCreateMutex();
+    initDebugPrintTimer();
 }
