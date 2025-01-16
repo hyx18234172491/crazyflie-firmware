@@ -117,11 +117,11 @@ static void rxCallback(dwt_cb_data_t *cbData)
   }
 
 
-#ifdef ENABLE_SNIFFER
-// #ifdef ENABLE_UWB_PRINT
-  // if(msgType==PRINT){
+// #ifdef ENABLE_SNIFFER
+#ifdef ENABLE_UWB_PRINT
+  if(msgType==PRINT){
     listeners[PRINT].rxCb(packet);
-  // }
+  }
 #else
   DEBUG_PRINT("rxcallback\n");
   if (listeners[msgType].rxCb)

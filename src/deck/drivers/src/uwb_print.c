@@ -79,7 +79,7 @@ void uwbPrintInit() {
   listener.txCb = NULL;
   uwbRegisterListener(&listener);
 
-  xTaskCreate(uwbPrintTask, "ADHOC_DECK_SNIFFER_TASK_NAME", 5 * configMINIMAL_STACK_SIZE, NULL,
+  xTaskCreate(uwbPrintTask, "ADHOC_DECK_SNIFFER_TASK_NAME", 5 * configMINIMAL_STACK_SIZE+100, NULL,
               ADHOC_DECK_TASK_PRI, &uwbPrintTaskHandle);
 }
 
