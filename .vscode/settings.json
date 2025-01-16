@@ -16,7 +16,8 @@
         "iterator": "c",
         "ranging_struct.h": "c",
         "adhocdeck.h": "c",
-        "dw3000.h": "c"
+        "dw3000.h": "c",
+        "uwb_recv_print.h": "c"
     },
     "editor.fontSize": 18
 }

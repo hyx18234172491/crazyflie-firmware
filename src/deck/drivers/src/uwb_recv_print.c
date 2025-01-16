@@ -17,8 +17,6 @@
 static TaskHandle_t uwbPrintTaskHandle = 0;
 static QueueHandle_t rxQueue;
 
-#include "debug.h"
-
 static bool SendingisPending = 0;
 static UWB_Packet_t uwbPacket={.header.type=PRINT};
 int len = 0;

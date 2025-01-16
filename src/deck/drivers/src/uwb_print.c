@@ -62,6 +62,9 @@ static void uwbPrintTask(void *parameters) {
         remain -= sizeToSend;
       }
     }
+    DEBUG_PRINT("rxenable");
+    dwt_forcetrxoff();
+    dwt_rxenable(DWT_START_RX_IMMEDIATE);
     vTaskDelay(1); // TODO pick proper timespan
   }
 }

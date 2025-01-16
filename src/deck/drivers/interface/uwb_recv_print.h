@@ -1,8 +1,11 @@
-#ifndef _ADHOCDECK_SNIFFER_H_
-#define _ADHOCDECK_SNIFFER_H_
+#ifndef _ADHOCDECK_UWB_PRINTF_H_
+#define _ADHOCDECK_UWB_PRINTF_H_
 
 #include "adhocdeck.h"
-
+#include <stdint.h> 
+#include <stdbool.h>
+#include <stdarg.h>
+#include <stdio.h>
 typedef int (*putc_t)(int c);
 
 int evUwbprintf(putc_t putcf, const char * fmt, va_list ap);

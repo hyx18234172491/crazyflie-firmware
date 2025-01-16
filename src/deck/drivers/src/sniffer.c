@@ -62,6 +62,8 @@ static void snifferTask(void *parameters) {
         remain -= sizeToSend;
       }
     }
+    dwt_forcetrxoff();
+    dwt_rxenable(DWT_START_RX_IMMEDIATE);
     vTaskDelay(1); // TODO pick proper timespan
   }
 }

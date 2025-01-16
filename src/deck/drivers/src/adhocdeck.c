@@ -82,6 +82,7 @@ static void txCallback()
 
 static void rxCallback(dwt_cb_data_t *cbData)
 {
+  DEBUG_PRINT("rxcallback\n");
 #ifdef ENABLE_RX_DBL_BUFF
   dwt_rxenable(DWT_START_RX_IMMEDIATE);
 #endif
@@ -122,6 +123,7 @@ static void rxCallback(dwt_cb_data_t *cbData)
     listeners[PRINT].rxCb(packet);
   // }
 #else
+  DEBUG_PRINT("rxcallback\n");
   if (listeners[msgType].rxCb)
   {
     listeners[msgType].rxCb(packet);
@@ -140,6 +142,7 @@ static void rxCallback(dwt_cb_data_t *cbData)
 
 static void rxTimeoutCallback()
 {
+  DEBUG_PRINT("Rxtimeout\n");
   dwt_rxenable(DWT_START_RX_IMMEDIATE);
 }
 

@@ -17,6 +17,8 @@
 #include "swarm_ranging.h"
 #include "estimator_kalman.h"
 
+#include "uwb_recv_print.h"
+
 
 static uint16_t MY_UWB_ADDRESS;
 int16_t TX_jitter = 10;
@@ -287,6 +289,7 @@ static void uwbRangingTxTask(void *parameters)
     int msgLen = generateRangingMessage((Ranging_Message_t *)&txPacketCache.payload);
     txPacketCache.header.length = sizeof(Packet_Header_t) + msgLen;
     uwbSendPacketBlock(&txPacketCache);
+    // UWB_DEBUG_PRINTF("abc\n");
     /*--13添加--*/
     latest_txTime = xTaskGetTickCount();
     getCurrentNeighborAddressInfo_t(&currentNeighborAddressInfo);
