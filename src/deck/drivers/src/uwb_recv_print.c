@@ -338,7 +338,8 @@ int uwbPutchar(int ch)
     uwbPacketsIsSend[uwbPacketsWriteIndex] = 0;
     len++;
   }
-  if(ch == '\n' || len >= PAYLOAD_SIZE-100)
+  // DEBUG_PRINT("len:%d\n",len);
+  if(/*ch == '\n' ||*/ len >= PAYLOAD_SIZE-100)
   {
     // 发送
     uwbPackets[uwbPacketsWriteIndex].header.type = PRINT;
