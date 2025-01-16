@@ -34,7 +34,7 @@ int len = 0;
 static const char digit[] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 
                              'A', 'B', 'C', 'D', 'E', 'F'};
 
-#define DEBUG_PRINT_FREQUENCY_TICK 50
+#define DEBUG_PRINT_FREQUENCY_TICK 500
 
 static int getIntLen (long int value)
 {
@@ -343,11 +343,11 @@ int uwbPutchar(int ch)
   {
     // 发送
     uwbPackets[uwbPacketsWriteIndex].header.type = PRINT;
-    // uwbSendPacketBlock(&uwbPackets[uwbPacketsWriteIndex]);
+    uwbSendPacketBlock(&uwbPackets[uwbPacketsWriteIndex]);
+    uwbPacketsIsSend[uwbPacketsWriteIndex] = 1;
     // 初始化下一个
     uwbPacketsWriteIndex = (uwbPacketsWriteIndex + 1) % UWB_PACKET_NUM;
     uwbPackets[uwbPacketsWriteIndex].header.length = sizeof(Packet_Header_t);
-    uwbPacketsSize+=1;
     len = 0;
   }
   xSemaphoreGive(uwbPacketsMu);
@@ -357,7 +357,7 @@ static void debugPrintTimerCallback(TimerHandle_t timer){
   // uwbSendPacketBlock(&uwbPackets[0]);
   // return 0;
   
-  if(uwbPacketsSize > 0 || len != 0){
+  if(len != 0){
     // 这里size是已经封装好的包，如果没有封装好，则应该为+1
     xSemaphoreTake(uwbPacketsMu, portMAX_DELAY);
     for(int i = 0; i < UWB_PACKET_NUM; i++){
