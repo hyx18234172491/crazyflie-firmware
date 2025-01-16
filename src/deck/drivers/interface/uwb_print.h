@@ -1,5 +1,5 @@
-#ifndef _ADHOCDECK_SNIFFER_H_
-#define _ADHOCDECK_SNIFFER_H_
+#ifndef _ADHOCDECK_UWB_RECV_PRINTF_H_
+#define _ADHOCDECK_UWB_RECV_PRINTF_H_
 
 #include "adhocdeck.h"
 

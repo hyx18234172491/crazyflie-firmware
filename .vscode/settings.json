@@ -7,7 +7,8 @@
     "files.associations": {
         "stdint.h": "c",
         "freertos.h": "c",
-        "uwb_print.h": "c"
+        "uwb_print.h": "c",
+        "adhocdeck.h": "c"
     },
     "editor.fontSize": 18
 }
