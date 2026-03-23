@@ -1727,7 +1727,8 @@ static Time_t generateRangingMessage(Ranging_Message_t *rangingMessage)
   }
   /* Generate message header */
   rangingMessage->header.srcAddress = MY_UWB_ADDRESS;
-  rangingMessage->header.msgLength = sizeof(Ranging_Message_Header_t) + sizeof(Body_Unit_t) * bodyUnitNumber;
+  // rangingMessage->header.msgLength = sizeof(Ranging_Message_Header_t) + sizeof(Body_Unit_t) * bodyUnitNumber;
+  rangingMessage->header.msgLength = sizeof(Ranging_Message_Header_t);
   rangingMessage->header.msgSequence = curSeqNumber;
   // getLatestNTxTimestamps(rangingMessage->header.lastTxTimestamps, RANGING_MAX_Tr_UNIT);
 
