@@ -66,6 +66,8 @@ static Ranging_Table_t EMPTY_RANGING_TABLE = {
 int16_t distanceTowards[NEIGHBOR_ADDRESS_MAX + 1] = {[0 ... NEIGHBOR_ADDRESS_MAX] = -1};
 uint8_t distanceSource[NEIGHBOR_ADDRESS_MAX + 1] = {[0 ... NEIGHBOR_ADDRESS_MAX] = -1};
 float distanceReal[NEIGHBOR_ADDRESS_MAX + 1] = {[0 ... NEIGHBOR_ADDRESS_MAX] = -1};
+
+
 SemaphoreHandle_t READ_SEND_PACKET_MUTEX;
 typedef struct Stastistic
 {
@@ -76,6 +78,59 @@ typedef struct Stastistic
   uint16_t compute3num;
 } Stastistic;
 static Stastistic statistic[NEIGHBOR_ADDRESS_MAX + 1];
+uint16_t distToNeighbor8DelayCount[8] = {0};
+// 延迟
+// 0~30ms 放第0个
+// 31~60ms 放第1个
+// 61~90ms 放第2个
+// 91~120ms 放第3个
+// 121~150ms 放第4个
+// 151~180ms 放第5个
+// 181~210ms 放第6个
+// 211以上s 放第7个
+
+void setDelay(UWB_Address_t uwbAddress, uint32_t delay)
+{
+  if(uwbAddress != 8){
+    return;
+  }
+  if (delay <= 30)
+  {
+    distToNeighbor8DelayCount[0]++;
+  }
+  else if (delay <= 60)
+  {
+    distToNeighbor8DelayCount[1]++;
+  }
+  else if (delay <= 90)
+  {
+    distToNeighbor8DelayCount[2]++;
+  }
+  else if (delay <= 120)
+  {
+    distToNeighbor8DelayCount[3]++;
+  }
+  else if (delay <= 150)
+  {
+    distToNeighbor8DelayCount[4]++;
+  }
+  else if (delay <= 180)
+  {
+    distToNeighbor8DelayCount[5]++;
+  }
+  else if (delay <= 210)
+  {
+    distToNeighbor8DelayCount[6]++;
+  }
+  else
+  {
+    distToNeighbor8DelayCount[7]++;
+  }
+}
+
+
+
+
 static TimerHandle_t statisticTimer;
 
 int16_t getDistance(UWB_Address_t neighborAddress)
@@ -1274,6 +1329,11 @@ static void S3_Tf(Ranging_Table_t *rangingTable)
   //  DEBUG_PRINT("S3_Tf: S%d -> S%d\n", prevState, curState);
 }
 
+static uint32_t get_UWB_timestamp_diff_to_tick(dwTime_t timestamp1, dwTime_t timestamp2)
+{
+  return (timestamp1.full - timestamp2.full + UWB_MAX_TIMESTAMP) % UWB_MAX_TIMESTAMP / 63897600;
+}
+
 static void S3_RX_NO_Rf(Ranging_Table_t *rangingTable)
 
 {
@@ -1286,6 +1346,9 @@ static void S3_RX_NO_Rf(Ranging_Table_t *rangingTable)
   {
     statistic[rangingTable->neighborAddress].compute2num++;
     rangingTable->distance = distance;
+    uint32_t ranging_delay = get_UWB_timestamp_diff_to_tick(rangingTable->latestReceived.timestamp,rangingTable->Tp.timestamp);
+    DEBUG_PRINT("ranging delay in tick: %lu\n", ranging_delay);
+    setDelay(rangingTable->neighborAddress, ranging_delay);
     setDistance(rangingTable->neighborAddress, distance, 2);
   }
   else
@@ -1321,6 +1384,9 @@ static void S3_RX_Rf(Ranging_Table_t *rangingTable)
   {
     statistic[rangingTable->neighborAddress].compute2num++;
     rangingTable->distance = distance;
+    uint32_t ranging_delay = get_UWB_timestamp_diff_to_tick(rangingTable->latestReceived.timestamp,rangingTable->Tp.timestamp);
+    DEBUG_PRINT("ranging delay in tick: %lu\n", ranging_delay);
+    setDelay(rangingTable->neighborAddress, ranging_delay);
     setDistance(rangingTable->neighborAddress, distance, 2);
   }
   else
@@ -1368,6 +1434,9 @@ static void S4_RX_NO_Rf(Ranging_Table_t *rangingTable)
   {
     statistic[rangingTable->neighborAddress].compute2num++;
     rangingTable->distance = distance;
+    uint32_t ranging_delay = get_UWB_timestamp_diff_to_tick(rangingTable->latestReceived.timestamp,rangingTable->Tp.timestamp);
+    DEBUG_PRINT("ranging delay in tick: %lu\n", ranging_delay);
+    setDelay(rangingTable->neighborAddress, ranging_delay);
     setDistance(rangingTable->neighborAddress, distance, 2);
   }
   else
@@ -1412,6 +1481,10 @@ static void S4_RX_Rf(Ranging_Table_t *rangingTable)
   {
     statistic[rangingTable->neighborAddress].compute1num++;
     rangingTable->distance = distance;
+
+    uint32_t ranging_delay = get_UWB_timestamp_diff_to_tick(rangingTable->latestReceived.timestamp,Tr_Rr_Candidate.Rr.timestamp);
+    DEBUG_PRINT("ranging delay in tick: %lu\n", ranging_delay);
+    setDelay(rangingTable->neighborAddress, ranging_delay);
     setDistance(rangingTable->neighborAddress, distance, 1);
     /* update history tx,rx
      * only success distance,update history
@@ -1731,8 +1804,8 @@ static Time_t generateRangingMessage(Ranging_Message_t *rangingMessage)
   }
   /* Generate message header */
   rangingMessage->header.srcAddress = MY_UWB_ADDRESS;
-  // rangingMessage->header.msgLength = sizeof(Ranging_Message_Header_t) + sizeof(Body_Unit_t) * bodyUnitNumber;
-  rangingMessage->header.msgLength = sizeof(Ranging_Message_Header_t);
+  rangingMessage->header.msgLength = sizeof(Ranging_Message_Header_t) + sizeof(Body_Unit_t) * bodyUnitNumber;
+  // rangingMessage->header.msgLength = sizeof(Ranging_Message_Header_t);
   rangingMessage->header.msgSequence = curSeqNumber;
   // getLatestNTxTimestamps(rangingMessage->header.lastTxTimestamps, RANGING_MAX_Tr_UNIT);
 
@@ -2176,5 +2249,15 @@ LOG_ADD(LOG_UINT16, compute2num24, &statistic[24].compute2num)
 LOG_ADD(LOG_INT16, dist24, distanceTowards + 24)
 LOG_ADD(LOG_UINT8, distSrc24, distanceSource + 24)
 LOG_ADD(LOG_FLOAT, distReal24, distanceReal + 24)
+
+
+LOG_ADD(LOG_UINT16, delay0, &distToNeighbor8DelayCount[0])
+LOG_ADD(LOG_UINT16, delay1, &distToNeighbor8DelayCount[1])
+LOG_ADD(LOG_UINT16, delay2, &distToNeighbor8DelayCount[2])
+LOG_ADD(LOG_UINT16, delay3, &distToNeighbor8DelayCount[3])
+LOG_ADD(LOG_UINT16, delay4, &distToNeighbor8DelayCount[4])
+LOG_ADD(LOG_UINT16, delay5, &distToNeighbor8DelayCount[5])
+LOG_ADD(LOG_UINT16, delay6, &distToNeighbor8DelayCount[6])
+LOG_ADD(LOG_UINT16, delay7, &distToNeighbor8DelayCount[7])
 
 LOG_GROUP_STOP(Statistic)
