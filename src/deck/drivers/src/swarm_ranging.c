@@ -1086,7 +1086,11 @@ static int16_t computeDistance(Timestamp_Tuple_t Tp, Timestamp_Tuple_t Rp,
     isErrorOccurred = true;
     return -1;
   }
-
+  DEBUG_PRINT("sequence numbers: Tp=%u, Rp=%u, Tr=%u, Rr=%u, Tf=%u, Rf=%u\n",
+              Tp.seqNumber, Rp.seqNumber, Tr.seqNumber, Rr.seqNumber, Tf.seqNumber, Rf.seqNumber);
+  DEBUG_PRINT("Rrfull = %llu, Trfull = %llu\n", Rr.timestamp.full, Tr.timestamp.full);
+  DEBUG_PRINT("Tpfull = %llu, Rpfull = %llu\n", Tp.timestamp.full, Rp.timestamp.full);
+  DEBUG_PRINT("Tffull = %llu, Rffull = %llu\n", Tf.timestamp.full, Rf.timestamp.full);
   int64_t tRound1, tReply1, tRound2, tReply2, diff1, diff2, t;
   tRound1 = (Rr.timestamp.full - Tp.timestamp.full + UWB_MAX_TIMESTAMP) % UWB_MAX_TIMESTAMP;
   tReply1 = (Tr.timestamp.full - Rp.timestamp.full + UWB_MAX_TIMESTAMP) % UWB_MAX_TIMESTAMP;
@@ -1273,7 +1277,7 @@ static void S3_Tf(Ranging_Table_t *rangingTable)
 static void S3_RX_NO_Rf(Ranging_Table_t *rangingTable)
 
 {
-  DEBUG_PRINT("S3NO");
+  // DEBUG_PRINT("S3NO");
   Ranging_Table_Tr_Rr_Candidate_t Tr_Rr_Candidate = rangingTableBufferGetLatest(&rangingTable->TrRrBuffer);
   int16_t distance = computeDistance2(rangingTable->TxRxHistory.Tx, rangingTable->TxRxHistory.Rx,
                                       rangingTable->Tp, rangingTable->Rp,
@@ -1308,7 +1312,7 @@ static void S3_RX_NO_Rf(Ranging_Table_t *rangingTable)
 
 static void S3_RX_Rf(Ranging_Table_t *rangingTable)
 {
-  DEBUG_PRINT("S3RX:");
+  // DEBUG_PRINT("S3RX:");
   Ranging_Table_Tr_Rr_Candidate_t Tr_Rr_Candidate = rangingTableBufferGetLatest(&rangingTable->TrRrBuffer);
   int16_t distance = computeDistance2(rangingTable->TxRxHistory.Tx, rangingTable->TxRxHistory.Rx,
                                       rangingTable->Tp, rangingTable->Rp,
@@ -1354,7 +1358,7 @@ static void S4_Tf(Ranging_Table_t *rangingTable)
 static void S4_RX_NO_Rf(Ranging_Table_t *rangingTable)
 {
 
-  DEBUG_PRINT("S4NO:");
+  // DEBUG_PRINT("S4NO:");
   /*use history tx,rx to compute distance*/
   Ranging_Table_Tr_Rr_Candidate_t Tr_Rr_Candidate = rangingTableBufferGetLatest(&rangingTable->TrRrBuffer);
   int16_t distance = computeDistance2(rangingTable->TxRxHistory.Tx, rangingTable->TxRxHistory.Rx,
@@ -1389,7 +1393,7 @@ static void S4_RX_NO_Rf(Ranging_Table_t *rangingTable)
 
 static void S4_RX_Rf(Ranging_Table_t *rangingTable)
 {
-  DEBUG_PRINT("S4RX:");
+  // DEBUG_PRINT("S4RX:");
   RANGING_TABLE_STATE prevState = rangingTable->state;
 
   /* Find corresponding Tf in TfBuffer, it is possible that can not find corresponding Tf. */
@@ -1499,7 +1503,7 @@ static void processRangingMessage(Ranging_Message_With_Timestamp_t *rangingMessa
   Ranging_Message_t *rangingMessage = &rangingMessageWithTimestamp->rangingMessage;
   uint16_t neighborAddress = rangingMessage->header.srcAddress;
   int neighborIndex = rangingTableSetSearchTable(&rangingTableSet, neighborAddress);
-
+  DEBUG_PRINT("neighbor %u.\n", neighborAddress);
   DEBUG_PRINT("seq:%d\n", rangingMessage->header.msgSequence);
 
   float posiX = logGetFloat(idX);
@@ -1557,17 +1561,17 @@ static void processRangingMessage(Ranging_Message_With_Timestamp_t *rangingMessa
 
   /* Try to find corresponding Rf for MY_UWB_ADDRESS. */
   Timestamp_Tuple_t neighborRf = {.timestamp.full = 0, .seqNumber = 0};
-  DEBUG_PRINT("filter:%d\n",rangingMessage->header.filter);
+  // DEBUG_PRINT("filter:%d\n",rangingMessage->header.filter);
   if (rangingMessage->header.filter & (1 << (uwbGetAddress() % 16)))
   {
     /* Retrieve body unit from received ranging message. */
     uint8_t bodyUnitCount = (rangingMessage->header.msgLength - sizeof(Ranging_Message_Header_t)) / sizeof(Body_Unit_t);
-    DEBUG_PRINT("body count:%d\n",bodyUnitCount);
+    // DEBUG_PRINT("body count:%d\n",bodyUnitCount);
     for (int i = 0; i < bodyUnitCount; i++)
     {
       if (rangingMessage->bodyUnits[i].address == uwbGetAddress())
       {
-        DEBUG_PRINT("find\n");
+        // DEBUG_PRINT("find\n");
         neighborRf.timestamp = rangingMessage->bodyUnits[i].timestamp;
         neighborRf.seqNumber = rangingMessage->bodyUnits[i].seqNumber;
         break;
@@ -1576,7 +1580,7 @@ static void processRangingMessage(Ranging_Message_With_Timestamp_t *rangingMessa
   }
   Timestamp_Tuple_t Tf = findTfBySeqNumber(neighborRf.seqNumber);
 
-  DEBUG_PRINT("nRFseq:%d\n",neighborRf.seqNumber);
+  // DEBUG_PRINT("nRFseq:%d\n",neighborRf.seqNumber);
   if (neighborRf.seqNumber != neighborRangingTable->Tp.seqNumber && Tf.timestamp.full)
   {
     neighborRangingTable->Rf = neighborRf;
@@ -1652,7 +1656,7 @@ static Time_t generateRangingMessage(Ranging_Message_t *rangingMessage)
   int8_t bodyUnitNumber = 0;
   rangingSeqNumber++;
   int curSeqNumber = rangingSeqNumber;
-  DEBUG_PRINT("TX:%d\n", curSeqNumber);
+  // DEBUG_PRINT("TX:%d\n", curSeqNumber);
   rangingMessage->header.filter = 0;
   Time_t curTime = xTaskGetTickCount();
   /* Using the default RANGING_PERIOD when DYNAMIC_RANGING_PERIOD is not enabled. */
@@ -1662,7 +1666,7 @@ static Time_t generateRangingMessage(Ranging_Message_t *rangingMessage)
 #else
   // rangingTableSetRearrange(&rangingTableSet, COMPARE_BY_LAST_SEND_TIME);
 #endif
-  DEBUG_PRINT("size:%d\n",rangingTableSet.size);
+  // DEBUG_PRINT("size:%d\n",rangingTableSet.size);
   /* Generate message body */
   for (int index = 0; index < rangingTableSet.size; index++)
   {
