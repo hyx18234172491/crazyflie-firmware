@@ -398,6 +398,9 @@ void relativeControlTask(void *arg)
   // idMultiranger = paramGetVarId("deck", "bcMultiranger");
   // uint8_t multirangerInit = paramGetUint(idMultiranger);
   uint8_t multirangerInit = false;
+  // 控制飞行时间
+  uint32_t flightStartTime = 0;
+  uint32_t flightMaxTime = M2T(30000); // 最长飞行时间，单位ms
   while (1)
   {
     vTaskDelay(10);
@@ -410,6 +413,10 @@ void relativeControlTask(void *arg)
     //   vTaskDelay(10000);
     //   setMyTakeoff(true);
     // }
+    
+    
+
+
 
     if (RUNNING_STAGE == 1) // debug阶段就不能让无人机飞
     {
@@ -419,6 +426,7 @@ void relativeControlTask(void *arg)
         if (onGround) // 起飞
         {
           vTaskDelay(5000);        // 设定位置使得其收敛时间
+          flightStartTime = xTaskGetTickCount();
           if (MY_UWB_ADDRESS == 0) // 0号设置到0号高度
           {
            take_off(set_height);
@@ -439,6 +447,10 @@ void relativeControlTask(void *arg)
           {
             setHoverSetpoint(&setpoint, 0, 0, set_height, 0);
           }
+        }
+        else if(xTaskGetTickCount() - flightStartTime > flightMaxTime)
+        {
+          land(set_height);
         }
         else if (leaderStage == FIRST_STAGE) // 第1个阶段随机飞行
         {
@@ -461,7 +473,7 @@ void relativeControlTask(void *arg)
           if (MY_UWB_ADDRESS == 0)
           {
             float_t randomVel = 0.3;
-             flyRandomIn1meter(randomVel, set_height);
+             flyRandomIn1meter(randomVel, set_height+0.2);
           }
           else
           {
