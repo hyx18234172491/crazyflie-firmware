@@ -400,7 +400,7 @@ void relativeControlTask(void *arg)
   uint8_t multirangerInit = false;
   // 控制飞行时间
   uint32_t flightStartTime = 0;
-  uint32_t flightMaxTime = M2T(30000); // 最长飞行时间，单位ms
+  uint32_t flightMaxTime = M2T(35000); // 最长飞行时间，单位ms
   while (1)
   {
     vTaskDelay(10);
