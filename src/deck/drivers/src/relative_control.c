@@ -175,6 +175,33 @@ static void formation0asCenter(float_t tarX, float_t tarY, float_t height)
   setHoverSetpoint(&setpoint, pid_vx, pid_vy, height, 0);
 }
 
+static void formation_i_asCenter(float_t tarX, float_t tarY, float_t height,int i)
+{
+  float dt = (float)(xTaskGetTickCount() - PreTime) / configTICK_RATE_HZ;
+  PreTime = xTaskGetTickCount();
+  if (dt > 1) // skip the first run of the EKF
+    return;
+  // pid control for formation flight 当前是1号无人机
+  float err_x = -(tarX - relaVarInCtrl[i][STATE_rlX]);
+  float err_y = -(tarY - relaVarInCtrl[i][STATE_rlY]);
+  float pid_vx = relaCtrl_p * err_x;  // 2.0*err_x 基于距离差进行一个速度控制
+  float pid_vy = relaCtrl_p * err_y;  // 2.0*err_y
+  float dx = (err_x - PreErr_x) / dt; // 先前的速度
+  float dy = (err_y - PreErr_y) / dt;
+  PreErr_x = err_x;
+  PreErr_y = err_y;
+  pid_vx += relaCtrl_d * dx; // 0.01*dx 先前速度*比例系数
+  pid_vy += relaCtrl_d * dy; // 0.01*dy
+  IntErr_x += err_x * dt;
+  IntErr_y += err_y * dt;
+  pid_vx += relaCtrl_i * constrain(IntErr_x, -0.5, 0.5); // += (+-)0.00005
+  pid_vy += relaCtrl_i * constrain(IntErr_y, -0.5, 0.5);
+  pid_vx = constrain(pid_vx, -0.5f, 0.5f);
+  pid_vy = constrain(pid_vy, -0.5f, 0.5f);
+
+  setHoverSetpoint(&setpoint, pid_vx, pid_vy, height, 0);
+}
+
 void take_off(float_t height)
 {
   for (int i = 0; i < 30; i++)
@@ -448,31 +475,51 @@ void relativeControlTask(void *arg)
         }
         else if (leaderStage >= -30 && leaderStage <= 30) // 第3个阶段，3*3转圈
         {
-          if (MY_UWB_ADDRESS == 0)
+          // DEBUG_PRINT("--2--\n");
+          int newTarget = 1;
+
+          if (MY_UWB_ADDRESS == newTarget)
           {
-            setHoverSetpoint(&setpoint, 0, 0, set_height, 0);
+            float_t randomVel = 0.3;
+             flyRandomIn1meter(randomVel, set_height+0.2);
           }
+          else if (MY_UWB_ADDRESS==0)
+          {
+            land(set_height);
+          }
+          
           else
           {
-            int8_t index = MY_UWB_ADDRESS;
-            if (MY_UWB_ADDRESS < 9) // 根据目前方案只要小于9，就是第2阶段
-            {
-              targetShift = leaderStage;
-              // 使得targetList在1~UAV_NUM之间偏移
-              index = (MY_UWB_ADDRESS + targetShift) % (SQURE3_3_NUM - 1) + 1; // 目标地址索引
-            }
-            else
-            {
-              targetShift = leaderStage + (MY_UWB_ADDRESS - 9) / 3;
-              // 使得targetList在1~UAV_NUM之间偏移
-              index = (MY_UWB_ADDRESS + targetShift + 1) % 25; // 目标地址索引
-              if (index < 9)
-                index += 9;
-            }
-            targetX = -cosf(relaVarInCtrl[0][STATE_rlYaw]) * targetList[index][STATE_rlX] + sinf(relaVarInCtrl[0][STATE_rlYaw]) * targetList[index][STATE_rlY];
-            targetY = -sinf(relaVarInCtrl[0][STATE_rlYaw]) * targetList[index][STATE_rlX] - cosf(relaVarInCtrl[0][STATE_rlYaw]) * targetList[index][STATE_rlY];
-            formation0asCenter(targetX, targetY, set_height);
+            int index = MY_UWB_ADDRESS;
+            targetX = -cosf(relaVarInCtrl[newTarget][STATE_rlYaw]) * (targetList[index][STATE_rlX] - targetList[newTarget][STATE_rlX]) + sinf(relaVarInCtrl[newTarget][STATE_rlYaw]) * (targetList[index][STATE_rlY] - targetList[newTarget][STATE_rlY]);
+            targetY = -sinf(relaVarInCtrl[newTarget][STATE_rlYaw]) * (targetList[index][STATE_rlX] - targetList[newTarget][STATE_rlX]) - cosf(relaVarInCtrl[newTarget][STATE_rlYaw]) * (targetList[index][STATE_rlY] - targetList[newTarget][STATE_rlY]);
+            formation_i_asCenter(targetX, targetY, set_height,newTarget);
           }
+          // if (MY_UWB_ADDRESS == 0)
+          // {
+          //   setHoverSetpoint(&setpoint, 0, 0, set_height, 0);
+          // }
+          // else
+          // {
+          //   int8_t index = MY_UWB_ADDRESS;
+          //   if (MY_UWB_ADDRESS < 9) // 根据目前方案只要小于9，就是第2阶段
+          //   {
+          //     targetShift = leaderStage;
+          //     // 使得targetList在1~UAV_NUM之间偏移
+          //     index = (MY_UWB_ADDRESS + targetShift) % (SQURE3_3_NUM - 1) + 1; // 目标地址索引
+          //   }
+          //   else
+          //   {
+          //     targetShift = leaderStage + (MY_UWB_ADDRESS - 9) / 3;
+          //     // 使得targetList在1~UAV_NUM之间偏移
+          //     index = (MY_UWB_ADDRESS + targetShift + 1) % 25; // 目标地址索引
+          //     if (index < 9)
+          //       index += 9;
+          //   }
+          //   targetX = -cosf(relaVarInCtrl[0][STATE_rlYaw]) * targetList[index][STATE_rlX] + sinf(relaVarInCtrl[0][STATE_rlYaw]) * targetList[index][STATE_rlY];
+          //   targetY = -sinf(relaVarInCtrl[0][STATE_rlYaw]) * targetList[index][STATE_rlX] - cosf(relaVarInCtrl[0][STATE_rlYaw]) * targetList[index][STATE_rlY];
+          //   formation0asCenter(targetX, targetY, set_height);
+          // }
         }
         else
         {
