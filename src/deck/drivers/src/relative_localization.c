@@ -232,19 +232,24 @@ void relativeLocoTask(void *arg)
                     vyi = (vyi_t + 0.0) / 100;
                     hi = (hi_t + 0.0) / 100;
                     uint32_t osTick = xTaskGetTickCount();
-                    float dtEKF = (float)(osTick - relaVar[neighborAddress].oldTimetick) / configTICK_RATE_HZ;
-                    relaVar[neighborAddress].oldTimetick = osTick;
+                    
+                    float dtEKFv2 = (float)(osTick - relaVar2[neighborAddress].oldTimetick) / configTICK_RATE_HZ;
+                    
+                    relaVar2[neighborAddress].oldTimetick = osTick;
                     relaVar[neighborAddress].height = hj;
+                    relaVar2[neighborAddress].height = hj;
                     if (EKFcount == max_EKFcount)
                     {
                         EKFcount = 0;
+                        float dtEKF = (float)(osTick - relaVar[neighborAddress].oldTimetick) / configTICK_RATE_HZ;
+                        relaVar[neighborAddress].oldTimetick = osTick;
                         relativeEKF(neighborAddress, vxi, vyi, ri, hi, vxj, vyj, rj, hj, dij, dtEKF);
                     }
                     else
                     {
                         EKFcount++;
                     }
-                    relativeEKF_v2(neighborAddress, vxi, vyi, ri, hi, vxj, vyj, rj, hj, dij, dtEKF);
+                    relativeEKF_v2(neighborAddress, vxi, vyi, ri, hi, vxj, vyj, rj, hj, dij, dtEKFv2);
                 }
                 //DEBUG_PRINT("addr:%d,X:%f,Y:%f\n",neighborAddress,relaVar[neighborAddress].S[STATE_rlX],relaVar[neighborAddress].S[STATE_rlY]);
             }
@@ -424,10 +429,10 @@ bool relativeInfoRead(float *relaVarParam, float *neighbor_height, currentNeighb
         for (int index = 0; index < currentNeighborAddressInfo.size; index++)
         {
             address_t neighborAddress = currentNeighborAddressInfo.address[index];
-            *(relaVarParam + neighborAddress * STATE_DIM_rl + 0) = relaVar[neighborAddress].S[STATE_rlX];
-            *(relaVarParam + neighborAddress * STATE_DIM_rl + 1) = relaVar[neighborAddress].S[STATE_rlY];
-            *(relaVarParam + neighborAddress * STATE_DIM_rl + 2) = relaVar[neighborAddress].S[STATE_rlYaw];
-            *(neighbor_height + neighborAddress) = relaVar[neighborAddress].height;
+            *(relaVarParam + neighborAddress * STATE_DIM_rl + 0) = relaVar2[neighborAddress].S[STATE_rlX];
+            *(relaVarParam + neighborAddress * STATE_DIM_rl + 1) = relaVar2[neighborAddress].S[STATE_rlY];
+            *(relaVarParam + neighborAddress * STATE_DIM_rl + 2) = relaVar2[neighborAddress].S[STATE_rlYaw];
+            *(neighbor_height + neighborAddress) = relaVar2[neighborAddress].height;
         }
         memcpy(dest->address, currentNeighborAddressInfo.address, sizeof(currentNeighborAddressInfo.address));
         dest->size = currentNeighborAddressInfo.size;
@@ -500,7 +505,7 @@ LOG_ADD(LOG_FLOAT, rlYaw4, &relaVar2[4].S[STATE_rlYaw])
 LOG_ADD(LOG_FLOAT, rlX5, &relaVar2[5].S[STATE_rlX])
 LOG_ADD(LOG_FLOAT, rlY5, &relaVar2[5].S[STATE_rlY])
 LOG_ADD(LOG_FLOAT, rlYaw5, &relaVar2[5].S[STATE_rlYaw])
-LOG_GROUP_STOP(relative_pos)
+LOG_GROUP_STOP(rela_posv2)
 
 // PARAM_GROUP_START(arelative_pos)
 // PARAM_ADD(PARAM_FLOAT, noiFlow, &Qv) // make sure the name is not too long
