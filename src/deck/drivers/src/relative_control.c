@@ -582,13 +582,14 @@ void relativeControlInit(void)
   MY_UWB_ADDRESS = uwbGetAddress();
   srand(MY_UWB_ADDRESS);
   if(MY_UWB_ADDRESS==0){
-    set_height = 0.6;
+    set_height = 0.4;
   }else if(MY_UWB_ADDRESS>8){
     set_height = 0.5;
   }else{
     set_height = 0.4;
   }
   xTaskCreate(relativeControlTask, "relative_Control", configMINIMAL_STACK_SIZE, NULL, 3, NULL);
+  // xTaskCreate(relativeControlTask, "relative_Control", configMINIMAL_STACK_SIZE, NULL, 3, NULL);
   isInit = true;
 }
 

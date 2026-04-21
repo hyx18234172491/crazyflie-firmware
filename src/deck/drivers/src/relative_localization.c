@@ -196,7 +196,7 @@ void relativeLocoTask(void *arg)
     initRelativePosition[1][0][STATE_rlY] = 1;
     */
     int EKFcount = 0;
-    int max_EKFcount = 4;
+    int max_EKFcount = 10;
 
     systemWaitStart();
     while (1)
@@ -249,6 +249,7 @@ void relativeLocoTask(void *arg)
                     {
                         EKFcount++;
                     }
+                    // DEBUG_PRINT("dtEKFv2: %f\n", dtEKFv2);
                     relativeEKF_v2(neighborAddress, vxi, vyi, ri, hi, vxj, vyj, rj, hj, dij, dtEKFv2);
                 }
                 //DEBUG_PRINT("addr:%d,X:%f,Y:%f\n",neighborAddress,relaVar[neighborAddress].S[STATE_rlX],relaVar[neighborAddress].S[STATE_rlY]);
@@ -347,6 +348,7 @@ void relativeEKF(int n, float vxi, float vyi, float ri, float hi, float vxj, flo
 
 void relativeEKF_v2(int n, float vxi, float vyi, float ri, float hi, float vxj, float vyj, float rj, float hj, uint16_t dij, float dt)
 {
+    // DEBUG_PRINT("n:%d,vxi:%f,vyi:%f,ri:%f,hi:%f,vxj:%f,vyj:%f,rj:%f,hj:%f,dij:%d,dt:%f\n", n, vxi, vyi, ri, hi, vxj, vyj, rj, hj, dij, dt);
     // some preprocessing
     arm_matrix_instance_f32 Pm = {STATE_DIM_rl, STATE_DIM_rl, (float *)relaVar2[n].P};
     float cyaw = arm_cos_f32(relaVar2[n].S[STATE_rlYaw]);
@@ -389,12 +391,17 @@ void relativeEKF_v2(int n, float vxi, float vyi, float ri, float hi, float vxj, 
 
     xij = relaVar2[n].S[STATE_rlX];
     yij = relaVar2[n].S[STATE_rlY];
+    // DEBUG_PRINT("xij:%f,yij:%f\n", xij, yij);
+    // DEBUG_PRINT("hi:%f,hj:%f\n", hi, hj);
     float distPred = arm_sqrt(xij * xij + yij * yij + (hi - hj) * (hi - hj)) + 0.0001f;
     float distMeas = (float)(dij / 100.0f);
+    // DEBUG_PRINT("distPred:%f,distMeas:%f\n", distPred, distMeas);
     // h矩阵
     h_v2[0] = xij / distPred;
     h_v2[1] = yij / distPred;
     h_v2[2] = 0;
+
+    // DEBUG_PRINT("distPred:%f,distMeas:%f\n", distPred, distMeas);
 
     mat_trans(&H_v2, &HTm_v2);        // H'
     mat_mult(&Pm, &HTm_v2, &PHTm_v2); // PH'
