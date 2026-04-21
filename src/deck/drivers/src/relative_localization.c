@@ -235,7 +235,6 @@ void relativeLocoTask(void *arg)
                     float dtEKF = (float)(osTick - relaVar[neighborAddress].oldTimetick) / configTICK_RATE_HZ;
                     relaVar[neighborAddress].oldTimetick = osTick;
                     relaVar[neighborAddress].height = hj;
-                    relativeEKF_v2(neighborAddress, vxi, vyi, ri, hi, vxj, vyj, rj, hj, dij, dtEKF);
                     if (EKFcount == max_EKFcount)
                     {
                         EKFcount = 0;
