@@ -27,25 +27,43 @@ static float InitCovPos = 0.2f; // 初始位置误差
 static float InitCovYaw = 0.2f; // 初始偏航角误差
 
 static relaVariable_t relaVar[RANGING_TABLE_SIZE];
+static relaVariable_t relaVar2[RANGING_TABLE_SIZE];
 
 static float A[STATE_DIM_rl][STATE_DIM_rl];
+static float A_v2[STATE_DIM_rl][STATE_DIM_rl];
 static float h[STATE_DIM_rl] = {0};
+static float h_v2[STATE_DIM_rl] = {0};
 static arm_matrix_instance_f32 H = {1, STATE_DIM_rl, h};
+static arm_matrix_instance_f32 H_v2 = {1, STATE_DIM_rl, h_v2};
 static arm_matrix_instance_f32 Am = {STATE_DIM_rl, STATE_DIM_rl, (float *)A};
+static arm_matrix_instance_f32 Am_v2 = {STATE_DIM_rl, STATE_DIM_rl, (float *)A_v2};
 
 // Temporary matrices for the covariance updates
 static float tmpNN1d[STATE_DIM_rl * STATE_DIM_rl];
+static float tmpNN1d_v2[STATE_DIM_rl * STATE_DIM_rl];
 static arm_matrix_instance_f32 tmpNN1m = {STATE_DIM_rl, STATE_DIM_rl, tmpNN1d};
+static arm_matrix_instance_f32 tmpNN1m_v2 = {STATE_DIM_rl, STATE_DIM_rl, tmpNN1d_v2};
 static float tmpNN2d[STATE_DIM_rl * STATE_DIM_rl];
+static float tmpNN2d_v2[STATE_DIM_rl * STATE_DIM_rl];
 static arm_matrix_instance_f32 tmpNN2m = {STATE_DIM_rl, STATE_DIM_rl, tmpNN2d};
+static arm_matrix_instance_f32 tmpNN2m_v2 = {STATE_DIM_rl, STATE_DIM_rl, tmpNN2d_v2};
 static float K[STATE_DIM_rl];
+static float K_v2[STATE_DIM_rl];
 static arm_matrix_instance_f32 Km = {STATE_DIM_rl, 1, (float *)K};
+static arm_matrix_instance_f32 Km_v2 = {STATE_DIM_rl, 1, (float *)K_v2};
 static float tmpNN3d[STATE_DIM_rl * STATE_DIM_rl];
+static float tmpNN3d_v2[STATE_DIM_rl * STATE_DIM_rl];
 static arm_matrix_instance_f32 tmpNN3m = {STATE_DIM_rl, STATE_DIM_rl, tmpNN3d};
+static arm_matrix_instance_f32 tmpNN3m_v2 = {STATE_DIM_rl, STATE_DIM_rl, tmpNN3d_v2};
 static float HTd[STATE_DIM_rl * 1];
+static float HTd_v2[STATE_DIM_rl * 1];
+
 static arm_matrix_instance_f32 HTm = {STATE_DIM_rl, 1, HTd};
+static arm_matrix_instance_f32 HTm_v2 = {STATE_DIM_rl, 1, HTd_v2};
 static float PHTd[STATE_DIM_rl * 1];
+static float PHTd_v2[STATE_DIM_rl * 1];
 static arm_matrix_instance_f32 PHTm = {STATE_DIM_rl, 1, PHTd};
+static arm_matrix_instance_f32 PHTm_v2 = {STATE_DIM_rl, 1, PHTd_v2};
 
 static bool fullConnect = false;  // a flag for control (fly or not)
 static uint32_t connectCount = 0; // watchdog for detecting the connection
@@ -177,6 +195,9 @@ void relativeLocoTask(void *arg)
     initRelativePosition[1][0][STATE_rlX] = -1; // 1号无人机相对于0号无人机的相对位置
     initRelativePosition[1][0][STATE_rlY] = 1;
     */
+    int EKFcount = 0;
+    int max_EKFcount = 4;
+
     systemWaitStart();
     while (1)
     {
@@ -202,6 +223,7 @@ void relativeLocoTask(void *arg)
                 if (isNewAdd)
                 {
                     relaVarInit(relaVar, neighborAddress);
+                    relaVarInit(relaVar2, neighborAddress);
                 }
                 else
                 {
@@ -213,7 +235,17 @@ void relativeLocoTask(void *arg)
                     float dtEKF = (float)(osTick - relaVar[neighborAddress].oldTimetick) / configTICK_RATE_HZ;
                     relaVar[neighborAddress].oldTimetick = osTick;
                     relaVar[neighborAddress].height = hj;
-                    relativeEKF(neighborAddress, vxi, vyi, ri, hi, vxj, vyj, rj, hj, dij, dtEKF);
+                    relativeEKF_v2(neighborAddress, vxi, vyi, ri, hi, vxj, vyj, rj, hj, dij, dtEKF);
+                    if (EKFcount == max_EKFcount)
+                    {
+                        EKFcount = 0;
+                        relativeEKF(neighborAddress, vxi, vyi, ri, hi, vxj, vyj, rj, hj, dij, dtEKF);
+                    }
+                    else
+                    {
+                        EKFcount++;
+                    }
+                    relativeEKF_v2(neighborAddress, vxi, vyi, ri, hi, vxj, vyj, rj, hj, dij, dtEKF);
                 }
                 //DEBUG_PRINT("addr:%d,X:%f,Y:%f\n",neighborAddress,relaVar[neighborAddress].S[STATE_rlX],relaVar[neighborAddress].S[STATE_rlY]);
             }
@@ -309,6 +341,83 @@ void relativeEKF(int n, float vxi, float vyi, float ri, float hi, float vxj, flo
     // DEBUG_PRINT("dis:%d\n", dij);
 }
 
+void relativeEKF_v2(int n, float vxi, float vyi, float ri, float hi, float vxj, float vyj, float rj, float hj, uint16_t dij, float dt)
+{
+    // some preprocessing
+    arm_matrix_instance_f32 Pm = {STATE_DIM_rl, STATE_DIM_rl, (float *)relaVar2[n].P};
+    float cyaw = arm_cos_f32(relaVar2[n].S[STATE_rlYaw]);
+    float syaw = arm_sin_f32(relaVar2[n].S[STATE_rlYaw]);
+    float xij = relaVar2[n].S[STATE_rlX];
+    float yij = relaVar2[n].S[STATE_rlY];
+
+    // prediction
+    relaVar2[n].S[STATE_rlX] = xij + (cyaw * vxj - syaw * vyj - vxi + ri * yij) * dt;
+    relaVar2[n].S[STATE_rlY] = yij + (syaw * vxj + cyaw * vyj - vyi - ri * xij) * dt;
+    relaVar2[n].S[STATE_rlYaw] = relaVar2[n].S[STATE_rlYaw] + (rj - ri) * dt;
+    // A状态转移矩阵
+    A_v2[0][0] = 1;
+    A_v2[0][1] = ri * dt;
+    A_v2[0][2] = (-syaw * vxj - cyaw * vyj) * dt;
+    A_v2[1][0] = -ri * dt;
+    A_v2[1][1] = 1;
+    A_v2[1][2] = (cyaw * vxj - syaw * vyj) * dt;
+    A_v2[2][0] = 0;
+    A_v2[2][1] = 0;
+    A_v2[2][2] = 1;
+
+    mat_mult(&Am_v2, &Pm, &tmpNN1m_v2);      // A P
+    mat_trans(&Am_v2, &tmpNN2m_v2);          // A'
+    mat_mult(&tmpNN1m_v2, &tmpNN2m_v2, &Pm); // A P A'
+
+    // BQB' = [ Qv*c^2 + Qv*s^2 + Qr*y^2 + Qv,                       -Qr*x*y, -Qr*y]
+    //        [                       -Qr*x*y, Qv*c^2 + Qv*s^2 + Qr*x^2 + Qv,  Qr*x]
+    //        [                         -Qr*y,                         Qr*x,  2*Qr]*dt^2
+    float dt2 = dt * dt;
+    relaVar2[n].P[0][0] += dt2 * (Qv + Qv + Qr * yij * yij);
+    relaVar2[n].P[0][1] += dt2 * (-Qr * xij * yij);
+    relaVar2[n].P[0][2] += dt2 * (-Qr * yij);
+    relaVar2[n].P[1][0] += dt2 * (-Qr * xij * yij);
+    relaVar2[n].P[1][1] += dt2 * (Qv + Qv + Qr * xij * xij);
+    relaVar2[n].P[1][2] += dt2 * (Qr * xij);
+    relaVar2[n].P[2][0] += dt2 * (-Qr * yij);
+    relaVar2[n].P[2][1] += dt2 * (Qr * xij);
+    relaVar2[n].P[2][2] += dt2 * (2 * Qr);
+
+    xij = relaVar2[n].S[STATE_rlX];
+    yij = relaVar2[n].S[STATE_rlY];
+    float distPred = arm_sqrt(xij * xij + yij * yij + (hi - hj) * (hi - hj)) + 0.0001f;
+    float distMeas = (float)(dij / 100.0f);
+    // h矩阵
+    h_v2[0] = xij / distPred;
+    h_v2[1] = yij / distPred;
+    h_v2[2] = 0;
+
+    mat_trans(&H_v2, &HTm_v2);        // H'
+    mat_mult(&Pm, &HTm_v2, &PHTm_v2); // PH'
+    float HPHR = powf(Ruwb, 2); // HPH' + R
+    for (int i = 0; i < STATE_DIM_rl; i++)
+    {                                 // Add the element of HPH' to the above
+        HPHR += H_v2.pData[i] * PHTd_v2[i]; // this obviously only works if the update is scalar (as in this function)
+    }
+    for (int i = 0; i < STATE_DIM_rl; i++)
+    {
+        K_v2[i] = PHTd_v2[i] / HPHR; // kalman gain = (PH' (HPH' + R )^-1)
+        // DEBUG_PRINT("K[%d]:%f\n", i, K[i]);
+        // DEBUG_PRINT("relaVarStart:%.3lf", relaVar2[n].S[i]);
+        relaVar2[n].S[i] = relaVar2[n].S[i] + K_v2[i] * (distMeas - distPred); // state update
+        // DEBUG_PRINT(",relaVar:%.3f,K:%.3f,distMeas:%.3f,distPred%.3f\n", relaVar2[n].S[i], K[i], distMeas, distPred);
+    }
+    mat_mult(&Km_v2, &H_v2, &tmpNN1m_v2); // KH
+    for (int i = 0; i < STATE_DIM_rl; i++)
+    {
+        tmpNN1d_v2[STATE_DIM_rl * i + i] -= 1;
+    } // KH - I
+    mat_trans(&tmpNN1m_v2, &tmpNN2m_v2);     // (KH - I)'
+    mat_mult(&tmpNN1m_v2, &Pm, &tmpNN3m_v2); // (KH - I)*P
+    mat_mult(&tmpNN3m_v2, &tmpNN2m_v2, &Pm); // (KH - I)*P*(KH - I)'
+    // DEBUG_PRINT("dis:%d\n", dij);
+}
+
 bool relativeInfoRead(float *relaVarParam, float *neighbor_height, currentNeighborAddressInfo_t *dest)
 {
     if (fullConnect)
@@ -340,31 +449,59 @@ void copyTargetList(float_t *dest, float_t *src)
     }
 }
 
-// LOG_GROUP_START(relative_pos)
-// LOG_ADD(LOG_FLOAT, rlX0, &relaVar[0].S[STATE_rlX])
-// LOG_ADD(LOG_FLOAT, rlY0, &relaVar[0].S[STATE_rlY])
-// LOG_ADD(LOG_FLOAT, rlYaw0, &relaVar[0].S[STATE_rlYaw])
+LOG_GROUP_START(relative_pos)
+LOG_ADD(LOG_FLOAT, rlX0, &relaVar[0].S[STATE_rlX])
+LOG_ADD(LOG_FLOAT, rlY0, &relaVar[0].S[STATE_rlY])
+LOG_ADD(LOG_FLOAT, rlYaw0, &relaVar[0].S[STATE_rlYaw])
 
-// LOG_ADD(LOG_FLOAT, rlX1, &relaVar[1].S[STATE_rlX])
-// LOG_ADD(LOG_FLOAT, rlY1, &relaVar[1].S[STATE_rlY])
-// LOG_ADD(LOG_FLOAT, rlYaw1, &relaVar[1].S[STATE_rlYaw])
+LOG_ADD(LOG_FLOAT, rlX1, &relaVar[1].S[STATE_rlX])
+LOG_ADD(LOG_FLOAT, rlY1, &relaVar[1].S[STATE_rlY])
+LOG_ADD(LOG_FLOAT, rlYaw1, &relaVar[1].S[STATE_rlYaw])
 
-// LOG_ADD(LOG_FLOAT, rlX2, &relaVar[2].S[STATE_rlX])
-// LOG_ADD(LOG_FLOAT, rlY2, &relaVar[2].S[STATE_rlY])
-// LOG_ADD(LOG_FLOAT, rlYaw2, &relaVar[2].S[STATE_rlYaw])
+LOG_ADD(LOG_FLOAT, rlX2, &relaVar[2].S[STATE_rlX])
+LOG_ADD(LOG_FLOAT, rlY2, &relaVar[2].S[STATE_rlY])
+LOG_ADD(LOG_FLOAT, rlYaw2, &relaVar[2].S[STATE_rlYaw])
 
-// LOG_ADD(LOG_FLOAT, rlX3, &relaVar[3].S[STATE_rlX])
-// LOG_ADD(LOG_FLOAT, rlY3, &relaVar[3].S[STATE_rlY])
-// LOG_ADD(LOG_FLOAT, rlYaw3, &relaVar[3].S[STATE_rlYaw])
+LOG_ADD(LOG_FLOAT, rlX3, &relaVar[3].S[STATE_rlX])
+LOG_ADD(LOG_FLOAT, rlY3, &relaVar[3].S[STATE_rlY])
+LOG_ADD(LOG_FLOAT, rlYaw3, &relaVar[3].S[STATE_rlYaw])
 
-// LOG_ADD(LOG_FLOAT, rlX4, &relaVar[4].S[STATE_rlX])
-// LOG_ADD(LOG_FLOAT, rlY4, &relaVar[4].S[STATE_rlY])
-// LOG_ADD(LOG_FLOAT, rlYaw4, &relaVar[4].S[STATE_rlYaw])
+LOG_ADD(LOG_FLOAT, rlX4, &relaVar[4].S[STATE_rlX])
+LOG_ADD(LOG_FLOAT, rlY4, &relaVar[4].S[STATE_rlY])
+LOG_ADD(LOG_FLOAT, rlYaw4, &relaVar[4].S[STATE_rlYaw])
 
-// LOG_ADD(LOG_FLOAT, rlX5, &relaVar[5].S[STATE_rlX])
-// LOG_ADD(LOG_FLOAT, rlY5, &relaVar[5].S[STATE_rlY])
-// LOG_ADD(LOG_FLOAT, rlYaw5, &relaVar[5].S[STATE_rlYaw])
-// LOG_GROUP_STOP(relative_pos)
+LOG_ADD(LOG_FLOAT, rlX5, &relaVar[5].S[STATE_rlX])
+LOG_ADD(LOG_FLOAT, rlY5, &relaVar[5].S[STATE_rlY])
+LOG_ADD(LOG_FLOAT, rlYaw5, &relaVar[5].S[STATE_rlYaw])
+LOG_GROUP_STOP(relative_pos)
+
+
+
+LOG_GROUP_START(rela_posv2)
+LOG_ADD(LOG_FLOAT, rlX0, &relaVar2[0].S[STATE_rlX])
+LOG_ADD(LOG_FLOAT, rlY0, &relaVar2[0].S[STATE_rlY])
+LOG_ADD(LOG_FLOAT, rlYaw0, &relaVar2[0].S[STATE_rlYaw])
+
+LOG_ADD(LOG_FLOAT, rlX1, &relaVar2[1].S[STATE_rlX])
+LOG_ADD(LOG_FLOAT, rlY1, &relaVar2[1].S[STATE_rlY])
+LOG_ADD(LOG_FLOAT, rlYaw1, &relaVar2[1].S[STATE_rlYaw])
+
+LOG_ADD(LOG_FLOAT, rlX2, &relaVar2[2].S[STATE_rlX])
+LOG_ADD(LOG_FLOAT, rlY2, &relaVar2[2].S[STATE_rlY])
+LOG_ADD(LOG_FLOAT, rlYaw2, &relaVar2[2].S[STATE_rlYaw])
+
+LOG_ADD(LOG_FLOAT, rlX3, &relaVar2[3].S[STATE_rlX])
+LOG_ADD(LOG_FLOAT, rlY3, &relaVar2[3].S[STATE_rlY])
+LOG_ADD(LOG_FLOAT, rlYaw3, &relaVar2[3].S[STATE_rlYaw])
+
+LOG_ADD(LOG_FLOAT, rlX4, &relaVar2[4].S[STATE_rlX])
+LOG_ADD(LOG_FLOAT, rlY4, &relaVar2[4].S[STATE_rlY])
+LOG_ADD(LOG_FLOAT, rlYaw4, &relaVar2[4].S[STATE_rlYaw])
+
+LOG_ADD(LOG_FLOAT, rlX5, &relaVar2[5].S[STATE_rlX])
+LOG_ADD(LOG_FLOAT, rlY5, &relaVar2[5].S[STATE_rlY])
+LOG_ADD(LOG_FLOAT, rlYaw5, &relaVar2[5].S[STATE_rlYaw])
+LOG_GROUP_STOP(relative_pos)
 
 // PARAM_GROUP_START(arelative_pos)
 // PARAM_ADD(PARAM_FLOAT, noiFlow, &Qv) // make sure the name is not too long
