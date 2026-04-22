@@ -215,7 +215,7 @@ void relativeLocoTask(void *arg)
     initRelativePosition[1][0][STATE_rlY] = 1;
     */
     int EKFcount = 0;
-    int max_EKFcount = 5;
+    int max_EKFcount = 10;
 
     systemWaitStart();
     while (1)
@@ -314,18 +314,19 @@ void relativeLocoTask(void *arg)
                         
 
 
-                        // 一直校正
                         
-                        relaVar[neighborAddress].height = hj;
-
-                        float dtEKF = (float)(osTick - relaVar[neighborAddress].oldTimetick) / configTICK_RATE_HZ;
-                        relaVar[neighborAddress].oldTimetick = osTick;
-                        // 校正
-                        relativeEKF(neighborAddress, vxi, vyi, ri, hi, vxj, vyj, rj, hj, dij, dtEKF);
                         // 实时位置预测
+                        float dtEKF = (float)(osTick - relaVar[neighborAddress].oldTimetick) / configTICK_RATE_HZ;
                         predict_v2(neighborAddress, vxi, vyi, ri, hi, vxj, vyj, rj, hj, dij, dtEKF);
 
                     }
+                    // 一直校正
+                    relaVar[neighborAddress].height = hj;
+
+                    float dtEKF = (float)(osTick - relaVar[neighborAddress].oldTimetick) / configTICK_RATE_HZ;
+                    relaVar[neighborAddress].oldTimetick = osTick;
+                    // 校正
+                    relativeEKF(neighborAddress, vxi, vyi, ri, hi, vxj, vyj, rj, hj, dij, dtEKF);
                     // DEBUG_PRINT("dtEKFv2: %f\n", dtEKFv2);
                     
                 }
