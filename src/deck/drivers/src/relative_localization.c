@@ -196,7 +196,7 @@ void relativeLocoTask(void *arg)
     initRelativePosition[1][0][STATE_rlY] = 1;
     */
     int EKFcount = 0;
-    int max_EKFcount = 10;
+    int max_EKFcount = 5;
 
     systemWaitStart();
     while (1)

@@ -151,10 +151,10 @@ static void formation0asCenter(float_t tarX, float_t tarY, float_t height)
   pid_vy += relaCtrl_d * dy; // 0.01*dy
   IntErr_x += err_x * dt;
   IntErr_y += err_y * dt;
-  pid_vx += relaCtrl_i * constrain(IntErr_x, -0.5, 0.5); // += (+-)0.00005
-  pid_vy += relaCtrl_i * constrain(IntErr_y, -0.5, 0.5);
-  pid_vx = constrain(pid_vx, -0.5f, 0.5f);
-  pid_vy = constrain(pid_vy, -0.5f, 0.5f);
+  pid_vx += relaCtrl_i * constrain(IntErr_x, -1.5, 1.5); // += (+-)0.00005
+  pid_vy += relaCtrl_i * constrain(IntErr_y, -1.5, 1.5);
+  pid_vx = constrain(pid_vx, -1.5f, 1.5f);
+  pid_vy = constrain(pid_vy, -1.5f, 1.5f);
 
   // float rep_x = 0.0f;
   // float rep_y = 0.0f;
@@ -416,7 +416,7 @@ void relativeControlTask(void *arg)
         else if (leaderStage == FIRST_STAGE) // 第1个阶段随机飞行
         {
           // DEBUG_PRINT("--1--\n");
-          float_t randomVel = 0.2;
+          float_t randomVel = 0.5;
           if (MY_UWB_ADDRESS == 0)
           {
             setHoverSetpoint(&setpoint, 0, 0, set_height, 0);
@@ -433,7 +433,7 @@ void relativeControlTask(void *arg)
           // DEBUG_PRINT("--2--\n");
           if (MY_UWB_ADDRESS == 0)
           {
-            float_t randomVel = 0.3;
+            float_t randomVel = 1;
              flyRandomIn1meter(randomVel, set_height);
           }
           else

@@ -2052,7 +2052,7 @@ static void uwbRangingTxTask(void *parameters)
 #ifdef ENABLE_OPTIMAL_RANGING_SCHEDULE
     int8_t time_Delay = temp_delay;
     temp_delay = 0;
-    vTaskDelay(20);
+    vTaskDelay(30);
 #endif
 #ifdef ENABLE_SLOT_RANGING_SCHEDULE
     if (MY_UWB_ADDRESS == 0)
