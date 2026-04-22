@@ -28,6 +28,10 @@ static float InitCovYaw = 0.2f; // 初始偏航角误差
 
 static relaVariable_t relaVar[RANGING_TABLE_SIZE];
 static relaVariable_t relaVar2[RANGING_TABLE_SIZE];
+static relaVariable_t relaVar2_real_time[RANGING_TABLE_SIZE];
+static StateBuffer_t stateBuffer[RANGING_TABLE_SIZE];
+
+
 
 static float A[STATE_DIM_rl][STATE_DIM_rl];
 static float A_v2[STATE_DIM_rl][STATE_DIM_rl];
@@ -183,6 +187,21 @@ void relaVarInit(relaVariable_t *relaVar, uint16_t neighborAddress)
     /*----------*/
     relaVar[neighborAddress].oldTimetick = xTaskGetTickCount();
 
+    // 初始化stateBuffer
+    stateBuffer[neighborAddress].velocityXInWorld = 0;
+    stateBuffer[neighborAddress].velocityYInWorld = 0;
+    stateBuffer[neighborAddress].gyroZ = 0;
+    stateBuffer[neighborAddress].positionZ = 0;
+    stateBuffer[neighborAddress].oldTimetick = xTaskGetTickCount();
+    stateBuffer[neighborAddress].duration = 0;
+
+    stateBuffer[MY_UWB_ADDRESS].velocityXInWorld = 0;
+    stateBuffer[MY_UWB_ADDRESS].velocityYInWorld = 0;
+    stateBuffer[MY_UWB_ADDRESS].gyroZ = 0;
+    stateBuffer[MY_UWB_ADDRESS].positionZ = 0;
+    stateBuffer[MY_UWB_ADDRESS].oldTimetick = xTaskGetTickCount();
+    stateBuffer[MY_UWB_ADDRESS].duration = 0;
+
     fullConnect = true;
     // DEBUG_PRINT("%f\n", relaVar[neighborAddress].S[STATE_rlX]);
 }
@@ -228,29 +247,87 @@ void relativeLocoTask(void *arg)
                 else
                 {
                     estimatorKalmanGetSwarmInfo(&vxi_t, &vyi_t, &ri, &hi_t); // 当前无人机的信息
+                    
+                    
                     vxi = (vxi_t + 0.0) / 100;
                     vyi = (vyi_t + 0.0) / 100;
                     hi = (hi_t + 0.0) / 100;
                     uint32_t osTick = xTaskGetTickCount();
+
+
+                    // 更新邻居stateBuffer
+                    uint32_t curr_duration = osTick - stateBuffer[neighborAddress].oldTimetick;
+                    uint32_t prev_duration = stateBuffer[neighborAddress].duration;
+                    stateBuffer[neighborAddress].velocityXInWorld = (stateBuffer[neighborAddress].velocityXInWorld * prev_duration  + vxj * curr_duration) / (prev_duration + curr_duration) ; // 这里简单地根据时间更新速度，实际可以根据EKF的结果来更新
+                    stateBuffer[neighborAddress].velocityYInWorld = (stateBuffer[neighborAddress].velocityYInWorld * prev_duration  + vyj * curr_duration) / (prev_duration + curr_duration) ;
+                    stateBuffer[neighborAddress].gyroZ = (stateBuffer[neighborAddress].gyroZ * prev_duration  + rj * curr_duration) / (prev_duration + curr_duration) ;
+                    stateBuffer[neighborAddress].positionZ = hj;
+                    stateBuffer[neighborAddress].oldTimetick = xTaskGetTickCount();
+                    stateBuffer[neighborAddress].duration = curr_duration + prev_duration;
+                    // 更新自己stateBuffer
+                    stateBuffer[MY_UWB_ADDRESS].velocityXInWorld = (stateBuffer[MY_UWB_ADDRESS].velocityXInWorld * stateBuffer[MY_UWB_ADDRESS].duration  + vxi * curr_duration) / (stateBuffer[MY_UWB_ADDRESS].duration + curr_duration) ;
+                    stateBuffer[MY_UWB_ADDRESS].velocityYInWorld = (stateBuffer[MY_UWB_ADDRESS].velocityYInWorld * stateBuffer[MY_UWB_ADDRESS].duration  + vyi * curr_duration) / (stateBuffer[MY_UWB_ADDRESS].duration + curr_duration) ;
+                    stateBuffer[MY_UWB_ADDRESS].gyroZ = (stateBuffer[MY_UWB_ADDRESS].gyroZ * stateBuffer[MY_UWB_ADDRESS].duration  + ri * curr_duration) / (stateBuffer[MY_UWB_ADDRESS].duration + curr_duration) ;
+                    stateBuffer[MY_UWB_ADDRESS].positionZ = hi;
+                    stateBuffer[MY_UWB_ADDRESS].oldTimetick = xTaskGetTickCount();
+                    stateBuffer[MY_UWB_ADDRESS].duration = curr_duration + prev_duration;
                     
-                    float dtEKFv2 = (float)(osTick - relaVar2[neighborAddress].oldTimetick) / configTICK_RATE_HZ;
                     
-                    relaVar2[neighborAddress].oldTimetick = osTick;
-                    relaVar[neighborAddress].height = hj;
-                    relaVar2[neighborAddress].height = hj;
                     if (EKFcount == max_EKFcount)
                     {
+                        
                         EKFcount = 0;
-                        float dtEKF = (float)(osTick - relaVar[neighborAddress].oldTimetick) / configTICK_RATE_HZ;
-                        relaVar[neighborAddress].oldTimetick = osTick;
-                        relativeEKF(neighborAddress, vxi, vyi, ri, hi, vxj, vyj, rj, hj, dij, dtEKF);
+                        // 执行校正
+                        vxi = stateBuffer[MY_UWB_ADDRESS].velocityXInWorld;
+                        vyi = stateBuffer[MY_UWB_ADDRESS].velocityYInWorld;
+                        hi = stateBuffer[MY_UWB_ADDRESS].positionZ;
+
+                        vxj = stateBuffer[neighborAddress].velocityXInWorld;
+                        vyj = stateBuffer[neighborAddress].velocityYInWorld;
+                        hj = stateBuffer[neighborAddress].positionZ;
+
+                        float dtEKFv2 = (float)(osTick - relaVar2[neighborAddress].oldTimetick) / configTICK_RATE_HZ;
+                        relaVar2[neighborAddress].oldTimetick = osTick;
+                        relaVar2[neighborAddress].height = hj;
+                        relativeEKF_v2(neighborAddress, vxi, vyi, ri, hi, vxj, vyj, rj, hj, dij, dtEKFv2);
+
+                        // 重置邻居stateBuffer
+                        stateBuffer[neighborAddress].velocityXInWorld = 0;
+                        stateBuffer[neighborAddress].velocityYInWorld = 0;
+                        stateBuffer[neighborAddress].gyroZ = 0;
+                        stateBuffer[neighborAddress].positionZ = 0;
+                        stateBuffer[neighborAddress].oldTimetick = xTaskGetTickCount();
+                        stateBuffer[neighborAddress].duration = 0;
+                        // 重置自己stateBuffer
+                        stateBuffer[MY_UWB_ADDRESS].velocityXInWorld = 0;
+                        stateBuffer[MY_UWB_ADDRESS].velocityYInWorld = 0;
+                        stateBuffer[MY_UWB_ADDRESS].gyroZ = 0;
+                        stateBuffer[MY_UWB_ADDRESS].positionZ = 0;
+                        stateBuffer[MY_UWB_ADDRESS].oldTimetick = xTaskGetTickCount();
+                        stateBuffer[MY_UWB_ADDRESS].duration = 0;
+
                     }
                     else
                     {
+                        // 执行基于运动学模型的预测 todo:
                         EKFcount++;
+                        
+
+
+                        // 一直校正
+                        
+                        relaVar[neighborAddress].height = hj;
+
+                        float dtEKF = (float)(osTick - relaVar[neighborAddress].oldTimetick) / configTICK_RATE_HZ;
+                        relaVar[neighborAddress].oldTimetick = osTick;
+                        // 校正
+                        relativeEKF(neighborAddress, vxi, vyi, ri, hi, vxj, vyj, rj, hj, dij, dtEKF);
+                        // 实时位置预测
+                        predict_v2(neighborAddress, vxi, vyi, ri, hi, vxj, vyj, rj, hj, dij, dtEKF);
+
                     }
                     // DEBUG_PRINT("dtEKFv2: %f\n", dtEKFv2);
-                    relativeEKF_v2(neighborAddress, vxi, vyi, ri, hi, vxj, vyj, rj, hj, dij, dtEKFv2);
+                    
                 }
                 //DEBUG_PRINT("addr:%d,X:%f,Y:%f\n",neighborAddress,relaVar[neighborAddress].S[STATE_rlX],relaVar[neighborAddress].S[STATE_rlY]);
             }
@@ -346,6 +423,23 @@ void relativeEKF(int n, float vxi, float vyi, float ri, float hi, float vxj, flo
     // DEBUG_PRINT("dis:%d\n", dij);
 }
 
+
+void predict_v2(int n, float vxi, float vyi, float ri, float hi, float vxj, float vyj, float rj, float hj, uint16_t dij, float dt)
+{
+    // DEBUG_PRINT("n:%d,vxi:%f,vyi:%f,ri:%f,hi:%f,vxj:%f,vyj:%f,rj:%f,hj:%f,dij:%d,dt:%f\n", n, vxi, vyi, ri, hi, vxj, vyj, rj, hj, dij, dt);
+    // some preprocessing
+    arm_matrix_instance_f32 Pm = {STATE_DIM_rl, STATE_DIM_rl, (float *)relaVar2_real_time[n].P};
+    float cyaw = arm_cos_f32(relaVar2_real_time[n].S[STATE_rlYaw]);
+    float syaw = arm_sin_f32(relaVar2_real_time[n].S[STATE_rlYaw]);
+    float xij = relaVar2_real_time[n].S[STATE_rlX];
+    float yij = relaVar2_real_time[n].S[STATE_rlY];
+
+    // prediction
+    relaVar2_real_time[n].S[STATE_rlX] = xij + (cyaw * vxj - syaw * vyj - vxi + ri * yij) * dt;
+    relaVar2_real_time[n].S[STATE_rlY] = yij + (syaw * vxj + cyaw * vyj - vyi - ri * xij) * dt;
+    relaVar2_real_time[n].S[STATE_rlYaw] = relaVar2_real_time[n].S[STATE_rlYaw] + (rj - ri) * dt;
+}
+
 void relativeEKF_v2(int n, float vxi, float vyi, float ri, float hi, float vxj, float vyj, float rj, float hj, uint16_t dij, float dt)
 {
     // DEBUG_PRINT("n:%d,vxi:%f,vyi:%f,ri:%f,hi:%f,vxj:%f,vyj:%f,rj:%f,hj:%f,dij:%d,dt:%f\n", n, vxi, vyi, ri, hi, vxj, vyj, rj, hj, dij, dt);
@@ -427,6 +521,12 @@ void relativeEKF_v2(int n, float vxi, float vyi, float ri, float hi, float vxj, 
     mat_mult(&tmpNN1m_v2, &Pm, &tmpNN3m_v2); // (KH - I)*P
     mat_mult(&tmpNN3m_v2, &tmpNN2m_v2, &Pm); // (KH - I)*P*(KH - I)'
     // DEBUG_PRINT("dis:%d\n", dij);
+
+    // 更新实时位置
+    relaVar2_real_time[n].S[STATE_rlX] = relaVar2[n].S[STATE_rlX];
+    relaVar2_real_time[n].S[STATE_rlY] = relaVar2[n].S[STATE_rlY];
+    relaVar2_real_time[n].S[STATE_rlYaw] = relaVar2[n].S[STATE_rlYaw];
+
 }
 
 bool relativeInfoRead(float *relaVarParam, float *neighbor_height, currentNeighborAddressInfo_t *dest)
@@ -489,29 +589,29 @@ LOG_GROUP_STOP(relative_pos)
 
 
 LOG_GROUP_START(rela_posv2)
-LOG_ADD(LOG_FLOAT, rlX0, &relaVar2[0].S[STATE_rlX])
-LOG_ADD(LOG_FLOAT, rlY0, &relaVar2[0].S[STATE_rlY])
-LOG_ADD(LOG_FLOAT, rlYaw0, &relaVar2[0].S[STATE_rlYaw])
+LOG_ADD(LOG_FLOAT, rlX0, &relaVar2_real_time[0].S[STATE_rlX])
+LOG_ADD(LOG_FLOAT, rlY0, &relaVar2_real_time[0].S[STATE_rlY])
+LOG_ADD(LOG_FLOAT, rlYaw0, &relaVar2_real_time[0].S[STATE_rlYaw])
 
-LOG_ADD(LOG_FLOAT, rlX1, &relaVar2[1].S[STATE_rlX])
-LOG_ADD(LOG_FLOAT, rlY1, &relaVar2[1].S[STATE_rlY])
-LOG_ADD(LOG_FLOAT, rlYaw1, &relaVar2[1].S[STATE_rlYaw])
+LOG_ADD(LOG_FLOAT, rlX1, &relaVar2_real_time[1].S[STATE_rlX])
+LOG_ADD(LOG_FLOAT, rlY1, &relaVar2_real_time[1].S[STATE_rlY])
+LOG_ADD(LOG_FLOAT, rlYaw1, &relaVar2_real_time[1].S[STATE_rlYaw])
 
-LOG_ADD(LOG_FLOAT, rlX2, &relaVar2[2].S[STATE_rlX])
-LOG_ADD(LOG_FLOAT, rlY2, &relaVar2[2].S[STATE_rlY])
-LOG_ADD(LOG_FLOAT, rlYaw2, &relaVar2[2].S[STATE_rlYaw])
+LOG_ADD(LOG_FLOAT, rlX2, &relaVar2_real_time[2].S[STATE_rlX])
+LOG_ADD(LOG_FLOAT, rlY2, &relaVar2_real_time[2].S[STATE_rlY])
+LOG_ADD(LOG_FLOAT, rlYaw2, &relaVar2_real_time[2].S[STATE_rlYaw])
 
-LOG_ADD(LOG_FLOAT, rlX3, &relaVar2[3].S[STATE_rlX])
-LOG_ADD(LOG_FLOAT, rlY3, &relaVar2[3].S[STATE_rlY])
-LOG_ADD(LOG_FLOAT, rlYaw3, &relaVar2[3].S[STATE_rlYaw])
+LOG_ADD(LOG_FLOAT, rlX3, &relaVar2_real_time[3].S[STATE_rlX])
+LOG_ADD(LOG_FLOAT, rlY3, &relaVar2_real_time[3].S[STATE_rlY])
+LOG_ADD(LOG_FLOAT, rlYaw3, &relaVar2_real_time[3].S[STATE_rlYaw])
 
-LOG_ADD(LOG_FLOAT, rlX4, &relaVar2[4].S[STATE_rlX])
-LOG_ADD(LOG_FLOAT, rlY4, &relaVar2[4].S[STATE_rlY])
-LOG_ADD(LOG_FLOAT, rlYaw4, &relaVar2[4].S[STATE_rlYaw])
+LOG_ADD(LOG_FLOAT, rlX4, &relaVar2_real_time[4].S[STATE_rlX])
+LOG_ADD(LOG_FLOAT, rlY4, &relaVar2_real_time[4].S[STATE_rlY])
+LOG_ADD(LOG_FLOAT, rlYaw4, &relaVar2_real_time[4].S[STATE_rlYaw])
 
-LOG_ADD(LOG_FLOAT, rlX5, &relaVar2[5].S[STATE_rlX])
-LOG_ADD(LOG_FLOAT, rlY5, &relaVar2[5].S[STATE_rlY])
-LOG_ADD(LOG_FLOAT, rlYaw5, &relaVar2[5].S[STATE_rlYaw])
+LOG_ADD(LOG_FLOAT, rlX5, &relaVar2_real_time[5].S[STATE_rlX])
+LOG_ADD(LOG_FLOAT, rlY5, &relaVar2_real_time[5].S[STATE_rlY])
+LOG_ADD(LOG_FLOAT, rlYaw5, &relaVar2_real_time[5].S[STATE_rlYaw])
 LOG_GROUP_STOP(rela_posv2)
 
 // PARAM_GROUP_START(arelative_pos)

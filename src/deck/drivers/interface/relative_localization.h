@@ -30,6 +30,16 @@ typedef struct
   uint8_t receiveFlag;
 } relaVariable_t;
 
+typedef struct
+{
+    float velocityXInWorld;   // 2byte m/s 在世界坐标系下的速度（不是机体坐标系）
+    float velocityYInWorld;   // 2byte cm/s 在世界坐标系下的速度（不是机体坐标系）
+    float gyroZ;   // 4 byte rad/s
+    float positionZ;       // 2 byte cm/s
+    uint32_t duration;
+    uint32_t oldTimetick;
+} StateBuffer_t;
+
 /*--用于初始位置设定--*/
 static uint8_t CONTROL_MODE = 1;
 const static uint8_t ARRAY_LENGTH = 15;
@@ -64,6 +74,7 @@ void relativeLocoInit(void);
 void relativeLocoTask(void *arg);
 void relativeEKF(int n, float vxi, float vyi, float ri, float hi, float vxj, float vyj, float rj, float hj, uint16_t dij, float dt);
 void relativeEKF_v2(int n, float vxi, float vyi, float ri, float hi, float vxj, float vyj, float rj, float hj, uint16_t dij, float dt);
+void predict_v2(int n, float vxi, float vyi, float ri, float hi, float vxj, float vyj, float rj, float hj, uint16_t dij, float dt);
 bool relativeInfoRead(float *relaVarParam, float *neighbor_height, currentNeighborAddressInfo_t *dest);
 void relaVarInit(relaVariable_t *relaVar, uint16_t neighborAddress); // // Initialize EKF for relative localization
 #endif
