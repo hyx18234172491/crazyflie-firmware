@@ -30,6 +30,7 @@ static relaVariable_t relaVar[RANGING_TABLE_SIZE];
 static relaVariable_t relaVar2[RANGING_TABLE_SIZE];
 static relaVariable_t relaVar2_real_time[RANGING_TABLE_SIZE];
 static StateBuffer_t stateBuffer[RANGING_TABLE_SIZE];
+static uint16_t dij_old[RANGING_TABLE_SIZE];
 
 
 
@@ -217,6 +218,7 @@ void relativeLocoTask(void *arg)
     int EKFcount = 0;
     int max_EKFcount = 10;
 
+    
     systemWaitStart();
     while (1)
     {
@@ -243,6 +245,7 @@ void relativeLocoTask(void *arg)
                 {
                     relaVarInit(relaVar, neighborAddress);
                     relaVarInit(relaVar2, neighborAddress);
+                    dij_old[neighborAddress] = dij;
                 }
                 else
                 {
@@ -291,6 +294,12 @@ void relativeLocoTask(void *arg)
                         relaVar2[neighborAddress].height = hj;
                         relativeEKF_v2(neighborAddress, vxi, vyi, ri, hi, vxj, vyj, rj, hj, dij, dtEKFv2);
 
+                        float dtEKF = (float)(osTick - relaVar[neighborAddress].oldTimetick) / configTICK_RATE_HZ;
+                        relaVar[neighborAddress].height = hj;
+                        relaVar[neighborAddress].oldTimetick = osTick;
+                        // 校正
+                        relativeEKF(neighborAddress, vxi, vyi, ri, hi, vxj, vyj, rj, hj, dij_old[neighborAddress], dtEKF);
+
                         // 重置邻居stateBuffer
                         stateBuffer[neighborAddress].velocityXInWorld = 0;
                         stateBuffer[neighborAddress].velocityYInWorld = 0;
@@ -306,27 +315,28 @@ void relativeLocoTask(void *arg)
                         stateBuffer[MY_UWB_ADDRESS].oldTimetick = xTaskGetTickCount();
                         stateBuffer[MY_UWB_ADDRESS].duration = 0;
 
+                        // 更新old dij，分析测距延迟导致的定位问题。
+                        dij_old[neighborAddress] = dij;
                     }
                     else
                     {
                         // 执行基于运动学模型的预测 todo:
                         EKFcount++;
-                        
 
 
                         
                         // 实时位置预测
-                        float dtEKF = (float)(osTick - relaVar[neighborAddress].oldTimetick) / configTICK_RATE_HZ;
-                        predict_v2(neighborAddress, vxi, vyi, ri, hi, vxj, vyj, rj, hj, dij, dtEKF);
+                        // float dtEKF = (float)(osTick - relaVar[neighborAddress].oldTimetick) / configTICK_RATE_HZ;
+                        // predict_v2(neighborAddress, vxi, vyi, ri, hi, vxj, vyj, rj, hj, dij, dtEKF);
 
                     }
                     // 一直校正
-                    relaVar[neighborAddress].height = hj;
+                    // relaVar[neighborAddress].height = hj;
 
-                    float dtEKF = (float)(osTick - relaVar[neighborAddress].oldTimetick) / configTICK_RATE_HZ;
-                    relaVar[neighborAddress].oldTimetick = osTick;
-                    // 校正
-                    relativeEKF(neighborAddress, vxi, vyi, ri, hi, vxj, vyj, rj, hj, dij, dtEKF);
+                    // float dtEKF = (float)(osTick - relaVar[neighborAddress].oldTimetick) / configTICK_RATE_HZ;
+                    // relaVar[neighborAddress].oldTimetick = osTick;
+                    // // 校正
+                    // relativeEKF(neighborAddress, vxi, vyi, ri, hi, vxj, vyj, rj, hj, dij, dtEKF);
                     // DEBUG_PRINT("dtEKFv2: %f\n", dtEKFv2);
                     
                 }
