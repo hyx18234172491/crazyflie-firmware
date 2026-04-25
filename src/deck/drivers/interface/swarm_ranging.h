@@ -15,6 +15,8 @@
   #define DYNAMIC_RANGING_COEFFICIENT 1
 #endif
 
+#define ENABLE_ONDEMAND_QUICKLY_RANGING
+
 
 
 /* Ranging Constants */
@@ -33,7 +35,8 @@
 #define RANGING_MESSAGE_SIZE_MAX UWB_PAYLOAD_SIZE_MAX
 #define RANGING_MESSAGE_PAYLOAD_SIZE_MAX (RANGING_MESSAGE_SIZE_MAX - sizeof(Ranging_Message_Header_t))
 #define RANGING_MAX_Tr_UNIT 4
-#define RANGING_MAX_BODY_UNIT (RANGING_MESSAGE_PAYLOAD_SIZE_MAX / sizeof(Body_Unit_t))
+// #define RANGING_MAX_BODY_UNIT (RANGING_MESSAGE_PAYLOAD_SIZE_MAX / sizeof(Body_Unit_t))
+#define RANGING_MAX_BODY_UNIT 1 // 测试bodyUint为1的调度策略
 #define RANGING_TABLE_SIZE_MAX 32 // default up to 20 one-hop neighbors
 #define RANGING_TABLE_HOLD_TIME (6 * RANGING_PERIOD_MAX)
 #define Tr_Rr_BUFFER_POOL_SIZE 5
@@ -85,7 +88,8 @@ typedef struct {
   uint16_t srcAddress; // 2 byte
   uint16_t msgSequence; // 2 byte
   Timestamp_Tuple_t_2 lastTxTimestamps[RANGING_MAX_Tr_UNIT]; // 10 byte * MAX_Tr_UNIT
-  // short velocity; // 2 byte cm/s
+  short velocity; // 2 byte cm/s  速度
+  short acceleration; // 2 byte cm/s^2 加速度
   uint16_t msgLength; // 2 byte
   uint16_t filter; // 16 bits bloom filter
   // float posiX;
@@ -164,6 +168,7 @@ typedef struct {
   Time_t expirationTime;
   Time_t lastSendTime;
   int16_t distance;
+  uint8_t needResponse; // 0 没有被at无需响应，1 被at需要响应
 
   RANGING_TABLE_STATE state;
 } __attribute__((packed)) Ranging_Table_t;

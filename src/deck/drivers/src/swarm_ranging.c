@@ -91,7 +91,7 @@ uint16_t distToNeighbor8DelayCount[8] = {0};
 
 void setDelay(UWB_Address_t uwbAddress, uint32_t delay)
 {
-  if(uwbAddress != 8){
+  if(uwbAddress != 6){
     return;
   }
   if (delay <= 30)
@@ -402,6 +402,7 @@ void rangingTableInit(Ranging_Table_t *table, UWB_Address_t neighborAddress)
   table->nextExpectedDeliveryTime = 0;
   table->expirationTime = 0;
   table->lastSendTime = 0;
+  table->needResponse = 0;
   rangingTableBufferInit(&table->TrRrBuffer); // Can be safely removed this line since memset() is called
   rangingTableTxRxHistoryInit(&table->TxRxHistory);
 }
@@ -500,6 +501,38 @@ static int COMPARE_BY_LAST_SEND_TIME(Ranging_Table_t *first, Ranging_Table_t *se
     return 1;
   }
   return -1;
+}
+
+
+
+static int COMPARE_BY_ONDEMAND_QUICKLY(Ranging_Table_t *first, Ranging_Table_t *second)
+{
+  /* 1. 首先判断 needResponse 是否相等 */
+  if (first->needResponse != second->needResponse)
+  {
+    /* 我们希望 needResponse == 1 的排在前面（最终留在堆顶）*/
+    /* 因此，如果 first 的 needResponse 是 0，则视 first 为“更大”，返回 1 让其沉到数组尾部 */
+    if (first->needResponse == 0)
+    {
+      return 1;
+    }
+    /* 反之，first 是 1，second 是 0，first 更小，返回 -1 留在前面 */
+    return -1; 
+  }
+
+  /* 2. 如果 needResponse 相等，则比较 nextExpectedDeliveryTime */
+  /* 我们希望 nextExpectedDeliveryTime 小的排在前面 */
+  if (first->nextExpectedDeliveryTime > second->nextExpectedDeliveryTime)
+  {
+    return 1;  /* first 更大，返回 1 让其沉到数组尾部 */
+  }
+  if (first->nextExpectedDeliveryTime < second->nextExpectedDeliveryTime)
+  {
+    return -1; /* first 更小，返回 -1 留在前面 */
+  }
+
+  /* 完全相等 */
+  return 0;
 }
 
 /* Build the heap */
@@ -1647,6 +1680,7 @@ static void processRangingMessage(Ranging_Message_With_Timestamp_t *rangingMessa
         // DEBUG_PRINT("find\n");
         neighborRf.timestamp = rangingMessage->bodyUnits[i].timestamp;
         neighborRf.seqNumber = rangingMessage->bodyUnits[i].seqNumber;
+        neighborRangingTable->needResponse = 1; // 被at了，next发送报文时下一次必须带上
         break;
       }
     }
@@ -1663,6 +1697,10 @@ static void processRangingMessage(Ranging_Message_With_Timestamp_t *rangingMessa
   {
     rangingTableOnEvent(neighborRangingTable, RANGING_EVENT_RX_NO_Rf);
   }
+
+  
+  neighborRangingTable->nextExpectedDeliveryTime = xTaskGetTickCount() + RANGING_PERIOD * 2 - 3;  // 更新下一次递送时间
+
   // /* Trigger event handler according to Rf */
   // if (neighborRf.timestamp.full)
   // {
@@ -1734,13 +1772,15 @@ static Time_t generateRangingMessage(Ranging_Message_t *rangingMessage)
   Time_t curTime = xTaskGetTickCount();
   /* Using the default RANGING_PERIOD when DYNAMIC_RANGING_PERIOD is not enabled. */
   Time_t taskDelay = M2T(RANGING_PERIOD);
+#ifdef ENABLE_ONDEMAND_QUICKLY_RANGING
+  rangingTableSetRearrange(&rangingTableSet, COMPARE_BY_ONDEMAND_QUICKLY);
+#endif
 #ifdef ENABLE_BUS_BOARDING_SCHEME
   rangingTableSetRearrange(&rangingTableSet, COMPARE_BY_NEXT_EXPECTED_DELIVERY_TIME);
-#else
-  // rangingTableSetRearrange(&rangingTableSet, COMPARE_BY_LAST_SEND_TIME);
 #endif
   // DEBUG_PRINT("size:%d\n",rangingTableSet.size);
   /* Generate message body */
+  
   for (int index = 0; index < rangingTableSet.size; index++)
   {
     if (bodyUnitNumber >= RANGING_MAX_BODY_UNIT)
@@ -1755,8 +1795,9 @@ static Time_t generateRangingMessage(Ranging_Message_t *rangingMessage)
       // {
       //   continue;
       // }
-      table->nextExpectedDeliveryTime = curTime + M2T(table->period);
+      // table->nextExpectedDeliveryTime = curTime + M2T(table->period); // 在按需快测下这里不需要更新，而是在测距完成后更新
       table->lastSendTime = curTime;
+      table->needResponse = 0; // 已经回复at了，重置
 
       /* It is possible that latestReceived is not the newest timestamp, because the newest may be in rxQueue
        * waiting to be handled.
@@ -1764,6 +1805,7 @@ static Time_t generateRangingMessage(Ranging_Message_t *rangingMessage)
       rangingMessage->bodyUnits[bodyUnitNumber].timestamp = table->latestReceived.timestamp;
       rangingMessage->bodyUnits[bodyUnitNumber].seqNumber = table->latestReceived.seqNumber;
       rangingMessage->bodyUnits[bodyUnitNumber].address = table->neighborAddress;
+      DEBUG_PRINT("--ne %u, seq %u.\n", table->neighborAddress, table->latestReceived.seqNumber);
       // table->latestReceived.seqNumber = 0;
       // table->latestReceived.timestamp.full = 0;
       // int randnum = rand() % 10;
@@ -1893,7 +1935,7 @@ static void uwbRangingTxTask(void *parameters)
     // xSemaphoreGive(neighborSet.mu);
     xSemaphoreGive(rangingTableSet.mu);
     taskDelay = RANGING_PERIOD;
-    vTaskDelay(41+rand()%40);
+    vTaskDelay(RANGING_PERIOD);
   }
 }
 
