@@ -1699,7 +1699,7 @@ static void processRangingMessage(Ranging_Message_With_Timestamp_t *rangingMessa
   }
 
   
-  neighborRangingTable->nextExpectedDeliveryTime = xTaskGetTickCount() + RANGING_PERIOD * 2 - 3;  // 更新下一次递送时间
+  // neighborRangingTable->nextExpectedDeliveryTime = xTaskGetTickCount() + RANGING_PERIOD * 2 - 3;  // 更新下一次递送时间
 
   // /* Trigger event handler according to Rf */
   // if (neighborRf.timestamp.full)
@@ -1795,7 +1795,7 @@ static Time_t generateRangingMessage(Ranging_Message_t *rangingMessage)
       // {
       //   continue;
       // }
-      // table->nextExpectedDeliveryTime = curTime + M2T(table->period); // 在按需快测下这里不需要更新，而是在测距完成后更新
+      table->nextExpectedDeliveryTime = curTime + M2T(table->period); // 在按需快测下这里不需要更新，而是在测距完成后更新
       table->lastSendTime = curTime;
       table->needResponse = 0; // 已经回复at了，重置
 
